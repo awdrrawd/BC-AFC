@@ -3,7 +3,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-0.6.1-purple.svg)
+![Version](https://img.shields.io/badge/version-0.7.0-purple.svg)
 ![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)
 ![BondageClub](https://img.shields.io/badge/BondageClub-Compatible-pink.svg)
 ![EN](https://img.shields.io/badge/EN-✔️-blue.svg)
@@ -132,38 +132,40 @@ If you have [Liko PCM](https://awdrrawd.github.io/liko-Plugin-Repository/) insta
 ### 🐵 直接安裝 · Direct installation
 Tampermonkey / Violentmonkey
 
-點擊以下連結直接安裝：  
-Click the link below to install:
+安裝載入器（loader）即可，插件本體與心形鎖已由 CI 打包到 GitHub Pages，載入器會自動抓取最新版：  
+Install the loader — the plugin bundle (with Heart Lock) is built by CI to GitHub Pages, and the loader fetches the latest build automatically:
 
-👉 **[Install Liko-ACF.user.js](https://github.com/awdrrawd/liko-Plugin-Repository/raw/refs/heads/main/Plugins/Liko-ACF.user.js)**
-
----
-
-### 🔖 書籤安裝 · Bookmarklet
-
-建立新書籤，將以下程式碼貼入網址欄，在 BC 頁面點擊書籤即可載入：  
-Create a new bookmark, paste the code below as the URL, then click it on the BondageClub page:
-
-```javascript
-javascript:(function(){
-  var s=document.createElement('script');
-  s.src="https://github.com/awdrrawd/liko-Plugin-Repository/raw/refs/heads/main/Plugins/Liko-ACF.user.js?"+Date.now();
-  s.type="text/javascript";
-  s.crossOrigin="anonymous";
-  document.head.appendChild(s);
-})();
-```
+👉 **[安裝 loader.user.js · Install loader.user.js](https://github.com/awdrrawd/BC-AFC/raw/refs/heads/main/loader.user.js)**
 
 ---
 
 ### 💻 瀏覽器控制台 · Browser Console
 
-開啟 F12，在 Console 分頁貼上以下程式碼：  
-Open F12 DevTools and paste the following into the Console tab:
+開啟 F12，在 Console 分頁貼上以下程式碼（直接載入 Pages 上的打包檔）：  
+Open F12 DevTools and paste the following into the Console tab (loads the bundle from Pages):
 
 ```javascript
-import(`https://github.com/awdrrawd/liko-Plugin-Repository/raw/refs/heads/main/Plugins/Liko-ACF.user.js?v=${(Date.now()/10000).toFixed(0)}`);
+import(`https://awdrrawd.github.io/BC-AFC/assets/main.js?v=${Date.now()}`);
 ```
+
+---
+
+### 🛠️ 開發 · Development
+
+原始碼採模組化（`src/`），由 vite 打包成單一 `dist/assets/main.js`，推送到 `main` 後 GitHub Actions 自動部署到 Pages。  
+Source is modular (`src/`), bundled by vite into a single `dist/assets/main.js`; pushing to `main` triggers GitHub Actions to deploy to Pages.
+
+```bash
+npm install
+npm run build       # 打包到 dist/（並把 Images/ 複製進 public/）
+npm run lint        # eslint 檢查
+npm run dev         # vite build --watch + preview :5175，配 loader.local.user.js 本地開發
+```
+
+- **本地開發**：安裝 `loader.local.user.js`（改讀 `http://localhost:5175/assets/main.js`），跑 `npm run dev` 後重整 BC 即可即時看到改動。  
+  **Local dev:** install `loader.local.user.js` (reads from `http://localhost:5175/assets/main.js`), run `npm run dev`, reload BC.
+- 心形鎖（Heart Lock）已是 `src/heartlock/` 內的模組，與 AFC 一起打包，**不再是獨立 URL 腳本**。  
+  Heart Lock is now a module under `src/heartlock/`, bundled together with AFC — no longer a separate URL script.
 
 ---
 
