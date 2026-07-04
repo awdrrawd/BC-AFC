@@ -1,0 +1,168 @@
+// ════════════════════════════════════════
+//  AFC module: propose.js
+//  ① 申請流程（發起／接收）+ window.ChatRoomAFC* dialog 入口與 prerequisite
+// ════════════════════════════════════════
+
+import { STAGE, BEEP, PROPOSE_COOLDOWN_MS, PROPOSE_EXPIRE_MS, STAGE_PROMOTE_DAYS } from '../core/config.js';
+import { _lastProposalSent, pendingOutgoing, pendingIncoming, AFCLockAccessOn } from '../core/state.js';
+import { getPrivateSettings, savePrivateSettings } from '../core/settings.js';
+import { chatLocalNotice, daysSince } from '../util/util.js';
+import { t } from '../i18n/i18n.js';
+import { sendBeep } from '../net/beep.js';
+import {
+    addLover, updateLastSeen, isAFCLover, isNativeLover, targetHasAFC, getLoverEntry,
+} from './lovers.js';
+import { initiateBreakup, broadcastEvent } from './breakup.js';
+import { proposeStageUpgrade } from './stage.js';
+import { proposeRestore } from './restore.js';
+import { createProposalUI, startCountdown } from '../ui/proposal-ui.js';
+
+// ── Window prerequisite 函式 ──
+window.ChatRoomAFCCanPropose = function () {
+    const C = CurrentCharacter;
+    if (!C?.MemberNumber || C.MemberNumber === Player.MemberNumber) return false;
+    if (isAFCLover(C.MemberNumber)) return false;
+    if (isNativeLover(C.MemberNumber)) return false;
+    if (!targetHasAFC(C)) return false;
+    return true;
+};
+
+window.ChatRoomAFCCanBreakup = function () {
+    return !!(CurrentCharacter?.MemberNumber && isAFCLover(CurrentCharacter.MemberNumber));
+};
+
+// 訂婚條件：交往滿 STAGE_PROMOTE_DAYS 天
+window.ChatRoomAFCCanProposeEngage = function () {
+    if (!CurrentCharacter) return false;
+    const l = getLoverEntry(CurrentCharacter.MemberNumber);
+    if (!l || l.stage !== STAGE.DATING) return false;
+    return daysSince(l.startDate) >= STAGE_PROMOTE_DAYS;
+};
+
+// 結婚條件：訂婚滿 STAGE_PROMOTE_DAYS 天
+window.ChatRoomAFCCanProposeMarry = function () {
+    if (!CurrentCharacter) return false;
+    const l = getLoverEntry(CurrentCharacter.MemberNumber);
+    if (!l || l.stage !== STAGE.ENGAGED) return false;
+    return daysSince(l.stageDate ?? l.startDate) >= STAGE_PROMOTE_DAYS;
+};
+
+// 恢復條件：對方有我（寬鬆條件，點擊時才做完整驗證）
+// 只要我還不是對方的拓展戀人就顯示（讓點擊時決定）
+window.ChatRoomAFCCanRestore = function () {
+    const C = CurrentCharacter;
+    if (!C?.MemberNumber || C.MemberNumber === Player.MemberNumber) return false;
+    if (isNativeLover(C.MemberNumber)) return false;
+    if (!targetHasAFC(C)) return false;
+    const iHaveC = isAFCLover(C.MemberNumber);
+    const cHasMe = C.OnlineSharedSettings?.AFC?.lovers
+    ?.some(l => Number(l.memberNumber) === Number(Player.MemberNumber)) ?? false;
+    // 情況A：對方有我但我沒有對方 | 情況B：我有對方但對方沒有我
+    return (iHaveC && !cHasMe) || (!iHaveC && cHasMe);
+};
+
+window.ChatRoomAFCRestore = function () {
+    if (!CurrentCharacter) return;
+    proposeRestore(CurrentCharacter);
+};
+
+window.ChatRoomAFCPropose       = function () { if (CurrentCharacter) proposeToCharacter(CurrentCharacter); };
+window.ChatRoomAFCBreakup       = function () { if (CurrentCharacter) initiateBreakup(CurrentCharacter.MemberNumber, CurrentCharacter.Name); };
+window.ChatRoomAFCProposeEngage = function () { if (CurrentCharacter) proposeStageUpgrade(CurrentCharacter, STAGE.ENGAGED); };
+window.ChatRoomAFCProposeMarry  = function () { if (CurrentCharacter) proposeStageUpgrade(CurrentCharacter, STAGE.MARRIED); };
+
+// ── ① 申請流程 — 發起方 ──
+export function proposeToCharacter(C) {
+    const target = C.MemberNumber;
+    if (!Player.FriendList?.includes(target)) {
+        chatLocalNotice(t('notFriend', C.Name)); return;
+    }
+    if (!targetHasAFC(C))      { chatLocalNotice(t('notInstalled', C.Name)); return; }
+    if (isAFCLover(target))    { chatLocalNotice(t('alreadyAFC', C.Name)); return; }
+    if (isNativeLover(target)){ chatLocalNotice(t('alreadyBC', C.Name)); return; }
+
+    const priv = getPrivateSettings();
+    const last = _lastProposalSent[target] ?? 0;
+    if (Date.now() - last < PROPOSE_COOLDOWN_MS) {
+        const sec = Math.ceil((PROPOSE_COOLDOWN_MS - (Date.now() - last)) / 1000);
+        chatLocalNotice(t('cooldown', sec)); return;
+    }
+
+    sendBeep(target, BEEP.PROPOSE, { SenderName: Player.Name });
+
+    if (priv) {
+        _lastProposalSent[target] = Date.now();
+        savePrivateSettings(priv);
+    }
+
+    if (pendingOutgoing[target]) clearTimeout(pendingOutgoing[target].timer);
+    pendingOutgoing[target] = {
+        timer: setTimeout(() => {
+            delete pendingOutgoing[target];
+            // 若對方已接受（已成為戀人），不顯示逾時訊息
+            if (!isAFCLover(target)) chatLocalNotice(t('proposeExpired', C.Name));
+        }, PROPOSE_EXPIRE_MS),
+    };
+    chatLocalNotice(t('proposeSent', C.Name));
+}
+
+// ② 申請流程 — 接收方 UI
+export function handleIncomingProposal(senderNum, senderName) {
+    if (pendingIncoming[senderNum]) return;
+
+    // 若已是戀人（雙向確認）則不需要再提案
+    const senderChar = ChatRoomCharacter?.find(c => c.MemberNumber === senderNum);
+    const senderHasMe = senderChar?.OnlineSharedSettings?.AFC?.lovers
+    ?.some(l => Number(l.memberNumber) === Number(Player.MemberNumber)) ?? false;
+    if (isAFCLover(senderNum) || isNativeLover(senderNum)) return;  // 已是戀人
+    // （senderHasMe 只是資料丟失時的容錯，仍允許顯示申請 UI）
+
+    sendBeep(senderNum, BEEP.PROPOSE_ACK);
+
+    const uiId = `el-proposal-${senderNum}`;
+
+    const el = createProposalUI({
+        uiId,
+        title:     t('propTitle', senderName, senderNum),
+        subText:   t('timerText', 3, '00'),
+        onAccept:  () => acceptProposal(senderNum, senderName),
+        onDecline: () => cleanupIncomingUI(senderNum),
+    });
+    if (!el) return;
+
+    const iv = startCountdown(uiId, `${uiId}-sub`, () => cleanupIncomingUI(senderNum),
+                              t('proposeExpired', senderName));
+    pendingIncoming[senderNum] = { timer: iv, uiId };
+}
+
+export function cleanupIncomingUI(num) {
+    const p = pendingIncoming[num];
+    if (!p) return;
+    clearInterval(p.timer);
+    document.getElementById(p.uiId)?.remove();
+    delete pendingIncoming[num];
+}
+
+function acceptProposal(senderNum, senderName) {
+    cleanupIncomingUI(senderNum);
+    addLover(senderNum, senderName, STAGE.DATING);
+    AFCLockAccessOn.add(senderNum);
+    updateLastSeen(senderNum);
+    broadcastEvent('becameLovers', senderNum, senderName);
+    sendBeep(senderNum, BEEP.ACCEPT, { ReceiverName: Player.Name });
+}
+
+export function handleAccepted(fromNum, receiverName) {
+    if (pendingOutgoing[fromNum]) {
+        clearTimeout(pendingOutgoing[fromNum].timer);
+        delete pendingOutgoing[fromNum];
+    }
+    if (!isAFCLover(fromNum)) {
+        addLover(fromNum, receiverName, STAGE.DATING);
+        AFCLockAccessOn.add(fromNum);
+        updateLastSeen(fromNum);
+        chatLocalNotice(t('proposeOK', receiverName));
+    }
+    // 回應 ACCEPT_ACK
+    sendBeep(fromNum, BEEP.ACCEPT_ACK, { AckNumber: Player.MemberNumber });
+}
