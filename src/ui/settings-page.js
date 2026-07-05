@@ -579,9 +579,8 @@ export const AFCSettingsUI = (() => {
 
 export function registerSettingsUI() {
     if (typeof PreferenceRegisterExtensionSetting !== "function") return;
-    // ButtonText 在登入後呼叫，此時 TranslationLanguage 已設定，t() 能正確翻譯
-    const _lang = detectLang();
-    const btnText = (_lang === 'TW' || _lang === 'CN') ? "拓展戀人設定" : "AFC Settings";
+    // ButtonText 在登入後呼叫，此時 TranslationLanguage 已設定，t() 能正確翻譯（全語言，非只 CJK/EN）
+    const btnText = t('prefButton');
     PreferenceRegisterExtensionSetting({
         Identifier: "AFC",
         ButtonText:  btnText,

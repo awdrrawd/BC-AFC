@@ -8,6 +8,7 @@ import { MOD_VERSION } from "../../core/config.js";
 
 export const AFC_UI = {
     EN: {
+        prefButton:     () => `AFC Settings`,
         // ── Notifications ─────────────────────────────────────
         notFriend:      (n) => `Please add ${n} as a friend first, then re-submit.`,
         notInstalled:   (n) => `${n} doesn't have the plugin installed.`,
@@ -112,6 +113,7 @@ export const AFC_UI = {
         dbMismatchDiff:   () => `Your online extended-lover list differs from the local backup. Open AFC Settings → Restore to reconcile manually; nothing is overwritten automatically.`,
     },
     TW: {
+        prefButton:     () => `拓展戀人設定`,
         notFriend:      (n) => `請先添加 ${n} 為好友後重新提交申請。`,
         notInstalled:   (n) => `${n} 尚未安裝插件，無法申請。`,
         alreadyAFC:      (n) => `${n} 已是你的拓展戀人。`,
@@ -209,6 +211,9 @@ export const AFC_UI = {
         restoreOKMsg:     (n) => `已復原 ${n} 筆戀人資料`,
         dbMismatchLoss:   () => `偵測到拓展戀人資料可能丟失（線上資料為空，但本機存有備份）。請至「拓展戀人設定 → 復原」確認要還原，或忽略（若這是新裝置）。`,
         dbMismatchDiff:   () => `偵測到線上拓展戀人資料與本機備份不一致。請至「拓展戀人設定 → 復原」自行確認，系統不會自動覆蓋任何一方。`,
+    },
+    CN: {
+        prefButton:     () => `拓展恋人设置`,
     },
 };
 // Simplified Chinese inherits Traditional Chinese
