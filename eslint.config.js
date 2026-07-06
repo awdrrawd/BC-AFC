@@ -19,6 +19,7 @@ const bcGlobals = [
   'ElementCreateInput', 'ElementValue', 'ElementRemove', 'ElementPosition',
   'GameVersion', 'Localization', 'AssetGroup', 'Asset', 'AssetGroupGet', 'InventoryGet',
   'DialogCanUnlock', 'TextGet', 'ActivitySetArousal', 'OrgasmStage',
+  'ActivityVibratorLevel', 'ActivityTimerProgress', 'ActivityChatRoomArousalSync',
   'CharacterRefresh', 'CharacterLoadCanvas', 'CharacterSetFacialExpression',
   'FriendListIDs', 'FriendListLoadFriendList', 'ChatRoomCharacterViewDraw', 'ChatRoomMenuDraw',
   'ChatRoomLeave', 'ChatRoomRun', 'Commands', 'CurrentTime', 'CommonTime', 'CommonGetFont',

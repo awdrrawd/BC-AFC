@@ -8,6 +8,7 @@ import { TAB_OVERVIEW } from './config.js';
 export const state = {
     initialized: false, assetCreated: false, modApi: null,
     vibeTimer: null, vibeCycle: 0, lastIntegritySync: 0,
+    vibeAnimTimer: null, vibeAnimUntil: 0, vibeAnimLevel: 0,
     _lastRestoreMsg: 0, _restoring: false, _unlocking: false,
     _inServerSync: false, _sendingResist: false, _timerUnlocking: false,
     panel: {
