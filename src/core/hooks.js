@@ -95,16 +95,21 @@ export function setupHooks() {
     // 完全不需依賴任何第三方工具的 API（如 bcx.inBcxSubscreen）。原生第二層畫面
     // 則另以 InformationSheetSecondScreen 判斷。
     modApi.hookFunction("InformationSheetRun", 7, (args, next) => {
-        // 面板展開且滑鼠落在面板範圍內 → next() 期間暫時把滑鼠座標移出畫面，
-        //  讓面板底下的原生元素不觸發 hover/tooltip（面板視為模態，避免戀人資訊
-        //  被底層 tooltip 遮住）。next() 後（含例外路徑）務必還原滑鼠座標。
+        // 面板展開且滑鼠落在「面板矩形內」→ next() 期間把滑鼠移出畫面，讓面板「後方」
+        //  priority < 7 的原生關係文字等不觸發 hover/tooltip（避免戀人資訊被底層 tooltip
+        //  遮住）。只作用在面板範圍內：面板外（角色、右側按鈕等）hover 一切照常。
+        //  我們自己的面板/按鈕在 next() 後（滑鼠已還原）才畫，不受影響；FCM 疊在戀人
+        //  條目上的按鈕請掛 priority > 7（本 hook 之外、滑鼠已還原）→ 正常可互動。
+        //  next() 後（含例外路徑）務必還原滑鼠座標。
+        const _panelModal = profilePanelOpen && CurrentScreen === "InformationSheet"
+            && !(typeof InformationSheetSecondScreen !== 'undefined' && InformationSheetSecondScreen)
+            && MouseX >= PROFILE_PANEL_X && MouseX <= PROFILE_PANEL_X + PROFILE_PANEL_W
+            && MouseY >= PROFILE_PANEL_Y && MouseY <= PROFILE_PANEL_Y + PROFILE_PANEL_H;
         let _mx, _my, _masked = false;
         try {
             setOwnerTextY(null);
             setInInfoSheet(true);
-            if (profilePanelOpen && CurrentScreen === "InformationSheet"
-                && MouseX >= PROFILE_PANEL_X && MouseX <= PROFILE_PANEL_X + PROFILE_PANEL_W
-                && MouseY >= PROFILE_PANEL_Y && MouseY <= PROFILE_PANEL_Y + PROFILE_PANEL_H) {
+            if (_panelModal) {
                 _mx = MouseX; _my = MouseY; MouseX = -9999; MouseY = -9999; _masked = true;
             }
             const r = next(args);
@@ -135,16 +140,20 @@ export function setupHooks() {
             return next(args);
         }
     });
-    modApi.hookFunction("InformationSheetClick", 5, (args, next) => {
+    // 優先序 7（＞ FCM 主按鈕的 5）：面板展開時，落在「面板矩形內」的點擊由本 hook
+    //  吃掉（不呼叫 next）→ 點不到面板後方的原生關係等；面板外（角色、右側按鈕、
+    //  FCM 主按鈕等）照常傳遞。FCM 疊在戀人條目上的按鈕請掛 priority > 7，會在本
+    //  hook 之前處理 → 正常可點。
+    modApi.hookFunction("InformationSheetClick", 7, (args, next) => {
         try {
-            // 面板展開且點擊落在面板內（非我們的按鈕）→ 視為模態：吃掉點擊，
-            //  不關閉面板、也不傳遞給底層元素（避免誤選底下的原生關係等）。
-            if (profilePanelOpen && CurrentScreen === "InformationSheet"
+            const panelModal = profilePanelOpen && CurrentScreen === "InformationSheet"
+                && !(typeof InformationSheetSecondScreen !== 'undefined' && InformationSheetSecondScreen);
+            if (panelModal
                 && MouseIn(PROFILE_PANEL_X, PROFILE_PANEL_Y, PROFILE_PANEL_W, PROFILE_PANEL_H)
                 && !MouseIn(PROFILE_BTN_X, PROFILE_BTN_Y, PROFILE_BTN_W, PROFILE_BTN_H)) {
-                return;   // 模態：消化點擊
+                return;   // 面板區塊內：消化點擊，不傳遞給後方元素
             }
-            // 任何非我們按鈕的點擊都關閉面板（包含點 BCX 按鈕）
+            // 面板外的點擊（非我們的按鈕）→ 收起面板（維持原本行為），但仍照常傳遞。
             if (!MouseIn(PROFILE_BTN_X, PROFILE_BTN_Y, PROFILE_BTN_W, PROFILE_BTN_H)) {
                 setProfilePanelOpen(false);
             }
