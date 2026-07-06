@@ -20,7 +20,7 @@ import { setupCommands } from './commands.js';
 import { registerSettingsUI } from '../ui/settings-page.js';
 import { syncWithOnlineLovers } from '../net/online.js';
 import { checkAutoBreakup, isAFCLover, getLoverEntry } from '../relations/lovers.js';
-import { getLoverRegions } from '../ui/profile.js';
+import { getLoverRegions, isPanelOpen, getPanelRect } from '../ui/profile.js';
 import { requestRoomNamesFromLovers } from '../net/roomname.js';
 import { unregisterAllSocketListeners } from './socket.js';
 import { _clearAck } from '../net/beep.js';
@@ -133,6 +133,10 @@ function completeInit() {
             getLovers:        () => [...(getSharedSettings()?.lovers ?? [])],
             /** 我是否允許主人使用心鎖 */
             canOwnerLock:     () => getPrivateSettings()?.enableOwnerLock ?? false,
+            /** 「更多戀人」面板目前是否展開中（且在角色資料頁）→ boolean */
+            isProfilePanelOpen: () => isPanelOpen(),
+            /** 面板容器矩形 { x, y, w, h }（BC 2000×1000 座標；模態範圍/繪製邊界）*/
+            getProfilePanelRect: () => getPanelRect(),
             /** Profile「更多戀人」面板中各條目的螢幕矩形＋資料（供其他插件疊按鈕/快速搜尋；
              *  面板未展開回傳 []）：[{ memberNumber, name, stage, col, row, x, y, w, h }] */
             getProfileLoverRegions: () => getLoverRegions(),

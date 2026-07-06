@@ -17,6 +17,16 @@ import { isOnline } from '../net/online.js';
 //  透過 window.Liko.AFC.getProfileLoverRegions() 對外公開（見 core-init.js）。
 let _loverRegions = [];
 
+/** 「更多戀人」面板目前是否展開中（且在角色資料頁）。 */
+export function isPanelOpen() {
+    return profilePanelOpen && CurrentScreen === "InformationSheet";
+}
+
+/** 面板容器矩形（BC 2000×1000 座標系）。供外部插件知道模態範圍/繪製邊界。 */
+export function getPanelRect() {
+    return { x: PROFILE_PANEL_X, y: PROFILE_PANEL_Y, w: PROFILE_PANEL_W, h: PROFILE_PANEL_H };
+}
+
 /** 目前拓展戀人面板中各條目的位置與資料（唯讀複本）。面板未展開時回傳 []。 */
 export function getLoverRegions() {
     if (!profilePanelOpen || CurrentScreen !== "InformationSheet") return [];
