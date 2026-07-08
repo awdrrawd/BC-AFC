@@ -20,7 +20,7 @@ if (window.Liko.AFC) {
     console.warn('🐈‍⬛ [AFC] ⚠️ 已載入，略過重複匯入。');
 } else {
     // Reserve the flag immediately so a second loader instance bails out here.
-    window.Liko.AFC = 'loading';
+    //window.Liko.AFC = 'loading';
     import(`https://awdrrawd.github.io/BC-AFC/assets/main.js?v=${Date.now()}`)
         .catch(e => console.error('🐈‍⬛ [AFC] 載入失敗:', e));
 }
