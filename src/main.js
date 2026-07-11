@@ -14,9 +14,17 @@
 import { MOD_VERSION } from './core/config.js';
 import { initialize } from './core/core-init.js';
 
-// 對外唯一入口：window.Liko.AFC（AFC + Heart Lock 合併於同一物件；loader 先設 'loading'）
-//  登入完成後由 core-init 填入戀人 API，heartlock/init 把心形鎖 API 掛在其下的 .heartLock。
 window.Liko = window.Liko ?? {};
-window.Liko.AFC = { version: MOD_VERSION };
+// Captured before we assign window.Liko.AFC below, so it's true on any
+// duplicate load regardless of how the second copy got in.
+const AFC_ALREADY_LOADED = !!window.Liko.AFC;
 
-initialize();
+if (AFC_ALREADY_LOADED) {
+    console.warn('🐈‍⬛ [AFC] ⚠️ Already loaded, skipping duplicate import.');
+} else {
+    // 對外唯一入口：window.Liko.AFC（AFC + Heart Lock 合併於同一物件；loader 先設 'loading'）
+    //  登入完成後由 core-init 填入戀人 API，heartlock/init 把心形鎖 API 掛在其下的 .heartLock。
+    window.Liko.AFC = { version: MOD_VERSION };
+
+    initialize();
+}

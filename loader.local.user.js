@@ -17,7 +17,8 @@ window.Liko = window.Liko ?? {};
 if (window.Liko.AFC) {
     console.warn('🐈‍⬛ [AFC] ⚠️ 已載入，略過重複匯入。');
 } else {
-    window.Liko.AFC = 'loading';
+    // Reserve the flag immediately so a second loader instance bails out here.
+    //window.Liko.AFC = 'loading';
     import(`http://localhost:5175/assets/main.js?v=${Date.now()}`)
         .catch(e => console.error('🐈‍⬛ [AFC] 本地載入失敗（vite preview 有開嗎？）:', e));
 }
