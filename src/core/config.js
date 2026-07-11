@@ -78,5 +78,5 @@ export const LEGACY_OK_VER = '0.6.1';
 // localStorage 本地存底前綴
 export const LS_PREFIX = "AFC_DB::";
 
-// 自架圖片（BC-AFC 倉庫，raw 直連，推送即生效）
-export const AFC_SETTINGS_IMAGE = "https://raw.githubusercontent.com/awdrrawd/BC-AFC/main/Images/AFC-ICON.png";
+// 自架圖片（BC-AFC 倉庫，經 GitHub Pages 部署，CDN 快取、避免 raw 熱連結限速）
+export const AFC_SETTINGS_IMAGE = "https://awdrrawd.github.io/BC-AFC/AFC-ICON.png";

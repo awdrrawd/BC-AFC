@@ -10,8 +10,8 @@ export const HSLOCK_NAME      = 'HighSecurityPadlock';
 export const MOD_NAME         = 'HeartLockBC';
 export const EXT_KEY          = 'AFC_HeartLock';
 export const EXT_KEY_OLD      = 'HeartLock';   // 舊 key，搬遷後刪除（短期輔助，未來移除）
-export const HEARTKEY_IMAGE   = 'https://raw.githubusercontent.com/awdrrawd/BC-AFC/main/Images/AFC-Heart_Key.png';
-export const HEARTLOCK_IMAGE  = 'https://raw.githubusercontent.com/awdrrawd/BC-AFC/main/Images/AFC-Heart_Lock.png';
+export const HEARTKEY_IMAGE   = 'https://awdrrawd.github.io/BC-AFC/AFC-Heart_Key.png';
+export const HEARTLOCK_IMAGE  = 'https://awdrrawd.github.io/BC-AFC/AFC-Heart_Lock.png';
 export const VIBE_INTERVAL_MS = 5000;
 export const MAX_TEXT         = 500; //note最大字數
 export const VIBE_MSG_CYCLE   = 12;  // 12 × 5s = 60 秒發一次震動訊息
