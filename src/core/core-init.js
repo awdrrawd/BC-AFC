@@ -29,7 +29,7 @@ import { L10N } from '../i18n/l10n.js';
 import { AFC_ACTIONS } from '../i18n/strings/afc-actions.js';
 
 export async function initialize() {
-    console.log(`🐈‍⬛ [AFC] ⌛ 啟動中... v${MOD_VERSION}`);
+    console.log(`🐈‍⬛ [AFC] ✅ v${MOD_VERSION} loaded`);
 
     // ── 階段一：載入期（不需要 BC 遊戲狀態）──────────────────
     // 1. 載入 Toast 系統
@@ -109,7 +109,7 @@ function completeInit() {
         if (typeof modApi.onUnload === 'function') modApi.onUnload(() => cleanup());
 
         setInitialized(true);
-        console.log(`🐈‍⬛ [AFC] ✅ 初始化完成 v${MOD_VERSION} (${detectLang()})`);
+        console.log(`🐈‍⬛ [AFC] ✅ v${MOD_VERSION} (${detectLang()}) 初始化完成`);
 
         // ── 對外 API：AFC 與 Heart Lock 合併於「同一個」window.Liko.AFC ──
         //   Heart Lock 的 API 是其下的子節點 window.Liko.AFC.heartLock（由 heartlock/init.js 掛上）。
