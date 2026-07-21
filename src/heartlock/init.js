@@ -14,23 +14,6 @@ import { patchFunctions } from './hooks.js';
 import { ensureStorage, reconcileHLStorage, saveAndSync } from './storage.js';
 import { startVibeTimer } from './vibe.js';
 import { startTimerCheck } from './timer.js';
-import { L10N } from '../i18n/l10n.js';
-import { HEARTLOCK_ACTIONS } from '../i18n/strings/heartlock-actions.js';
-import { HEARTLOCK_UI } from '../i18n/strings/heartlock-ui.js';
-
-// 把 lang→key 的翻譯表轉成引擎需要的 key→lang 格式。
-//   { ZH:{ tabOverview:'總覽' }, EN:{ tabOverview:'Overview' } }
-//   → { tabOverview:{ ZH:'總覽', EN:'Overview' } }
-function _langKeyedToKeyLang(langKeyed) {
-    const out = {};
-    for (const lang of Object.keys(langKeyed || {})) {
-        const block = langKeyed[lang] || {};
-        for (const key of Object.keys(block)) {
-            (out[key] || (out[key] = {}))[lang] = block[key];
-        }
-    }
-    return out;
-}
 
 // 備援：若未取得共用 modApi，才自行註冊
 function getModApi() {
@@ -52,12 +35,8 @@ function getModApi() {
 export async function initHeartLock(sharedModApi) {
     if (state.initialized) return;
 
-    // 註冊心形鎖文本到共用 L10N 引擎的 'hl' 命名空間：
-    //   廣播/系統訊息（send 用）＋ 本地 UI（T()→L10N.t 用），鍵不衝突、合併一份。
-    //   引擎表格結構為 key→lang（{ key: { EN, ZH, … } }）。actions 已是此格式；
-    //   UI 檔為方便翻譯採 lang→key（{ ZH:{…}, EN:{…} }），註冊前先轉置。
-    L10N.register('hl', HEARTLOCK_ACTIONS);
-    L10N.register('hl', _langKeyedToKeyLang(HEARTLOCK_UI));
+    // 心形鎖文本（'hl' 命名空間）已由 AFC core-init 的 registerFallback()（內建後備）
+    //  與 ensureAfcI18n()（執行期 fetch 根目錄 Translation/<LANG>.js）一併註冊，這裡不再重複註冊。
 
     // Phase 1：取得 modApi（優先用 AFC 傳入的共用 modApi）
     if (sharedModApi) state.modApi = sharedModApi;

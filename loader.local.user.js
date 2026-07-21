@@ -1,8 +1,7 @@
 // ==UserScript==
-// @name         Abundantia Florum ─Chromatica─ - 本地版
-// @name:zh      繁戀如花 ─繽紛─ - 本地開發
+// @name         本地測試 - AFC
 // @namespace    https://github.com/awdrrawd/BC-AFC
-// @version      0.7.0
+// @version      0.1
 // @description  AFC 本地開發載入器
 // @author       莉柯莉絲(Likolisu)
 // @supportURL   https://github.com/awdrrawd/BC-AFC
@@ -17,11 +16,6 @@ window.Liko = window.Liko ?? {};
 if (window.Liko.AFC) {
     console.warn('🐈‍⬛ [AFC] ⚠️ 已載入，略過重複匯入。');
 } else {
-    // Reserve the flag immediately so a second loader instance bails out here.
-    //window.Liko.AFC = 'loading';
     import(`http://localhost:5175/assets/main.js?v=${Date.now()}`)
         .catch(e => console.error('🐈‍⬛ [AFC] 本地載入失敗（vite preview 有開嗎？）:', e));
 }
-// Local dev loader: reads the bundle from the local vite preview server.
-// The ?v= timestamp busts the cache so every reload picks up the latest build.
-// Run ` npm run dev ` , then reload BC.

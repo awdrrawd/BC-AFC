@@ -11,7 +11,8 @@ import {
 } from './state.js';
 import { loadToastSystem, toast } from '../util/toast.js';
 import { waitFor } from '../util/util.js';
-import { t, detectLang } from '../i18n/i18n.js';
+import { t, detectLang, ensureAfcI18n } from '../i18n/i18n.js';
+import { registerFallback } from '../i18n/fallback.js';
 import { legacyCleanupOnce, _migrateOldBackupToDB } from './legacy.js';
 import { getSharedSettings, getPrivateSettings, syncLockPermsToShared } from './settings.js';
 import { reconcileLocalDB } from './storage.js';
@@ -26,7 +27,6 @@ import { unregisterAllSocketListeners } from './socket.js';
 import { _clearAck } from '../net/beep.js';
 import { initHeartLock } from '../heartlock/init.js';
 import { L10N } from '../i18n/l10n.js';
-import { AFC_ACTIONS } from '../i18n/strings/afc-actions.js';
 
 export async function initialize() {
     console.log(`🐈‍⬛ [AFC] ✅ v${MOD_VERSION} loaded`);
@@ -48,9 +48,10 @@ export async function initialize() {
         repository: "https://github.com/awdrrawd/BC-AFC",
     }));
 
-    // 共用 L10N 引擎：註冊 AFC 事件文本 + 安裝唯一的接收端 hook
-    //  （bcModSdk 已是共用模組體系，不需另外對外公開我們的 modApi）
-    L10N.register('afc', AFC_ACTIONS);
+    // 共用 L10N 引擎：先註冊內建後備（TW+EN，afc + hl 兩命名空間），再啟動執行期 fetch
+    //  抓根目錄 Translation/<LANG>.js 的完整字庫覆蓋後備（fire-and-forget，後備確保載入前不會顯示 raw key）。
+    registerFallback();
+    ensureAfcI18n();
     L10N.install(modApi);
 
     // 啟動 Heart Lock（bundle 內模組，共用 AFC 的 modApi）
@@ -143,7 +144,7 @@ function completeInit() {
         });
 
         // Toast 通知成功
-        toast(t('toastLoaded'), 5000, "#C2185B");
+        toast(t('toastLoaded', MOD_VERSION), 5000, "#C2185B");
 
     } catch (e) {
         console.error("🐈‍⬛ [AFC] ❌ 初始化失敗:", e);

@@ -22,3 +22,6 @@ function copyInto(srcDir, dstDir, filter) {
 
 mkdirSync(root + 'public', { recursive: true });
 copyInto('Images/', 'public/', n => /\.png$/i.test(n));
+// 翻譯字庫：一國一檔（含 afc + hl 兩命名空間），執行期由 AFC 從 Pages 的 /Translation/ fetch。
+//  翻譯者改 Translation/<LANG>.js 即可，build 會複製到 public/Translation/ 部署。
+copyInto('Translation/', 'public/Translation/', n => n.endsWith('.js'));
