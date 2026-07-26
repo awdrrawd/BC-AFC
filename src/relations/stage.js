@@ -101,10 +101,10 @@ function acceptStageProposal(senderNum, senderName, newStage, key, uiId) {
 
 export function handleAcceptedStage(fromNum, receiverName, newStage) {
     const key = `${fromNum}_${newStage}`;
-    if (pendingStageProp[key]) {
-        clearTimeout(pendingStageProp[key].timer);
-        delete pendingStageProp[key];
-    }
+    // 只認自己確實送出過升格申請的接受回覆；無對應 pending 即忽略（防偽造遠端升格）
+    if (!pendingStageProp[key]) return;
+    clearTimeout(pendingStageProp[key].timer);
+    delete pendingStageProp[key];
     promoteStage(fromNum, newStage);
     // A（發起方）看到：B 接受了你的 [訂婚] 申請
     chatLocalNotice(t('stageOK', receiverName, stageLabel(newStage)));

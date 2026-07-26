@@ -93,10 +93,10 @@ function acceptRestore(senderNum, senderName, stage, startDate, stageDate) {
 }
 
 export function handleRestoreAccepted(fromNum, receiverName, stage, startDate, stageDate) {
-    if (pendingRestoreOut[fromNum]) {
-        clearTimeout(pendingRestoreOut[fromNum].timer);
-        delete pendingRestoreOut[fromNum];
-    }
+    // 只認自己確實送出過恢復申請的接受回覆；無對應 pending 即忽略（防偽造）
+    if (!pendingRestoreOut[fromNum]) return;
+    clearTimeout(pendingRestoreOut[fromNum].timer);
+    delete pendingRestoreOut[fromNum];
     // Case A：我是丟失方，對方回傳資料，現在 addLover
     if (!isAFCLover(fromNum)) {
         const s = getSharedSettings();

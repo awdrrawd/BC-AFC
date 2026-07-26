@@ -452,10 +452,6 @@ const HL_FALLBACK = {
         "TW": "取消",
         "EN": "Cancel"
     },
-    "unlockPending": {
-        "TW": "已發送解鎖請求給鎖主，請等待…",
-        "EN": "Unlock request sent to owner, please wait…"
-    },
     "noteTitle": {
         "TW": "♥ 愛情筆記 ♥",
         "EN": "♥ Love Note ♥"

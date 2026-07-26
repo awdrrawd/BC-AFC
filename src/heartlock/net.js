@@ -4,11 +4,11 @@
 // ════════════════════════════════════════
 
 import { HEARTLOCK_NAME } from './config.js';
-import { clone, log } from './util.js';
+import { clone } from './util.js';
 import { state } from './state.js';
 import { sendLocalizedAction } from '../i18n/l10n.js';
 import { ensureStorage, getOrCreateConfig, deleteConfig, saveAndSync } from './storage.js';
-import { hideNoteTA } from './note.js';
+import { isMemberAllowedByMe } from './permissions.js';
 import { hlRefreshCurrentTab } from './panel.js';
 
 export function sendSettingsChange(character, groupName) {
@@ -88,6 +88,8 @@ export function handleHidden(data) {
         const e = data.Dictionary?.find(d => d.Tag === 'HeartLockApply');
         if (!e || e.Target !== Player.MemberNumber) return;
         if (Number(e.Owner) !== Number(data.Sender)) return;
+        // 發送者必須是本人允許施鎖的關係（主人/戀人），否則拒絕認領此鎖
+        if (!isMemberAllowedByMe(data.Sender)) return;
         const existing = Player.HeartLock?.padlocks?.[e.Group];
         if (existing && Number(existing.owner) !== Number(data.Sender)) return;
         const cfg = getOrCreateConfig(e.Group);
@@ -107,54 +109,18 @@ export function handleHidden(data) {
         const e = data.Dictionary?.find(d => d.Tag === 'HeartLock::Update');
         if (!e || e.Target !== Player.MemberNumber) return;
         if (!ensureStorage()) return;
-        const p = Player.HeartLock.padlocks;
-        if (p[e.Group]) { Object.assign(p[e.Group], e.Config); saveAndSync(); }
+        const cfg = Player.HeartLock.padlocks[e.Group];
+        // 只有掛鎖者（owner）本人能改鎖設定（計時/震動/高潮模式/筆記等）
+        if (cfg && Number(cfg.owner) === Number(data.Sender)) { Object.assign(cfg, e.Config); saveAndSync(); }
     }
     if (data.Content === 'HeartLock::Remove') {
         const e = data.Dictionary?.find(d => d.Tag === 'HeartLock::Remove');
         if (!e || e.Target !== Player.MemberNumber) return;
-        deleteConfig(e.Group);
-    }
-    // 非 owner 的 EL/BC 戀人請求解鎖
-    // owner 收到後檢查 Requester 是否有權，若有則替代執行 InventoryUnlock
-    if (data.Content === 'HeartLock::Unlock::Done') {
-        const e = data.Dictionary?.find(d => d.Tag === 'HeartLock::Unlock::Done');
-        if (!e || e.Target !== Player.MemberNumber) return;
-        // 解鎖已完成，清除 pending 並關閉面板
-        state.panel.unlockPending = false;
-        hideNoteTA();
-        state.panel.noteEditing = false;
-        state.panel.ctlEditing  = false;
-        DialogFocusItem = null;
-    }
-    if (data.Content === 'HeartLock::Unlock::Request') {
-        const e = data.Dictionary?.find(d => d.Tag === 'HeartLock::Unlock::Request');
-        if (!e) return;
         if (!ensureStorage()) return;
-        const gn  = e.Group;
-        const cfg = Player.HeartLock?.padlocks?.[gn];
-        if (!cfg || Number(cfg.owner) !== Number(Player.MemberNumber)) return;
-        const requester = e.Requester;
-        const wearerNum = e.WearerMemberNumber;
-        const wearer    = ChatRoomCharacter?.find(c => c.MemberNumber === wearerNum);
-        if (!wearer) return;
-        const wearerAFCLovers = wearer.OnlineSharedSettings?.AFC?.lovers ?? [];
-        const isAFCLover = wearerAFCLovers.some(l => Number(l.memberNumber) === Number(requester));
-        const isBCLovr   = wearer.Lovership?.some(l => Number(l.MemberNumber) === Number(requester)) ?? false;
-        if (!isAFCLover && !isBCLovr) return;
-        try {
-            state._unlocking = true;
-            InventoryUnlock?.(wearer, gn);
-            state._unlocking = false;
-            ChatRoomCharacterUpdate?.(wearer);
-            deleteConfig(gn);
-            log(`HeartLock::Unlock::Request: 已替 #${requester} 解鎖 ${gn}`);
-            try {
-                ServerSend('ChatRoomChat', {
-                    Type: 'Hidden', Content: 'HeartLock::Unlock::Done',
-                    Dictionary: [{ Tag: 'HeartLock::Unlock::Done', Target: requester, Group: gn }],
-                });
-            } catch {}
-        } catch { state._unlocking = false; }
+        const cfg = Player.HeartLock?.padlocks?.[e.Group];
+        if (!cfg) return;
+        // owner 本人、或本人授權解鎖的關係（主人/戀人，見解鎖分頁直接解鎖流程）才可移除
+        if (Number(cfg.owner) === Number(data.Sender) || isMemberAllowedByMe(data.Sender))
+            deleteConfig(e.Group);
     }
 }

@@ -4,19 +4,12 @@
 //  （筆記 textarea 本身由 tabs.js 的 hlTabNote 就地建立於 DOM 面板內）
 // ════════════════════════════════════════
 
-import { NOTE_OVERLAY_ID, NOTE_TA_ID, CC } from './config.js';
-import { state } from './state.js';
+import { NOTE_OVERLAY_ID, CC } from './config.js';
 import { T } from './i18n.js';
 import { hlEl } from './util.js';
 
 export function closeNoteOverlay() {
     document.getElementById(NOTE_OVERLAY_ID)?.remove();
-}
-
-export function hideNoteTA() {
-    const el = document.getElementById(NOTE_TA_ID);
-    if (el) { el.style.display = 'none'; el.value = ''; }
-    state.panel.noteDraft = null;
 }
 
 // ── 筆記圖片解析 ──

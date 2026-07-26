@@ -68,3 +68,27 @@ export function isAllowedToUnlock(C, cfg) {
     if (C.Lovership?.some(l => Number(l.MemberNumber) === meNum)) return true;
     return false;
 }
+
+/**
+ * 穿戴者（Player）視角：判斷 memberNumber 是否為 Player 允許施鎖/解鎖的關係
+ * （主人需 enableOwnerLock；戀人需 enableAFCLock）。
+ * 用於「接收端」驗證遠端鎖指令的發送者，避免同房任意人偽造 owner 身分。
+ * 讀 Player 自己的設定（本地權威），不受他人 P2P 廣播污染。
+ */
+export function isMemberAllowedByMe(memberNumber) {
+    if (memberNumber == null) return false;
+    const n = Number(memberNumber);
+    const lockPerms = Player.OnlineSharedSettings?.AFC?.lockPerms;
+    // 主人（需 enableOwnerLock）
+    if (lockPerms?.enableOwnerLock &&
+        Player.Ownership?.MemberNumber != null &&
+        Number(Player.Ownership.MemberNumber) === n) return true;
+    // 戀人需 enableAFCLock
+    if (!lockPerms?.enableAFCLock) return false;
+    // AFC 戀人
+    const afcLovers = Player.OnlineSharedSettings?.AFC?.lovers ?? [];
+    if (afcLovers.some(l => Number(l.memberNumber) === n)) return true;
+    // BC 原生戀人
+    if (Player.Lovership?.some(l => Number(l.MemberNumber) === n)) return true;
+    return false;
+}

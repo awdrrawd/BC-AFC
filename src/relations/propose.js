@@ -111,11 +111,7 @@ export function handleIncomingProposal(senderNum, senderName) {
     if (pendingIncoming[senderNum]) return;
 
     // 若已是戀人（雙向確認）則不需要再提案
-    const senderChar = ChatRoomCharacter?.find(c => c.MemberNumber === senderNum);
-    const senderHasMe = senderChar?.OnlineSharedSettings?.AFC?.lovers
-    ?.some(l => Number(l.memberNumber) === Number(Player.MemberNumber)) ?? false;
     if (isAFCLover(senderNum) || isNativeLover(senderNum)) return;  // 已是戀人
-    // （senderHasMe 只是資料丟失時的容錯，仍允許顯示申請 UI）
 
     sendBeep(senderNum, BEEP.PROPOSE_ACK);
 
@@ -153,10 +149,11 @@ function acceptProposal(senderNum, senderName) {
 }
 
 export function handleAccepted(fromNum, receiverName) {
-    if (pendingOutgoing[fromNum]) {
-        clearTimeout(pendingOutgoing[fromNum].timer);
-        delete pendingOutgoing[fromNum];
-    }
+    // 只認自己確實送出過申請的接受回覆；無對應 pending 即視為偽造/未經請求的 ACCEPT，忽略。
+    // （申請有效期 PROPOSE_EXPIRE_MS = 3 分鐘，ACCEPT 走可靠傳輸，合法回覆必在期內到達）
+    if (!pendingOutgoing[fromNum]) return;
+    clearTimeout(pendingOutgoing[fromNum].timer);
+    delete pendingOutgoing[fromNum];
     if (!isAFCLover(fromNum)) {
         addLover(fromNum, receiverName, STAGE.DATING);
         AFCLockAccessOn.add(fromNum);
