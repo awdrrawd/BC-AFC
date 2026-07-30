@@ -267,7 +267,8 @@ export function patchFunctions(modApi) {
         let anyRestored = false;
         for (const gn of Object.keys(padlocks)) {
             const cfg = padlocks[gn], item = InventoryGet?.(Player, gn);
-            const broken = !item || item.Property?.Name !== HEARTLOCK_NAME || item.Property?.LockedBy !== HSLOCK_NAME;
+            const broken = !item || (cfg.assetName && item.Asset?.Name !== cfg.assetName)
+                || item.Property?.Name !== HEARTLOCK_NAME || item.Property?.LockedBy !== HSLOCK_NAME;
             if (broken) {
                 // 相依物件未載入而暫掛的部位：不重試、不計入防作弊、不洗版
                 if (_pendingRestore.has(gn)) continue;
@@ -319,7 +320,8 @@ export function patchFunctions(modApi) {
         let anyRestored = false;
         for (const gn of Object.keys(padlocks)) {
             const cfg = padlocks[gn], item = InventoryGet?.(Player, gn);
-            const broken = !item || item.Property?.Name !== HEARTLOCK_NAME || item.Property?.LockedBy !== HSLOCK_NAME;
+            const broken = !item || (cfg.assetName && item.Asset?.Name !== cfg.assetName)
+                || item.Property?.Name !== HEARTLOCK_NAME || item.Property?.LockedBy !== HSLOCK_NAME;
             if (broken) {
                 if (_pendingRestore.has(gn)) continue;
                 if (sourceMember != null && Number(sourceMember) === Number(cfg.owner)) { deleteConfig(gn); continue; }

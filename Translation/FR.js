@@ -484,6 +484,9 @@
     },
     "unlockDone": {
         "FR": "{0} a déverrouillé le {2} de {1}."
+    },
+    "dbRestoreAnomaly": {
+        "FR": "⚠ Les données en ligne du HeartLock de {0} ont été anormalement perdues et restaurées depuis la sauvegarde locale pour : {1}. Si ce n'était pas vous, veuillez vérifier avec le propriétaire du verrou."
     }
 });
 })();

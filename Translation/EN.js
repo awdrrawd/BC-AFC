@@ -484,6 +484,9 @@
     },
     "unlockDone": {
         "EN": "{0} unlocked the {2} on {1}."
+    },
+    "dbRestoreAnomaly": {
+        "EN": "⚠ {0}'s HeartLock online data was abnormally lost and has been restored from the local backup for: {1}. If this was not you, please check with the lock owner."
     }
 });
 })();

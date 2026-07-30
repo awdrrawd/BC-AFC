@@ -484,6 +484,9 @@
     },
     "unlockDone": {
         "DE": "{0} hat {2} von {1} entsperrt."
+    },
+    "dbRestoreAnomaly": {
+        "DE": "⚠ {0}s HeartLock-Onlinedaten gingen unerwartet verloren und wurden aus der lokalen Sicherung wiederhergestellt für: {1}. Falls du das nicht warst, wende dich bitte an den Schlossbesitzer."
     }
 });
 })();

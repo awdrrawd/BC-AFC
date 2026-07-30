@@ -10,6 +10,7 @@ import { sendLocalizedAction } from '../i18n/l10n.js';
 import { ensureStorage, getOrCreateConfig, deleteConfig, saveAndSync } from './storage.js';
 import { isMemberAllowedByMe } from './permissions.js';
 import { hlRefreshCurrentTab } from './panel.js';
+import { rebaselineCurseIfNeeded } from './bcx-compat.js';
 
 export function sendSettingsChange(character, groupName) {
     if (!character || character.IsPlayer()) return;
@@ -95,7 +96,7 @@ export function handleHidden(data) {
         const cfg = getOrCreateConfig(e.Group);
         if (!cfg) return;
         cfg.owner = e.Owner; cfg.ownerName = e.OwnerName;
-        cfg.lockedAt = e.LockedAt; cfg.assetName = e.AssetName ?? null; cfg.lockId = e.LockId ?? null;
+        cfg.lockedAt = e.LockedAt; cfg.lockTs = Date.now(); cfg.assetName = e.AssetName ?? null; cfg.lockId = e.LockId ?? null;
         try {
             const item = InventoryGet?.(Player, e.Group);
             if (item) {
@@ -104,6 +105,8 @@ export function handleHidden(data) {
             }
         } catch {}
         saveAndSync();
+        // 若該部位有 BCX 屬性詛咒 → 待 appearance 同步反映鎖屬性後，重新蓋章 curse 基準避免洗版
+        try { setTimeout(() => rebaselineCurseIfNeeded(e.Group), 600); } catch {}
     }
     if (data.Content === 'HeartLock::Update') {
         const e = data.Dictionary?.find(d => d.Tag === 'HeartLock::Update');

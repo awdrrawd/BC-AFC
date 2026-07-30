@@ -54,7 +54,7 @@ export async function initHeartLock(sharedModApi) {
     patchFunctions(modApi);
     await waitFor(() => window.Player?.ExtensionSettings !== undefined, 30000);
     ensureStorage();
-    reconcileHLStorage();   // 與本機 DB 對帳：被初始化→抓 DB；伺服器較舊且不符→採用最新
+    await reconcileHLStorage();   // 與後備 DB(IndexedDB+localStorage)對帳：四情境 + 舊鎖回填
     saveAndSync();
     reapplyFromAppearance();
     startVibeTimer();

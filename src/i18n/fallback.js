@@ -635,6 +635,10 @@ const HL_FALLBACK = {
     "unlockDone": {
         "TW": "{0}解開了{1}身上的{2}。",
         "EN": "{0} unlocked the {2} on {1}."
+    },
+    "dbRestoreAnomaly": {
+        "TW": "⚠ {0}的心鎖線上資料異常遺失，已由本機後備還原以下部位：{1}。若非你本人操作，請與鎖主確認。",
+        "EN": "⚠ {0}'s HeartLock online data was abnormally lost and has been restored from the local backup for: {1}. If this was not you, please check with the lock owner."
     }
 };
 
