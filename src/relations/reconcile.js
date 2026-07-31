@@ -11,7 +11,7 @@ import { AFCLockAccessOn, pendingRestoreOut, setLastKnownLoverCount } from '../c
 import { getSharedSettings, saveSharedSettings } from '../core/settings.js';
 import { broadcastAFCData } from '../net/sync-data.js';
 import { _lsReadLovers } from '../core/storage.js';
-import { isAFCLover, targetHasAFC } from './lovers.js';
+import { isAFCLover, targetHasAFC, reconcileStage } from './lovers.js';
 import { proposeRestore } from './restore.js';
 
 export function reconcileWithRoom() {
@@ -45,6 +45,15 @@ export function reconcileWithRoom() {
             // 否則：交給 ChatRoomAFCCanRestore 的手動恢復入口
         } else if (iHaveC && !cHasMe) {
             if (!pendingRestoreOut[num]) proposeRestore(C, true);
+        } else if (iHaveC && cHasMe) {
+            // 雙方都有彼此 → 校正關係階段/日期，修復並防止「一方訂婚、一方結婚」的不一致。
+            // 對方廣播的 lovers 內含「對方眼中的我們關係」（stage/stageDate/startDate）。
+            // 兩端各自向較高階段收斂，最終一致；升格會 broadcast，另一端下次同步即同步。
+            const theirEntryOfMe = (C.OnlineSharedSettings?.AFC?.lovers ?? [])
+                .find(l => Number(l.memberNumber) === Number(Player.MemberNumber));
+            if (theirEntryOfMe) {
+                reconcileStage(num, theirEntryOfMe.stage, theirEntryOfMe.stageDate, theirEntryOfMe.startDate);
+            }
         }
     }
 }

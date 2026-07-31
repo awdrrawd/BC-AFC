@@ -27,6 +27,7 @@ if (AFC?.isLover) { /* 已就緒 */ }
 | `version` | `string` | AFC 版本，如 `"0.7.0"` |
 | `isLover(memberNumber)` | `boolean` | 對方是否為**我**的拓展戀人 |
 | `getLoverStage(memberNumber)` | `0 \| 1 \| 2 \| null` | 戀人階段（見 [Stage](#stage-階段)）；非戀人為 `null` |
+| `getLoverRoom(memberNumber)` | `LoverRoom \| null` | 該戀人目前分享的**私人房間**（見 [跨房私人房](#跨房私人房)）；未分享／非戀人為 `null` |
 | `getLovers()` | `Lover[]` | 我的戀人清單（**唯讀複本**，順序＝面板顯示順序） |
 | `canUseHeartLock(character)` | `boolean` | 我是否有資格對 `character`（BC Character 物件）上心形鎖 |
 | `canOwnerLock()` | `boolean` | 我是否允許「主人」對我使用心形鎖 |
@@ -37,6 +38,18 @@ const stage = window.Liko?.AFC?.getLoverStage(C.MemberNumber); // 0/1/2/null
 ```
 
 > 要查**別人**有沒有某位戀人，直接讀對方公開資料：`C.OnlineSharedSettings?.AFC?.lovers`（見 [資料型別](#資料型別)）。`isLover` / `getLovers` 只反映**自己**的清單。
+
+### 跨房私人房
+
+戀人進入私人房時，AFC 會把房名經 **AccountBeep** 分享給在線戀人（BC 平台限制：AccountBeep **只送得到好友**，而 AFC 加戀人的第一步本就是先成為 BC 好友，故戀人恆為好友）。收到的房名存在本地，`getLoverRoom(memberNumber)` 即回傳它：
+
+```js
+const room = window.Liko?.AFC?.getLoverRoom(mn);
+// → { ChatRoomName: "我們的小窩", ChatRoomSpace: "X" }  或  null
+if (room?.ChatRoomName) { /* 可顯示、供玩家點擊加入 */ }
+```
+
+用途範例：FCM 在自己的好友面板上，對「在私人房（伺服器隱藏房名）」的戀人改用本 API 取得房名 → 顯示並提供加入。**非好友本就無法分享，回傳 `null` 屬正常**。
 
 ---
 
@@ -158,6 +171,17 @@ window.Liko?.AFC?.heartLock?.removeLock('ItemNeck');   // 解特定部位
   startDate: number,          // 關係起始（ms epoch，不變）
   stageDate: number,          // 當前階段起始（ms epoch，升格時更新）
   lastSeen?: number | null,   // 最後見面（ms epoch）
+}
+```
+
+### LoverRoom
+
+`getLoverRoom()` 的回傳（戀人分享的私人房，見 [跨房私人房](#跨房私人房)）：
+
+```ts
+{
+  ChatRoomName: string | null,   // 私人房名；戀人不在私人房或尚未同步時為 null
+  ChatRoomSpace: string,         // 房間空間代碼（如 "X"），預設 "X"
 }
 ```
 

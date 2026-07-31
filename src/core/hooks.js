@@ -234,7 +234,8 @@ export function setupHooks() {
     modApi.hookFunction("FriendListLoadFriendList", 5, (args, next) => {
         try {
             for (const friend of args[0] ?? []) {
-                if (friend.Private && friend.ChatRoomName === null && loversPrivateRoom[friend.MemberNumber]) {
+                // 私人房時伺服器可能回傳 ChatRoomName 為 null 或省略（undefined）→ 一律以 falsy 判斷
+                if (friend.Private && !friend.ChatRoomName && loversPrivateRoom[friend.MemberNumber]) {
                     friend.ChatRoomName  = loversPrivateRoom[friend.MemberNumber].ChatRoomName;
                     friend.ChatRoomSpace = loversPrivateRoom[friend.MemberNumber].ChatRoomSpace;
                 }

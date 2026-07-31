@@ -8,6 +8,7 @@ import { MOD_NAME, MOD_VERSION } from './config.js';
 import {
     modApi, setModApi, isInitialized, setInitialized, setLastKnownLoverCount,
     setProfilePanelOpen, AFCLockAccessOn, pendingOutgoing, pendingIncoming, _pendingAcks,
+    loversPrivateRoom,
 } from './state.js';
 import { loadToastSystem, toast } from '../util/toast.js';
 import { waitFor } from '../util/util.js';
@@ -122,6 +123,12 @@ function completeInit() {
             isLover:          (num) => isAFCLover(num),
             /** 對方的戀人階段（0/1/2，若非戀人則 null）*/
             getLoverStage:    (num) => getLoverEntry(num)?.stage ?? null,
+            /** 戀人目前分享的私人房間 { ChatRoomName, ChatRoomSpace }（無則 null）。
+             *  供 FCM 等外掛顯示/加入戀人的私人房（房名經 AccountBeep 由戀人分享，僅 BC 好友間可得）。*/
+            getLoverRoom:     (num) => {
+                const r = loversPrivateRoom[num];
+                return r ? { ChatRoomName: r.ChatRoomName ?? null, ChatRoomSpace: r.ChatRoomSpace ?? 'X' } : null;
+            },
             /** 穿戴者是否允許我使用心鎖 */
             canUseHeartLock:  (ch)  => {
                 const lovers = ch?.OnlineSharedSettings?.AFC?.lovers ?? [];
