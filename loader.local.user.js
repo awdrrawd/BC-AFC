@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         本地測試 - AFC
 // @namespace    https://github.com/awdrrawd/BC-AFC
-// @version      0.7.0
+// @version      0.7.1
 // @description  AFC 本地開發載入器
 // @author       莉柯莉絲(Likolisu)
 // @supportURL   https://github.com/awdrrawd/BC-AFC

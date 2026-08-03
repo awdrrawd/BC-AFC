@@ -11,7 +11,7 @@ import { AFCLockAccessOn, pendingRestoreOut, setLastKnownLoverCount } from '../c
 import { getSharedSettings, saveSharedSettings } from '../core/settings.js';
 import { broadcastAFCData } from '../net/sync-data.js';
 import { _lsReadLovers } from '../core/storage.js';
-import { isAFCLover, targetHasAFC, reconcileStage } from './lovers.js';
+import { isAFCLover, targetHasAFC, reconcileStage, updateLastSeen } from './lovers.js';
 import { proposeRestore } from './restore.js';
 
 export function reconcileWithRoom() {
@@ -20,6 +20,8 @@ export function reconcileWithRoom() {
     const dbLovers = _lsReadLovers();
     for (const C of ChatRoomCharacter ?? []) {
         if (!C?.MemberNumber || C.MemberNumber === Player.MemberNumber) continue;
+        // 見面即更新最後見面（單向本地紀錄；對方有無 AFC 都算）
+        if (isAFCLover(C.MemberNumber)) updateLastSeen(C.MemberNumber);
         if (!targetHasAFC(C)) continue;
         const num    = C.MemberNumber;
         const iHaveC = isAFCLover(num);

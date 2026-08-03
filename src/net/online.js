@@ -22,7 +22,7 @@ export async function refreshOnlineFriends() {
             if (data?.Query !== "OnlineFriends") return;
             ServerSocket.off("AccountQueryResult", handler);
             clearTimeout(timer);
-            setOnlineFriendsCache(new Set(data.Result?.map(f => f.MemberNumber) ?? []));
+            setOnlineFriendsCache(new Map((data.Result ?? []).map(f => [f.MemberNumber, f])));
             setLastOnlineFetch(Date.now());
             if (!resolved) { resolved = true; resolve(); }
         };
@@ -46,7 +46,7 @@ export async function syncWithOnlineLovers() {
     let onlineFriends = null;
     const handler = (data) => {
         if (data?.Query === "OnlineFriends")
-            onlineFriends = new Set(data.Result?.map(f => f.MemberNumber) ?? []);
+            onlineFriends = new Map((data.Result ?? []).map(f => [f.MemberNumber, f]));
     };
     ServerSocket.on("AccountQueryResult", handler);
     ServerSend("AccountQuery", { Query: "OnlineFriends" });

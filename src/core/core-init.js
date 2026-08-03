@@ -8,7 +8,7 @@ import { MOD_NAME, MOD_VERSION } from './config.js';
 import {
     modApi, setModApi, isInitialized, setInitialized, setLastKnownLoverCount,
     setProfilePanelOpen, AFCLockAccessOn, pendingOutgoing, pendingIncoming, _pendingAcks,
-    loversPrivateRoom,
+    loversPrivateRoom, onlineFriendsCache,
 } from './state.js';
 import { loadToastSystem, toast } from '../util/toast.js';
 import { waitFor } from '../util/util.js';
@@ -127,7 +127,12 @@ function completeInit() {
              *  供 FCM 等外掛顯示/加入戀人的私人房（房名經 AccountBeep 由戀人分享，僅 BC 好友間可得）。*/
             getLoverRoom:     (num) => {
                 const r = loversPrivateRoom[num];
-                return r ? { ChatRoomName: r.ChatRoomName ?? null, ChatRoomSpace: r.ChatRoomSpace ?? 'X' } : null;
+                if (r) return { ChatRoomName: r.ChatRoomName ?? null, ChatRoomSpace: r.ChatRoomSpace ?? 'X' };
+                // 公開房：BC 好友資料本就帶房名，直接讀線上快取回傳（私人房才需 BEEP 分享）
+                const f = onlineFriendsCache.get(num);
+                if (f && !f.Private && f.ChatRoomName)
+                    return { ChatRoomName: f.ChatRoomName, ChatRoomSpace: f.ChatRoomSpace ?? 'X' };
+                return null;
             },
             /** 穿戴者是否允許我使用心鎖 */
             canUseHeartLock:  (ch)  => {

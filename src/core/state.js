@@ -34,7 +34,8 @@ export const _recentBeepKeys = new Set();
 export let profilePageFresh = false;  // 每次進入 Profile 頁面時強制刷新一次線上狀態
 export function setProfilePageFresh(v) { profilePageFresh = v; }
 
-export let onlineFriendsCache = new Set();
+// memberNumber -> 好友紀錄 { ChatRoomName, ChatRoomSpace, Private, ... }（.has 語意同 Set）
+export let onlineFriendsCache = new Map();
 export function setOnlineFriendsCache(v) { onlineFriendsCache = v; }
 
 export let lastOnlineFetch = 0;
