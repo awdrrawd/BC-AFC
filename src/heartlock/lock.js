@@ -284,7 +284,7 @@ export function checkLockIntegrity() {
         const badLockedBy = item.Property?.LockedBy !== HSLOCK_NAME;
         const badName     = item.Property?.Name     !== HEARTLOCK_NAME;
         const badLockId   = cfg.lockId && item.Property?.HeartLockId !== cfg.lockId;
-        if (badAsset || badLockedBy || badName || badLockId) { log('Lock integrity violation on', gn, { badAsset, badLockedBy, badName, badLockId }); restoreLockFromConfig(gn, cfg); }
+        if (badAsset || badLockedBy || badName || badLockId) restoreLockFromConfig(gn, cfg);
     }
     cleanupFakeLocks();
 }

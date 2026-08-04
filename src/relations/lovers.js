@@ -5,12 +5,7 @@
 
 import { STAGE } from '../core/config.js';
 import { AFCLockAccessOn, loversPrivateRoom, setLastKnownLoverCount } from '../core/state.js';
-import {
-    getSharedSettings, getPrivateSettings, saveSharedSettings, _syncLoversBackup,
-} from '../core/settings.js';
-import { broadcastAFCData } from '../net/sync-data.js';
-import { daysSince, chatLocalNotice } from '../util/util.js';
-import { initiateBreakup } from './breakup.js';
+import { getSharedSettings, saveSharedSettings } from '../core/settings.js';
 
 export function addLover(memberNumber, name, stage = STAGE.DATING) {
     const s = getSharedSettings();
@@ -21,8 +16,6 @@ export function addLover(memberNumber, name, stage = STAGE.DATING) {
         stageDate:   Date.now(),
     });
     saveSharedSettings();
-    _syncLoversBackup();
-    broadcastAFCData();
     console.log("🐈‍⬛ [AFC] ✅ 新增戀人:", name, memberNumber);
 }
 
@@ -34,8 +27,6 @@ export function removeLover(memberNumber) {
     delete loversPrivateRoom[memberNumber];
     setLastKnownLoverCount(s.lovers.length);
     saveSharedSettings();
-    _syncLoversBackup();
-    broadcastAFCData();
 }
 
 // 升格戀人關係階段（單調：只升不降，防「已結婚被降回訂婚」造成雙方不一致）
@@ -47,7 +38,6 @@ export function promoteStage(memberNumber, newStage) {
     lover.stage     = newStage;
     lover.stageDate = Date.now();
     saveSharedSettings();
-    _syncLoversBackup();
 }
 
 // 依對方持有的資料校正「我這邊」的關係階段與日期，收斂雙方狀態。
@@ -79,7 +69,7 @@ export function reconcileStage(memberNumber, theirStage, theirStageDate, theirSt
         changed = true;
     }
 
-    if (changed) { saveSharedSettings(); _syncLoversBackup(); }
+    if (changed) saveSharedSettings();
     return changed;
 }
 
@@ -104,21 +94,5 @@ export function updateLastSeen(memberNumber) {
     if (lover) {
         lover.lastSeen = Date.now();
         saveSharedSettings();
-    }
-}
-
-// ── 自動解除（超過 N 天未見面）──
-export function checkAutoBreakup() {
-    const priv = getPrivateSettings();
-    if (!priv?.autoBreakupDays || priv.autoBreakupDays <= 0) return;
-    const s = getSharedSettings();
-    if (!s) return;
-    const threshold = priv.autoBreakupDays;
-    for (const lover of [...s.lovers]) {
-        const lastSeen = lover.lastSeen ?? lover.startDate;
-        if (daysSince(lastSeen) >= threshold) {
-            chatLocalNotice(`與 ${lover.name} 已超過 ${threshold} 天未見面，自動解除拓展戀人關係。`);
-            initiateBreakup(lover.memberNumber, lover.name);
-        }
     }
 }

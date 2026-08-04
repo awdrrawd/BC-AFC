@@ -6,7 +6,7 @@
 import { MOD_VERSION, AFC_SETTINGS_IMAGE } from '../core/config.js';
 import {
     getPrivateSettings, getSharedSettings, savePrivateSettings,
-    saveSharedSettings, syncLockPermsToShared, _syncLoversBackup,
+    saveSharedSettings, syncLockPermsToShared,
 } from '../core/settings.js';
 import { factoryReset, _readBackupLovers } from '../core/storage.js';
 import { initiateBreakup } from '../relations/breakup.js';
@@ -405,7 +405,6 @@ export const AFCSettingsUI = (() => {
             // 全部使用
             s.lovers = [...srcLovers];
             saveSharedSettings();
-            _syncLoversBackup();
             chatLocalNotice(t('restoreOKMsg', srcLovers.length));
         } else {
             // 單筆復原
@@ -415,7 +414,6 @@ export const AFCSettingsUI = (() => {
             if (existing >= 0) s.lovers[existing] = { ...entry };
             else s.lovers.push({ ...entry });
             saveSharedSettings();
-            _syncLoversBackup();
             chatLocalNotice(t('restoreOKMsg', 1));
         }
     }

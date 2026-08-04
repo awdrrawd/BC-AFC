@@ -105,14 +105,6 @@ export function savePrivateSettings(settings) {
     } catch (e) { console.error("🐈‍⬛ [AFC] ❌ 儲存私人設定失敗:", e.message); }
 }
 
-/** 同步備份 lovers 到 ExtensionSettings（不改其他設定值） */
-export function _syncLoversBackup() {
-    try {
-        const priv = getPrivateSettings();
-        if (priv) savePrivateSettings(priv);
-    } catch {}
-}
-
 export function saveSharedSettings() {
     try {
         const afc = Player.OnlineSharedSettings?.AFC;

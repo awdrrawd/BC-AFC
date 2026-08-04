@@ -9,7 +9,6 @@
 import { STAGE } from '../core/config.js';
 import { AFCLockAccessOn, pendingRestoreOut, setLastKnownLoverCount } from '../core/state.js';
 import { getSharedSettings, saveSharedSettings } from '../core/settings.js';
-import { broadcastAFCData } from '../net/sync-data.js';
 import { _lsReadLovers } from '../core/storage.js';
 import { isAFCLover, targetHasAFC, reconcileStage, updateLastSeen } from './lovers.js';
 import { proposeRestore } from './restore.js';
@@ -41,7 +40,6 @@ export function reconcileWithRoom() {
                 AFCLockAccessOn.add(num);
                 setLastKnownLoverCount(s.lovers.length);
                 saveSharedSettings();
-                broadcastAFCData();
                 console.log("🐈‍⬛ [AFC] 🔧 自本地DB補回戀人:", num);
             }
             // 否則：交給 ChatRoomAFCCanRestore 的手動恢復入口

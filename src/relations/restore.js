@@ -6,7 +6,6 @@
 import { STAGE, BEEP, PROPOSE_EXPIRE_MS } from '../core/config.js';
 import { pendingRestoreOut, pendingRestoreInc, AFCLockAccessOn } from '../core/state.js';
 import { getSharedSettings, saveSharedSettings } from '../core/settings.js';
-import { broadcastAFCData } from '../net/sync-data.js';
 import { t } from '../i18n/i18n.js';
 import { chatLocalNotice } from '../util/util.js';
 import { sendBeep } from '../net/beep.js';
@@ -75,7 +74,6 @@ function acceptRestore(senderNum, senderName, stage, startDate, stageDate) {
         s.lovers.push({ memberNumber: senderNum, name: senderName,
                        stage, startDate, stageDate });
         saveSharedSettings();
-        broadcastAFCData();
     }
     // 無論哪個 Case，都把資料帶回給對方
     // Case A：我（保有方）已有對方，找出我記錄的對方資料，回傳讓對方 addLover
@@ -106,7 +104,6 @@ export function handleRestoreAccepted(fromNum, receiverName, stage, startDate, s
                            startDate: startDate ?? Date.now(),
                            stageDate: stageDate ?? Date.now() });
             saveSharedSettings();
-            broadcastAFCData();
         }
     }
     AFCLockAccessOn.add(fromNum);

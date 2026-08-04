@@ -21,7 +21,7 @@ import { setupHooks } from './hooks.js';
 import { setupCommands } from './commands.js';
 import { registerSettingsUI } from '../ui/settings-page.js';
 import { syncWithOnlineLovers } from '../net/online.js';
-import { checkAutoBreakup, isAFCLover, getLoverEntry } from '../relations/lovers.js';
+import { isAFCLover, getLoverEntry } from '../relations/lovers.js';
 import { getLoverRegions, isPanelOpen, getPanelRect } from '../ui/profile.js';
 import { requestRoomNamesFromLovers } from '../net/roomname.js';
 import { unregisterAllSocketListeners } from './socket.js';
@@ -101,7 +101,6 @@ function completeInit() {
         registerSettingsUI();
 
         syncWithOnlineLovers();
-        checkAutoBreakup();
 
         // 登入比對本機 DB（資料丟失/換裝置/不一致），並向在線戀人請求房名
         _migrateOldBackupToDB();

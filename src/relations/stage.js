@@ -6,7 +6,6 @@
 import { STAGE, BEEP, STAGE_LABEL, PROPOSE_EXPIRE_MS } from '../core/config.js';
 import { pendingStageProp, pendingStageInc, setLastKnownLoverCount } from '../core/state.js';
 import { getSharedSettings, saveSharedSettings } from '../core/settings.js';
-import { broadcastAFCData } from '../net/sync-data.js';
 import { t, stageLabel } from '../i18n/i18n.js';
 import { chatLocalNotice } from '../util/util.js';
 import { sendBeep } from '../net/beep.js';
@@ -64,7 +63,7 @@ export function handleIncomingStageProposal(senderNum, senderName, newStage) {
                     lastSeen:  Date.now(),
                 });
                 setLastKnownLoverCount(s.lovers.length);
-                saveSharedSettings(); broadcastAFCData();
+                saveSharedSettings();
             }
         } else if (!senderHasMe) {
             return;   // 我沒有、DB 沒有、對方也沒列我 → 無從升格

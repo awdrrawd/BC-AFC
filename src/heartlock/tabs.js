@@ -11,11 +11,11 @@ import {
     timerRemainStr, timerDateOnlyStr, timerDateShortStr, timerDeltaStr, lockedAtStr,
 } from './util.js';
 import { getSetting, getPadlockConfig } from './storage.js';
-import { canEdit } from './permissions.js';
+import { canEdit, isAllowedToUnlock } from './permissions.js';
 import { pushConfig, sendSettingsChange, notifyRemove } from './net.js';
 import { showHTMLDatePicker } from './datepicker.js';
 import { renderNoteWithImages } from './note.js';
-import { hlShowTab, removeHLPanel, _canUnlockHeartLock, setHlTimer } from './panel.js';
+import { hlShowTab, removeHLPanel, setHlTimer } from './panel.js';
 import { cleanHeartLockProperty } from './lock.js';
 import { sendLocalizedAction } from '../i18n/l10n.js';
 
@@ -234,7 +234,7 @@ export function hlTabControl(el, ch, gn, cfg) {
 
 // ── Tab: 解鎖 ──
 export function hlTabUnlock(el, ch, gn, cfg) {
-    const canUnl = _canUnlockHeartLock(ch, cfg);
+    const canUnl = isAllowedToUnlock(ch, cfg);
     el.style.display='flex'; el.style.flexDirection='column'; el.style.alignItems='center'; el.style.gap='.6em';
     const img = hlEl('img', 'width:9em;height:9em;object-fit:contain;pointer-events:none;user-select:none;');
     img.src = HEARTKEY_IMAGE; img.draggable = false; img.onerror = ()=>{ img.style.display='none'; };

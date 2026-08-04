@@ -11,12 +11,9 @@ import { state } from './state.js';
 import { hlEl, dpInit } from './util.js';
 import { T } from './i18n.js';
 import { getPadlockConfig } from './storage.js';
-import { isAllowedToUnlock } from './permissions.js';
 import { closeNoteOverlay } from './note.js';
 import { requestHeartLockData } from './net.js';
 import { hlTabOverview, hlTabNote, hlTabTimer, hlTabControl, hlTabUnlock } from './tabs.js';
-
-export function _canUnlockHeartLock(ch, cfg) { return isAllowedToUnlock(ch, cfg); }
 
 let _hlTimer = null;
 // tabs 需要在自身 refresh interval 內設定 _hlTimer，透過此 setter 共用
@@ -165,5 +162,3 @@ export function panelLoad() {
     if (!ch || !gn) return;
     openHLPanel(ch, gn);
 }
-export function panelDraw()  {}
-export function panelClick() {}
