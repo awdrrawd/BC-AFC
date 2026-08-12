@@ -33,10 +33,7 @@ export async function initialize() {
     console.log(`🐈‍⬛ [AFC] ✅ v${MOD_VERSION} loaded`);
 
     // ── 階段一：載入期（不需要 BC 遊戲狀態）──────────────────
-    // 1. 載入 Toast 系統
-    await loadToastSystem();
-
-    // 2. 等待 bcModSdk（無超時）
+    // 1. 等待並立即註冊 bcModSdk（無超時）
     await waitFor(() =>
                   typeof bcModSdk !== 'undefined' && !!bcModSdk?.registerMod ||
                   typeof window.bcModSdk !== 'undefined' && !!window.bcModSdk?.registerMod
@@ -49,30 +46,37 @@ export async function initialize() {
         repository: "https://github.com/awdrrawd/BC-AFC",
     }));
 
+    // 2. 載入 Toast 系統
+    await loadToastSystem();
+
     // 共用 L10N 引擎：先註冊內建後備（TW+EN，afc + hl 兩命名空間），再啟動執行期 fetch
     //  抓根目錄 Translation/<LANG>.js 的完整字庫覆蓋後備（fire-and-forget，後備確保載入前不會顯示 raw key）。
     registerFallback();
     ensureAfcI18n();
     L10N.install(modApi);
 
-    // 啟動 Heart Lock（bundle 內模組，共用 AFC 的 modApi）
-    try { initHeartLock(modApi); } catch (e) { console.error("🐈‍⬛ [AFC] ❌ Heart Lock 啟動失敗:", e); }
-
-    // 3. 等待 ServerSocket 就緒（無超時）
-    await waitFor(() =>
-                  typeof ServerSocket !== 'undefined' &&
-                  ServerSocket !== null &&
-                  typeof ServerSocket.on === 'function'
-                 );
-
     // ── 階段二：登入後（需要 Player + 設定資料）───────────────
-    ServerSocket.on("LoginResponse", () => {
-        setTimeout(completeInit, 500);
-    });
+    await waitForLogin();
+    await waitFor(() => Player?.OnlineSharedSettings !== undefined && Player?.ExtensionSettings !== undefined);
 
-    // 等待 MemberNumber 存在後再嘗試（相容重載與正常登入）
-    waitFor(() => typeof Player?.MemberNumber === "number").then(() => {
-        completeInit();
+    completeInit();
+
+    // 啟動 Heart Lock（bundle 內模組，共用 AFC 的 modApi）
+    try { await initHeartLock(modApi); } catch (e) { console.error("🐈‍⬛ [AFC] ❌ Heart Lock 啟動失敗:", e); }
+}
+
+function waitForLogin() {
+    if (typeof Player !== 'undefined' && Player?.MemberNumber !== undefined) return Promise.resolve();
+    return new Promise(resolve => {
+        const removeHook = modApi.hookFunction('LoginResponse', 0, (args, next) => {
+            const result = next(args);
+            queueMicrotask(() => {
+                if (typeof Player === 'undefined' || Player?.MemberNumber === undefined) return;
+                removeHook();
+                resolve();
+            });
+            return result;
+        });
     });
 }
 

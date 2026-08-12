@@ -43,9 +43,8 @@ export async function initHeartLock(sharedModApi) {
     const modApi = state.modApi ?? getModApi();
     if (!modApi) { console.error('🐈‍⬛ [HeartLock] modApi unavailable.'); return; }
 
-    // Phase 2：等玩家登入 + 遊戲資源就緒
+    // Phase 2：AFC 核心已確認登入，這裡只等待遊戲資源就緒
     await waitFor(() =>
-                  !!window.Player?.AccountName &&
                   !!window.AssetFemale3DCG &&
                   !!AssetGroupGet?.('Female3DCG', 'ItemMisc')
                  );
