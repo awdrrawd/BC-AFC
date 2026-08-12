@@ -57,12 +57,15 @@ export function detectLang() {
 }
 
 
-export function t(key, ...args) {
-    // 用 AFC 自己偵測的語言 + 引擎的解析/佔位替換（{0}{1}…），缺 key 時退回 key 本身。
-    const out = L10N.tl(detectLang(), 'afc', key, ...args);
-    if (out == null) { console.warn("🐈‍⬛ [AFC] missing i18n key:", key); return key; }
+// 唯一取字路徑：AFC 偵測語言 + 引擎解析/佔位（{0}{1}…），缺 key 退回 key 本身。
+//  afc / hl 皆走這裡，兩者只差命名空間 → 真正共用同一套語言偵測與後備行為。
+export function tns(ns, key, ...args) {
+    const out = L10N.tl(detectLang(), ns, key, ...args);
+    if (out == null) { console.warn("🐈‍⬛ [AFC] missing i18n key:", `${ns}/${key}`); return key; }
     return out;
 }
+
+export function t(key, ...args) { return tns('afc', key, ...args); }
 
 /** 取得戀人階段的本地化標籤（數字 0/1/2） */
 export function stageLabel(stage) {

@@ -4,11 +4,12 @@
 //  一律委派共用的 L10N 引擎（window.Liko.L10N）。
 //    文本：根目錄 Translation/<LANG>.js（含 afc + hl 兩命名空間；執行期由 AFC fetch）。
 //    由 AFC core-init 的 registerFallback()（TW+EN 後備）＋ ensureAfcI18n()（fetch）註冊到 'hl'。
-//  T(key, ...args)：等同 L10N.t('hl', key, ...args)（7 語 EN/TW/CN/DE/FR/RU/UA、{0} 佔位）。
+//  T(key, ...args)：等同 AFC 的 t()，只換命名空間 'hl' → 與 AFC 共用同一套語言偵測/後備。
+//    （7 語 EN/TW/CN/DE/FR/RU/UA、{0} 佔位；缺 key 退回 key 本身。）
 // ════════════════════════════════════════
 
-import { L10N } from '../i18n/l10n.js';
+import { tns } from '../i18n/i18n.js';
 
 export function T(key, ...args) {
-    return L10N.t('hl', key, ...args);
+    return tns('hl', key, ...args);
 }

@@ -82,5 +82,5 @@ export async function initHeartLock(sharedModApi) {
         },
     };
 
-    log(`🐈‍⬛ [HeartLock] v${MOD_VER} initialized.`);
+    log(`✅ v${MOD_VER} loaded.`);
 }
