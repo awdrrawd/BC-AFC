@@ -102,15 +102,16 @@ export function factoryReset() {
         // 3) 重置 AFC 私人 / 共享設定為預設
         delete Player.OnlineSharedSettings.AFC;
         Player.ExtensionSettings.AFC = JSON.stringify(defaultPrivate());
-        // 4) 真正刪掉舊版殘留 key（_cleanupLegacyKeys 會送整個 ExtensionSettings）
+        // 4) 逐鍵清掉舊版殘留 key
         _cleanupLegacyKeys();
         // 5) 重建預設並同步
         AFCLockAccessOn.clear();
         setLastKnownLoverCount(0);   // 解除 saveSharedSettings 的「戀人歸零」保護
         getSharedSettings();
         _dbSync();                   // 一併清空本機 DB（初廠＝手動清除）
-        // 送整個 ExtensionSettings（含重置後的 AFC）+ OnlineSharedSettings
-        try { ServerAccountUpdate?.QueueData?.({ ExtensionSettings: Player.ExtensionSettings, OnlineSharedSettings: Player.OnlineSharedSettings }, true); } catch {}
+        // AFC 只同步自己的鍵；共享設定維持原本的 AccountUpdate。
+        try { if (typeof ServerPlayerExtensionSettingsSync === 'function') ServerPlayerExtensionSettingsSync('AFC'); } catch {}
+        try { ServerAccountUpdate?.QueueData?.({ OnlineSharedSettings: Player.OnlineSharedSettings }, true); } catch {}
         console.warn("🐈‍⬛ [AFC] ⚠️ 已執行初廠設定（戀人關係解除、所有戀人鎖破壞、設定重置）");
         try { toast(t('factoryDone'), 8000, "#e53935"); } catch {}
         try { chatLocalNotice(t('factoryDone')); } catch {}

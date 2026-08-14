@@ -23,16 +23,26 @@ function _cmpVer(a, b) {
     return 0;
 }
 
-// 清掉用不到的舊維護殘留 key（真正刪除：ServerPlayerExtensionSettingsSync 對 undefined 會 throw，
-// 無法刪 key；改送整個 ExtensionSettings 物件，伺服器整欄取代 → 缺的 key 就真的消失）
+// 用 dot-notation 將舊 key 清成 null，避免為了 $unset 而回傳整個
+// ExtensionSettings。伺服器上可能留下極小的 null 佔位，但不會重送或覆蓋其他插件。
+function _clearExtensionSetting(key) {
+    if (!Player.ExtensionSettings || Player.ExtensionSettings[key] === undefined) return false;
+    const previous = Player.ExtensionSettings[key];
+    Player.ExtensionSettings[key] = null;
+    try {
+        if (typeof ServerPlayerExtensionSettingsSync === 'function') ServerPlayerExtensionSettingsSync(key);
+    } catch {
+        Player.ExtensionSettings[key] = previous;
+        return false;
+    }
+    delete Player.ExtensionSettings[key];
+    return true;
+}
+
 export function _cleanupLegacyKeys() {
     if (Player.OnlineSharedSettings) delete Player.OnlineSharedSettings.EL;  // 隨整個 OnlineSharedSettings 送出即移除
-    let extChanged = false;
-    if (Player.ExtensionSettings.EL !== undefined) { delete Player.ExtensionSettings.EL; extChanged = true; }
-    if (Player.ExtensionSettings.AFC_loversBackup !== undefined) { delete Player.ExtensionSettings.AFC_loversBackup; extChanged = true; }
-    if (extChanged) {
-        try { ServerAccountUpdate?.QueueData?.({ ExtensionSettings: Player.ExtensionSettings }, true); } catch {}
-    }
+    _clearExtensionSetting('EL');
+    _clearExtensionSetting('AFC_loversBackup');
 }
 
 function notifyLegacyData() {

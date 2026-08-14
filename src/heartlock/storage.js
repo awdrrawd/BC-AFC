@@ -14,15 +14,33 @@ export function ensureStorage() {
     if (!Player.ExtensionSettings) Player.ExtensionSettings = {};
     const es = Player.ExtensionSettings;
     // 一次性搬遷：舊 key 'HeartLock' → 'AFC_HeartLock'（保留作用中的鎖設定）
+    let targetChanged = false;
     if (es[EXT_KEY_OLD] !== undefined) {
-        if ((!es[EXT_KEY] || typeof es[EXT_KEY] !== 'object') && typeof es[EXT_KEY_OLD] === 'object')
+        if ((!es[EXT_KEY] || typeof es[EXT_KEY] !== 'object') && typeof es[EXT_KEY_OLD] === 'object') {
             es[EXT_KEY] = es[EXT_KEY_OLD];
-        delete es[EXT_KEY_OLD];
-        try { ServerAccountUpdate?.QueueData?.({ ExtensionSettings: Player.ExtensionSettings }, true); } catch {}
+            targetChanged = true;
+        }
+        const previous = es[EXT_KEY_OLD];
+        es[EXT_KEY_OLD] = null;
+        try {
+            if (typeof ServerPlayerExtensionSettingsSync === 'function') ServerPlayerExtensionSettingsSync(EXT_KEY_OLD);
+            delete es[EXT_KEY_OLD];
+        } catch {
+            es[EXT_KEY_OLD] = previous;
+        }
     }
-    if (!es[EXT_KEY] || typeof es[EXT_KEY] !== 'object') es[EXT_KEY] = clone(DEFAULT_STORAGE);
-    if (!es[EXT_KEY].padlocks) es[EXT_KEY].padlocks = {};
+    if (!es[EXT_KEY] || typeof es[EXT_KEY] !== 'object') {
+        es[EXT_KEY] = clone(DEFAULT_STORAGE);
+        targetChanged = true;
+    }
+    if (!es[EXT_KEY].padlocks) {
+        es[EXT_KEY].padlocks = {};
+        targetChanged = true;
+    }
     Player.HeartLock = es[EXT_KEY];
+    if (targetChanged) {
+        try { if (typeof ServerPlayerExtensionSettingsSync === 'function') ServerPlayerExtensionSettingsSync(EXT_KEY); } catch {}
+    }
     return true;
 }
 
