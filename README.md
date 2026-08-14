@@ -17,6 +17,11 @@ A BondageClub UserScript plugin extending the native lover system — multiple l
 > 本插件內含 **BC Heart Lock Extension（心形鎖拓展）**，安裝 ACF 後心形鎖功能會自動載入，無需另行安裝。  
 > This plugin includes the **BC Heart Lock Extension**. It loads automatically with ACF — no separate install needed.
 
+## 📚 文件 · Documentation
+
+完整的架構、資料模型、多語系統與公開 API 說明請見 [`docs/`](docs/README.md)。
+See [`docs/`](docs/README.md) for architecture, data model, localization, and public API documentation.
+
 ---
 
 ## ✨ 功能 · Features

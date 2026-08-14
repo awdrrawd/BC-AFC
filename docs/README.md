@@ -1,4 +1,4 @@
-# BC-AFC Wiki
+# BC-AFC Documentation
 
 **Abundantia Florum ─Chromatica─ (AFC)** — 拓展戀人系統，內含 **Heart Lock（心形鎖）**，兩者打包為單一 bundle。
 
@@ -6,9 +6,9 @@
 
 ## 頁面
 
-- **[Public API](Public-API)** — `window.Liko.AFC`：戀人查詢、Profile 面板整合（在戀人條目上疊按鈕）、心形鎖 API。
-- **[Localization Engine](Localization-Engine)** — 跨插件共用的翻譯引擎 `window.Liko.__Sys_i18n__` / `__Sys_L10N__`：介面字串 + 聊天訊息在地化（送英文底本、接收端各看各語言）。
-- **[Architecture & Data](Architecture-and-Data)** — 模組結構、資料模型（OnlineSharedSettings / ExtensionSettings / localStorage）、建置與部署、Loader、聊天指令。
+- **[Public API](Public-API.md)** — `window.Liko.AFC`：戀人查詢、Profile 面板整合（在戀人條目上疊按鈕）、心形鎖 API。
+- **[Localization Engine](Localization-Engine.md)** — 跨插件共用的翻譯引擎 `window.Liko.__Sys_i18n__` / `__Sys_L10N__`：介面字串 + 聊天訊息在地化（送英文底本、接收端各看各語言）。
+- **[Architecture & Data](Architecture-and-Data.md)** — 模組結構、資料模型（OnlineSharedSettings / ExtensionSettings / localStorage）、建置與部署、Loader、聊天指令。
 
 ## 一分鐘速覽
 

@@ -47,7 +47,7 @@ AFC 的資料刻意分散在多處以抗伺服器端清空：
 | `Player.ExtensionSettings.AFC_HeartLock` | 心形鎖 `padlocks` map | 心形鎖上鎖狀態 |
 | `localStorage["HL_DB::<帳號>"]` | 心形鎖備份 + 時間戳 | 對帳：伺服器被初始化時從 DB 還原 |
 
-型別細節見 **[Public API → 資料型別](Public-API#資料型別)**。
+型別細節見 **[Public API → 資料型別](Public-API.md#資料型別)**。
 
 ---
 
@@ -59,7 +59,7 @@ AFC 的資料刻意分散在多處以抗伺服器端清空：
 | ChatRoom `Hidden` `AFC::Sync` | 廣播自己的戀人資料給房內玩家（EBC 等伺服器同步失效時的容錯） |
 | `AccountBeep`（BeepType `afcBeep`） | 跨房**戀人房名分享**（仿 BCTweaks；IsSecret:false 讓伺服器蓋上 ChatRoomName） |
 | ChatRoom `Hidden` `HeartLock::*` | 心形鎖套用/設定/移除/遠端解鎖 |
-| ChatRoom `Action` `CUSTOM_SYSTEM_ACTION` + `Liko_L10N` 標記 | 在地化廣播（見 [Localization Engine](Localization-Engine)） |
+| ChatRoom `Action` `CUSTOM_SYSTEM_ACTION` + `Liko_L10N` 標記 | 在地化廣播（見 [Localization Engine](Localization-Engine.md)） |
 
 ---
 
@@ -74,7 +74,7 @@ AFC 的資料刻意分散在多處以抗伺服器端清空：
 | **> 7（建議 8）** | overlay 插件（如 FCM 疊在戀人條目上的按鈕） | 在 AFC 之上繪製、在 AFC 模態之前處理點擊 |
 | 5 | FCM 主按鈕等 | 一般繪製 |
 
-詳見 **[Public API → 優先序契約](Public-API#profile-面板整合)**。
+詳見 **[Public API → 優先序契約](Public-API.md#profile-面板整合)**。
 
 ---
 
