@@ -2,7 +2,7 @@
 // @name         Abundantia Florum ─Chromatica─
 // @name:zh      繁戀如花 ─繽紛─
 // @namespace    https://github.com/awdrrawd/BC-AFC
-// @version      0.7.1
+// @version      1.0
 // @description  拓展戀人系統（內含心形鎖）| Extended Lover System for BondageClub (bundles Heart Lock)
 // @author       莉柯莉絲(Likolisu)
 // @supportURL   https://github.com/awdrrawd/BC-AFC

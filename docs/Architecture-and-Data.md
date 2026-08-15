@@ -94,7 +94,7 @@ AFC 的資料刻意分散在多處以抗伺服器端清空：
 
 ```bash
 npm install
-npm run build       # 打包到 dist/（prebuild 會 sync-version + copy-assets 把 Images/ → public/）
+npm run build       # 打包到 dist/（prebuild 會由 copy-assets 把 Images/ → public/）
 npm run lint        # eslint
 npm run dev         # vite build --watch + preview :5175（配 loader.local.user.js 本地開發）
 ```
