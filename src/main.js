@@ -1,30 +1,12 @@
-// ════════════════════════════════════════
-//  AFC entry (bundled by vite → assets/main.js)
-//  Loader (loader.user.js / loader.local.user.js) dynamically imports this file.
-//  Modules are grouped by area under ./<category>/:
-//    core/       — config, state, socket, settings, storage, legacy, commands, hooks, core-init
-//    i18n/       — i18n
-//    util/       — util, toast
-//    net/        — beep, beep-router, roomname, online, sync-data
-//    relations/  — lovers, propose, stage, restore, reconcile, breakup, dialog
-//    ui/         — proposal-ui, profile, settings-page
-//    heartlock/  — 心形鎖（原獨立插件，現為 bundle 內模組，隨 AFC 一起啟動）
-// ════════════════════════════════════════
-
-import { MOD_VERSION } from './core/config.js';
-import { initialize } from './core/core-init.js';
-
+// Keep this bootstrap free of static imports so duplicate detection runs first.
 window.Liko = window.Liko ?? {};
-// Captured before we assign window.Liko.AFC below, so it's true on any
-// duplicate load regardless of how the second copy got in.
-const AFC_ALREADY_LOADED = !!window.Liko.AFC;
 
-if (AFC_ALREADY_LOADED) {
-    console.warn('🐈‍⬛ [AFC] ⚠️ Already loaded, skipping duplicate import.');
+if (window.Liko.AFC) {
+    console.warn('🐈‍⬛ [AFC] Already loaded, skipping duplicate init.');
 } else {
-    // 對外唯一入口：window.Liko.AFC（AFC + Heart Lock 合併於同一物件；loader 先設 'loading'）
-    //  登入完成後由 core-init 填入戀人 API，heartlock/init 把心形鎖 API 掛在其下的 .heartLock。
-    window.Liko.AFC = { version: MOD_VERSION };
-
-    initialize();
+    const namespace = window.Liko.AFC = {};
+    import('./app.js').catch(error => {
+        if (window.Liko.AFC === namespace && !namespace.version) delete window.Liko.AFC;
+        console.error('🐈‍⬛ [AFC] Failed to load:', error);
+    });
 }
