@@ -39,6 +39,10 @@ export async function initialize() {
                   typeof window.bcModSdk !== 'undefined' && !!window.bcModSdk?.registerMod
                  );
     const sdk = window.bcModSdk ?? bcModSdk;
+    if (sdk.getModsInfo?.().some(mod => mod.name === MOD_NAME)) {
+        console.warn('🐈‍⬛ [AFC] Already registered with Mod SDK, aborting duplicate init.');
+        return;
+    }
     setModApi(sdk.registerMod({
         name:       MOD_NAME,
         fullName:   "Abundantia Florum ─Chromatica─",
