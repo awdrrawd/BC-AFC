@@ -6,6 +6,8 @@
 
 ## 頁面
 
+- **[Interactive Architecture Map](afc-architecture.html)** — 左側功能索引與右側束狀檔案關聯圖。
+- **[Architecture Guide](architecture.md)** — 功能分支圖入口與模組責任邊界。
 - **[Public API](Public-API.md)** — `window.Liko.AFC`：戀人查詢、Profile 面板整合（在戀人條目上疊按鈕）、心形鎖 API。
 - **[Localization Engine](Localization-Engine.md)** — 跨插件共用的翻譯引擎 `window.Liko.__Sys_i18n__` / `__Sys_L10N__`：介面字串 + 聊天訊息在地化（送英文底本、接收端各看各語言）。
 - **[Architecture & Data](Architecture-and-Data.md)** — 模組結構、資料模型（OnlineSharedSettings / ExtensionSettings / localStorage）、建置與部署、Loader、聊天指令。
