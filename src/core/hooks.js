@@ -28,8 +28,25 @@ import { parseAccountBeep, broadcastRoomNameToLovers, clearSharedRoomName } from
 import { broadcastAFCData, handleAFCSyncData } from '../net/sync-data.js';
 import { handleBCLoverProposal } from '../relations/breakup.js';
 import { reconcileWithRoom } from '../relations/reconcile.js';
+import { isAFCLover } from '../relations/lovers.js';
 
 export function setupHooks() {
+    // 僅在頭頂圖示繪製時把 AFC 戀人視為戀人，沿用原生位置、縮放與圖示優先序。
+    // 保留角色物件身分（原生聚焦清單以物件比對），結束或拋錯時立即還原判斷。
+    modApi.hookFunction('ChatRoomDrawCharacterStatusIcons', 1, (args, next) => {
+        const C = args[0];
+        if (!C || C.IsPlayer() || !isAFCLover(C.MemberNumber)) return next(args);
+
+        const original = Object.getOwnPropertyDescriptor(C, 'IsLoverOfPlayer');
+        try {
+            C.IsLoverOfPlayer = () => true;
+            return next(args);
+        } finally {
+            if (original) Object.defineProperty(C, 'IsLoverOfPlayer', original);
+            else delete C.IsLoverOfPlayer;
+        }
+    });
+
     // ── 好友清單：AFC 戀人顯示為戀人關係（優先 BCT Best Friend）──────
     modApi.hookFunction('FriendListLoadFriendList', 3, async (args, next) => {
         await next(args);   // 等 BC + BCT（priority 2）都執行完
