@@ -24,7 +24,7 @@ if (AFC?.isLover) { /* 已就緒 */ }
 
 | 方法 | 回傳 | 說明 |
 |---|---|---|
-| `version` | `string` | AFC 版本，如 `"0.7.0"` |
+| `version` | `string` | AFC 版本，如 `"0.7.1"` |
 | `isLover(memberNumber)` | `boolean` | 對方是否為**我**的拓展戀人 |
 | `getLoverStage(memberNumber)` | `0 \| 1 \| 2 \| null` | 戀人階段（見 [Stage](#stage-階段)）；非戀人為 `null` |
 | `getLoverRoom(memberNumber)` | `LoverRoom \| null` | 該戀人目前分享的**私人房間**（見 [跨房私人房](#跨房私人房)）；未分享／非戀人為 `null` |

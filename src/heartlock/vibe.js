@@ -5,13 +5,13 @@
 
 import { HEARTLOCK_NAME, VIBE_INTERVAL_MS, VIBE_MSG_CYCLE } from './config.js';
 import { state } from './state.js';
-import { T } from './i18n.js';
+import { th as T } from '../i18n/i18n.js';
 import { ensureStorage } from './storage.js';
 import { sendLocalizedAction } from '../i18n/l10n.js';
 
 export function startVibeTimer() {
-    if (state.vibeTimer) return;
-    state.vibeTimer = setInterval(vibeStep, VIBE_INTERVAL_MS);
+    if (state.timers.vibe) return;
+    state.timers.vibe = setInterval(vibeStep, VIBE_INTERVAL_MS);
 }
 
 export function vibeStep() {
@@ -45,8 +45,8 @@ export function vibeStep() {
         try { AudioPlaySoundEffect("VibrationShort"); } catch {}
     }
 
-    state.vibeCycle = (state.vibeCycle + 1) % VIBE_MSG_CYCLE;
-    if (state.vibeCycle === 0) {
+    state.vibe.cycle = (state.vibe.cycle + 1) % VIBE_MSG_CYCLE;
+    if (state.vibe.cycle === 0) {
         const mode = Player.OnlineSharedSettings?.AFC?.vibeMsgMode ?? 'broadcast';
         if (mode !== 'off') {
             const nick = Player.Nickname || Player.Name;
@@ -75,18 +75,18 @@ export function vibeStep() {
 // ────────────────────────────────────────
 export function startVibeAnim(level, durationMs) {
     if (!window.Player?.ArousalSettings) return;
-    state.vibeAnimUntil = Date.now() + durationMs;   // 期間再觸發只延長，不重疊計時器
-    state.vibeAnimLevel = level;
-    if (state.vibeAnimTimer) return;
+    state.vibe.animationUntil = Date.now() + durationMs;   // 期間再觸發只延長，不重疊計時器
+    state.vibe.animationLevel = level;
+    if (state.timers.vibeAnimation) return;
     const tick = () => {
-        if (!window.Player?.ArousalSettings || Date.now() >= state.vibeAnimUntil) {
+        if (!window.Player?.ArousalSettings || Date.now() >= state.vibe.animationUntil) {
             if (window.Player?.ArousalSettings) Player.ArousalSettings.VibratorLevel = 0;  // 交還給 BC 依實際玩具重算
-            clearInterval(state.vibeAnimTimer); state.vibeAnimTimer = null;
+            clearInterval(state.timers.vibeAnimation); state.timers.vibeAnimation = null;
             return;
         }
-        Player.ArousalSettings.VibratorLevel = state.vibeAnimLevel;
+        Player.ArousalSettings.VibratorLevel = state.vibe.animationLevel;
         Player.ArousalSettings.ChangeTime = (typeof CommonTime === 'function') ? CommonTime() : Date.now();
     };
     tick();
-    state.vibeAnimTimer = setInterval(tick, 100);
+    state.timers.vibeAnimation = setInterval(tick, 100);
 }

@@ -5,12 +5,11 @@
 
 import { STAGE, BEEP, PROPOSE_EXPIRE_MS } from '../core/config.js';
 import { pendingRestoreOut, pendingRestoreInc, AFCLockAccessOn } from '../core/state.js';
-import { getSharedSettings, saveSharedSettings } from '../core/settings.js';
 import { t } from '../i18n/i18n.js';
 import { chatLocalNotice } from '../util/util.js';
 import { sendBeep } from '../net/beep.js';
-import { isAFCLover, getLoverEntry, updateLastSeen } from './lovers.js';
-import { createProposalUI, startCountdown } from '../ui/proposal-ui.js';
+import { isAFCLover, getLoverEntry, updateLastSeen, upsertLover } from './lovers.js';
+import { clearRequest, scheduleOutgoing, showIncoming } from './request-manager.js';
 
 export function proposeRestore(C, quiet = false) {
     const target = C.MemberNumber;
@@ -38,47 +37,32 @@ export function proposeRestore(C, quiet = false) {
         StartDate:  startDate ?? Date.now(),
         StageDate:  stageDate ?? Date.now(),
     });
-    if (pendingRestoreOut[target]) clearTimeout(pendingRestoreOut[target].timer);
-    pendingRestoreOut[target] = {
-        timer: setTimeout(() => { delete pendingRestoreOut[target]; }, PROPOSE_EXPIRE_MS),
-    };
+    scheduleOutgoing(pendingRestoreOut, target, PROPOSE_EXPIRE_MS);
     if (!quiet) chatLocalNotice(t('restoreSent', C.Name));
 }
 
 export function handleIncomingRestore(senderNum, senderName, stage, startDate, stageDate) {
     if (pendingRestoreInc[senderNum]) return;
     const uiId = `el-restore-${senderNum}`;
-    const el = createProposalUI({
-        uiId,
+    showIncoming({
+        store: pendingRestoreInc, key: senderNum, uiId,
         title:     t('restoreTitle', senderName, senderNum),
         subText:   t('timerText', 3, '00'),
-        onAccept:  () => acceptRestore(senderNum, senderName, stage, startDate, stageDate),
-        onDecline: () => cleanupRestoreUI(senderNum),
+        expireMessage: null,
+        onAccept: close => acceptRestore(senderNum, senderName, stage, startDate, stageDate, close),
     });
-    if (!el) return;
-
-    const iv = startCountdown(uiId, `${uiId}-sub`,
-                              () => cleanupRestoreUI(senderNum), null);
-    pendingRestoreInc[senderNum] = { timer: iv, uiId };
 }
 
-function acceptRestore(senderNum, senderName, stage, startDate, stageDate) {
-    cleanupRestoreUI(senderNum);
-    const s = getSharedSettings();
-    if (!s) return;
-
-    const alreadyHave = s.lovers.some(l => Number(l.memberNumber) === Number(senderNum));
-
-    if (!alreadyHave) {
+function acceptRestore(senderNum, senderName, stage, startDate, stageDate, close) {
+    close();
+    if (!isAFCLover(senderNum)) {
         // Case B：我（丟失方）收到保有方的申請，直接 addLover
-        s.lovers.push({ memberNumber: senderNum, name: senderName,
-                       stage, startDate, stageDate });
-        saveSharedSettings();
+        upsertLover({ memberNumber: senderNum, name: senderName, stage, startDate, stageDate });
     }
     // 無論哪個 Case，都把資料帶回給對方
     // Case A：我（保有方）已有對方，找出我記錄的對方資料，回傳讓對方 addLover
     // Case B：我剛 addLover 完畢，回傳確認
-    const myEntryForSender = s.lovers.find(l => Number(l.memberNumber) === Number(senderNum));
+    const myEntryForSender = getLoverEntry(senderNum);
     AFCLockAccessOn.add(senderNum);
     updateLastSeen(senderNum);
     sendBeep(senderNum, BEEP.RESTORE_ACCEPT, {
@@ -93,28 +77,15 @@ function acceptRestore(senderNum, senderName, stage, startDate, stageDate) {
 export function handleRestoreAccepted(fromNum, receiverName, stage, startDate, stageDate) {
     // 只認自己確實送出過恢復申請的接受回覆；無對應 pending 即忽略（防偽造）
     if (!pendingRestoreOut[fromNum]) return;
-    clearTimeout(pendingRestoreOut[fromNum].timer);
-    delete pendingRestoreOut[fromNum];
+    clearRequest(pendingRestoreOut, fromNum);
     // Case A：我是丟失方，對方回傳資料，現在 addLover
     if (!isAFCLover(fromNum)) {
-        const s = getSharedSettings();
-        if (s && !s.lovers.some(l => Number(l.memberNumber) === Number(fromNum))) {
-            s.lovers.push({ memberNumber: fromNum, name: receiverName,
-                           stage: stage ?? STAGE.DATING,
-                           startDate: startDate ?? Date.now(),
-                           stageDate: stageDate ?? Date.now() });
-            saveSharedSettings();
-        }
+        upsertLover({ memberNumber: fromNum, name: receiverName,
+                      stage: stage ?? STAGE.DATING,
+                      startDate: startDate ?? Date.now(),
+                      stageDate: stageDate ?? Date.now() });
     }
     AFCLockAccessOn.add(fromNum);
     updateLastSeen(fromNum);
     chatLocalNotice(t('restoreOK', receiverName));
-}
-
-function cleanupRestoreUI(num) {
-    const p = pendingRestoreInc[num];
-    if (!p) return;
-    clearInterval(p.timer);
-    document.getElementById(p.uiId)?.remove();
-    delete pendingRestoreInc[num];
 }

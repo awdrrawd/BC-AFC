@@ -15,7 +15,7 @@ import {
 import { initiateBreakup, broadcastEvent } from './breakup.js';
 import { proposeStageUpgrade } from './stage.js';
 import { proposeRestore } from './restore.js';
-import { createProposalUI, startCountdown } from '../ui/proposal-ui.js';
+import { clearRequest, scheduleOutgoing, showIncoming } from './request-manager.js';
 
 // ── Window prerequisite 函式 ──
 window.ChatRoomAFCCanPropose = function () {
@@ -95,14 +95,9 @@ export function proposeToCharacter(C) {
         savePrivateSettings(priv);
     }
 
-    if (pendingOutgoing[target]) clearTimeout(pendingOutgoing[target].timer);
-    pendingOutgoing[target] = {
-        timer: setTimeout(() => {
-            delete pendingOutgoing[target];
-            // 若對方已接受（已成為戀人），不顯示逾時訊息
-            if (!isAFCLover(target)) chatLocalNotice(t('proposeExpired', C.Name));
-        }, PROPOSE_EXPIRE_MS),
-    };
+    scheduleOutgoing(pendingOutgoing, target, PROPOSE_EXPIRE_MS, () => {
+        if (!isAFCLover(target)) chatLocalNotice(t('proposeExpired', C.Name));
+    });
     chatLocalNotice(t('proposeSent', C.Name));
 }
 
@@ -117,30 +112,21 @@ export function handleIncomingProposal(senderNum, senderName) {
 
     const uiId = `el-proposal-${senderNum}`;
 
-    const el = createProposalUI({
-        uiId,
+    showIncoming({
+        store: pendingIncoming, key: senderNum, uiId,
         title:     t('propTitle', senderName, senderNum),
         subText:   t('timerText', 3, '00'),
-        onAccept:  () => acceptProposal(senderNum, senderName),
-        onDecline: () => cleanupIncomingUI(senderNum),
+        expireMessage: t('proposeExpired', senderName),
+        onAccept:  close => acceptProposal(senderNum, senderName, close),
     });
-    if (!el) return;
-
-    const iv = startCountdown(uiId, `${uiId}-sub`, () => cleanupIncomingUI(senderNum),
-                              t('proposeExpired', senderName));
-    pendingIncoming[senderNum] = { timer: iv, uiId };
 }
 
 export function cleanupIncomingUI(num) {
-    const p = pendingIncoming[num];
-    if (!p) return;
-    clearInterval(p.timer);
-    document.getElementById(p.uiId)?.remove();
-    delete pendingIncoming[num];
+    clearRequest(pendingIncoming, num);
 }
 
-function acceptProposal(senderNum, senderName) {
-    cleanupIncomingUI(senderNum);
+function acceptProposal(senderNum, senderName, close = () => cleanupIncomingUI(senderNum)) {
+    close();
     addLover(senderNum, senderName, STAGE.DATING);
     AFCLockAccessOn.add(senderNum);
     updateLastSeen(senderNum);
@@ -152,8 +138,7 @@ export function handleAccepted(fromNum, receiverName) {
     // 只認自己確實送出過申請的接受回覆；無對應 pending 即視為偽造/未經請求的 ACCEPT，忽略。
     // （申請有效期 PROPOSE_EXPIRE_MS = 3 分鐘，ACCEPT 走可靠傳輸，合法回覆必在期內到達）
     if (!pendingOutgoing[fromNum]) return;
-    clearTimeout(pendingOutgoing[fromNum].timer);
-    delete pendingOutgoing[fromNum];
+    clearRequest(pendingOutgoing, fromNum);
     if (!isAFCLover(fromNum)) {
         addLover(fromNum, receiverName, STAGE.DATING);
         AFCLockAccessOn.add(fromNum);

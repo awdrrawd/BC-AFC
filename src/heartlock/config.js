@@ -9,7 +9,6 @@ export const HEARTLOCK_NAME   = 'Heart Padlock';
 export const HSLOCK_NAME      = 'HighSecurityPadlock';
 export const MOD_NAME         = 'HeartLockBC';
 export const EXT_KEY          = 'AFC_HeartLock';
-export const EXT_KEY_OLD      = 'HeartLock';   // 舊 key，搬遷後刪除（短期輔助，未來移除）
 
 // ── 後備 DB（IndexedDB 主 + localStorage 鏡像）常數 ──
 // DB 僅作「後手」還原,資料仍以線上(ExtensionSettings)為準。

@@ -6,11 +6,18 @@
 import { TAB_OVERVIEW } from './config.js';
 
 export const state = {
-    initialized: false, assetCreated: false, modApi: null,
-    vibeTimer: null, vibeCycle: 0, lastIntegritySync: 0,
-    vibeAnimTimer: null, vibeAnimUntil: 0, vibeAnimLevel: 0,
-    _lastRestoreMsg: 0, _restoring: false, _unlocking: false,
-    _inServerSync: false, _sendingResist: false, _timerUnlocking: false,
+    lifecycle: { initialized: false, assetCreated: false, modApi: null },
+    timers: { vibe: null, vibeAnimation: null, unlockCheck: null, integrity: null },
+    vibe: { cycle: 0, animationUntil: 0, animationLevel: 0 },
+    operations: {
+        lastRestoreMessage: 0,
+        restoring: false,
+        unlocking: false,
+        applyingLock: false,
+        serverSync: false,
+        sendingResist: false,
+        timerUnlocking: false,
+    },
     panel: {
         tab: TAB_OVERVIEW, targetChar: null, groupName: null,
         timerInput: 0, noteEditing: false, ctlEditing: false, noteDraft: null,

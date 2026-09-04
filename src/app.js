@@ -2,7 +2,7 @@
 //  AFC application (loaded by main.js and bundled by vite → assets/main.js)
 //  Loader (loader.user.js / loader.local.user.js) dynamically imports this file.
 //  Modules are grouped by area under ./<category>/:
-//    core/       — config, state, socket, settings, storage, legacy, commands, hooks, core-init
+//    core/       — config, state, socket, settings, storage, commands, hooks, core-init
 //    i18n/       — i18n
 //    util/       — util, toast
 //    net/        — beep, beep-router, roomname, online, sync-data

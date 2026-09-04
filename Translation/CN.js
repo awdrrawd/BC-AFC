@@ -240,9 +240,6 @@
     "toastFail": {
         "CN": "🐈‍⬛ [AFC] 加载失败，请刷新页面。"
     },
-    "legacyDetected": {
-        "CN": "🐈‍⬛ [AFC] 检测到不兼容的旧版 AFC 数据，已重置为默认（恋人锁未受影响）。"
-    },
     "factoryTitle": {
         "CN": "恢复出厂设置"
     },

@@ -6,33 +6,57 @@
 import { STAGE } from '../core/config.js';
 import { AFCLockAccessOn, loversPrivateRoom, setLastKnownLoverCount } from '../core/state.js';
 import { getSharedSettings, saveSharedSettings } from '../core/settings.js';
+import { normalizeLover, normalizeLoverList, normalizeMemberNumber, sameMemberNumber } from './lover-model.js';
+
+function commitLovers(settings) {
+    setLastKnownLoverCount(settings.lovers.length);
+    saveSharedSettings();
+}
 
 export function addLover(memberNumber, name, stage = STAGE.DATING) {
     const s = getSharedSettings();
-    if (!s || s.lovers.some(l => l.memberNumber === memberNumber)) return;
-    s.lovers.push({
-        memberNumber, name, stage,
-        startDate:   Date.now(),
-        stageDate:   Date.now(),
-    });
-    saveSharedSettings();
+    const normalized = normalizeLover({ memberNumber, name, stage });
+    if (!s || !normalized || s.lovers.some(l => sameMemberNumber(l.memberNumber, normalized.memberNumber))) return false;
+    s.lovers.push(normalized);
+    commitLovers(s);
     console.log("🐈‍⬛ [AFC] ✅ 新增戀人:", name, memberNumber);
+    return true;
+}
+
+export function upsertLover(input) {
+    const s = getSharedSettings();
+    const normalized = normalizeLover(input);
+    if (!s || !normalized) return null;
+    const index = s.lovers.findIndex(l => sameMemberNumber(l.memberNumber, normalized.memberNumber));
+    if (index >= 0) s.lovers[index] = { ...s.lovers[index], ...normalized };
+    else s.lovers.push(normalized);
+    commitLovers(s);
+    return s.lovers[index >= 0 ? index : s.lovers.length - 1];
+}
+
+export function replaceLovers(lovers) {
+    const s = getSharedSettings();
+    if (!s) return [];
+    s.lovers = normalizeLoverList(lovers);
+    commitLovers(s);
+    return s.lovers;
 }
 
 export function removeLover(memberNumber) {
     const s = getSharedSettings();
     if (!s) return;
-    s.lovers = s.lovers.filter(l => l.memberNumber !== memberNumber);
-    AFCLockAccessOn.delete(memberNumber);
-    delete loversPrivateRoom[memberNumber];
-    setLastKnownLoverCount(s.lovers.length);
-    saveSharedSettings();
+    const normalized = normalizeMemberNumber(memberNumber);
+    if (normalized === null) return;
+    s.lovers = s.lovers.filter(l => !sameMemberNumber(l.memberNumber, normalized));
+    AFCLockAccessOn.delete(normalized);
+    delete loversPrivateRoom[normalized];
+    commitLovers(s);
 }
 
 // 升格戀人關係階段（單調：只升不降，防「已結婚被降回訂婚」造成雙方不一致）
 export function promoteStage(memberNumber, newStage) {
     const s = getSharedSettings();
-    const lover = s?.lovers.find(l => l.memberNumber === memberNumber);
+    const lover = s?.lovers.find(l => sameMemberNumber(l.memberNumber, memberNumber));
     if (!lover) return;
     if (newStage <= (lover.stage ?? STAGE.DATING)) return;   // 不降級、同級不重設日期
     lover.stage     = newStage;
@@ -46,7 +70,7 @@ export function promoteStage(memberNumber, newStage) {
 //   回傳是否有變更。
 export function reconcileStage(memberNumber, theirStage, theirStageDate, theirStartDate) {
     const s = getSharedSettings();
-    const lover = s?.lovers.find(l => l.memberNumber === memberNumber);
+    const lover = s?.lovers.find(l => sameMemberNumber(l.memberNumber, memberNumber));
     if (!lover) return false;
 
     const myStage = lover.stage ?? STAGE.DATING;
@@ -74,23 +98,23 @@ export function reconcileStage(memberNumber, theirStage, theirStageDate, theirSt
 }
 
 export function getLoverEntry(memberNumber) {
-    return getSharedSettings()?.lovers.find(l => l.memberNumber === memberNumber);
+    return getSharedSettings()?.lovers.find(l => sameMemberNumber(l.memberNumber, memberNumber));
 }
 
 export function isAFCLover(memberNumber) {
-    return getSharedSettings()?.lovers.some(l => l.memberNumber === memberNumber) ?? false;
+    return getSharedSettings()?.lovers.some(l => sameMemberNumber(l.memberNumber, memberNumber)) ?? false;
 }
 
 export function targetHasAFC(C) { return !!(C?.OnlineSharedSettings?.AFC); }
 
 export function isNativeLover(memberNumber) {
-    return Player.Lovership?.some(l => l.MemberNumber === memberNumber) ?? false;
+    return Player.Lovership?.some(l => sameMemberNumber(l.MemberNumber, memberNumber)) ?? false;
 }
 
 // ── 最後見面紀錄 ──
 export function updateLastSeen(memberNumber) {
     const s = getSharedSettings();
-    const lover = s?.lovers.find(l => l.memberNumber === memberNumber);
+    const lover = s?.lovers.find(l => sameMemberNumber(l.memberNumber, memberNumber));
     if (lover) {
         lover.lastSeen = Date.now();
         saveSharedSettings();

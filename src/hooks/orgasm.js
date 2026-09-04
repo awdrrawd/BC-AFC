@@ -3,10 +3,10 @@
 //  高潮攔截（normal / edge / deny）
 // ════════════════════════════════════════
 
-import { HEARTLOCK_NAME } from './config.js';
-import { ensureStorage } from './storage.js';
+import { HEARTLOCK_NAME } from '../heartlock/config.js';
+import { ensureStorage } from '../heartlock/storage.js';
 
-export function setupOrgasmHook(modApi) {
+export function setupOrgasmHooks(hook) {
     const getMode = () => {
         if (!ensureStorage()) return 'normal';
         let mode = 'normal';
@@ -20,7 +20,7 @@ export function setupOrgasmHook(modApi) {
         }
         return mode;
     };
-    modApi.hookFunction('ActivityOrgasmPrepare', 11, (args, next) => {
+    hook('ActivityOrgasmPrepare', 11, (args, next) => {
         if (!args[0]?.IsPlayer?.()) return next(args);
         const mode = getMode();
         // edge：對齊 BC 原生 IsEdged()，封頂 95、永不高潮
@@ -39,7 +39,7 @@ export function setupOrgasmHook(modApi) {
         }
         return next(args);
     });
-    modApi.hookFunction('ActivityOrgasmStart', 11, (args, next) => {
+    hook('ActivityOrgasmStart', 11, (args, next) => {
         if (!args[0]?.IsPlayer?.()) return next(args);
         // edge 原生不會設 OrgasmTimer，理論上不會走到這；保險起見再封頂一次
         if (getMode() === 'edge') { if (Player.ArousalSettings?.Progress != null) Player.ArousalSettings.Progress = 95; return; }

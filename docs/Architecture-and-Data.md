@@ -9,14 +9,21 @@ src/
 ├─ main.js                進入點：建立 window.Liko.AFC，呼叫 initialize()
 ├─ core/
 │  ├─ config.js           常數：版本、Beep 通道、階段、顏色、Profile 座標、圖片 URL
-│  ├─ state.js            跨模組共用可變狀態（export let + setter）
-│  ├─ socket.js           ServerSocket 監聽註冊/移除
+│  ├─ state.js            關係流程的統一 runtime data tree
+│  ├─ socket.js           每個 ServerSocket event 的唯一 dispatcher
 │  ├─ settings.js         OnlineSharedSettings.AFC（共享）+ ExtensionSettings.AFC（私人）
+│  ├─ lover-backup.js     戀人資料本機備份 repository（不依賴共享設定）
 │  ├─ storage.js          localStorage「DB」保險箱 + factoryReset
-│  ├─ legacy.js           舊版資料一次性處理（短期輔助）
 │  ├─ commands.js         /afc-* 聊天指令
-│  ├─ hooks.js            modApi.hookFunction + ServerSocket listeners（含 Profile 面板模態）
 │  └─ core-init.js        初始化（載入期/登入後兩階段）+ 對外 API + 啟動 Heart Lock
+├─ hooks/                 所有 bcModSdk hook 的唯一存放處
+│  ├─ registry.js         hook / interval / timeout 的註冊與卸載生命週期
+│  ├─ index.js            AFC hook 與共用通道 dispatcher
+│  ├─ chat-message-channel.js  ChatRoomMessage 內部訂閱派送
+│  ├─ relationship-visual.js  戀人圖示、好友列表與對話 UI
+│  ├─ heartlock.js        HeartLock 遊戲函式 hook
+│  ├─ orgasm.js           HeartLock 高潮控制 hook
+│  └─ lifecycle.js        登入階段的一次性 hook
 ├─ i18n/
 │  ├─ engine.js           共用翻譯引擎（BC_i18n.js 複本 → window.Liko.__Sys_i18n__/__Sys_L10N__）
 │  ├─ i18n.js             AFC 本地 UI 翻譯（薄封裝）
@@ -24,14 +31,18 @@ src/
 │  └─ strings/            文本資料（非引擎）：afc-ui / afc-actions / heartlock-ui / heartlock-actions
 ├─ util/                  util（通用）、toast
 ├─ net/                   beep（可靠傳輸）、beep-router、roomname、online、sync-data
-├─ relations/             lovers、propose、stage、restore、reconcile、breakup、dialog
+├─ relations/             戀人 model/service、共用 request manager、提案/升格/恢復流程
 ├─ ui/                    proposal-ui、profile（面板/燈號/regions）、settings-page（偏好設定頁）
 └─ heartlock/             心形鎖（原獨立插件，現為 bundle 內模組）：
-                          config/i18n/state/util/datepicker/storage/permissions/lock/
-                          net/vibe/orgasm/timer/note/panel/tabs/hooks/init
+                          config/state/util/datepicker/storage/permissions/lock/
+                          events/net/vibe/timer/note/panel/init；tabs/ 每頁一個模組
 ```
 
-**引擎 vs 文本分離**：`i18n/engine.js`、`l10n.js`、`i18n.js` 是工具；所有翻譯字串在 `i18n/strings/`。維護翻譯只改 `strings/`。
+**引擎 vs 文本分離**：`i18n/engine.js`、`l10n.js`、`i18n.js` 是工具；所有翻譯字串在 `i18n/strings/`。HeartLock 透過中央 `i18n.js` 的 `hl` namespace 取字串，不另設一套 I18N。維護翻譯只改 `strings/`。
+
+**Hook 與通道**：所有 bcModSdk hook 實作集中於 `src/hooks/`，並共用同一個 registry。相同遊戲函式只有一個 AFC hook，再由內部呼叫各功能處理器；目前已合併 `ChatRoomMessage`、`ChatRoomSync`、`InformationSheetExit`、`FriendListLoadFriendList` 與 `ElementButton.Create`。L10N 不再自行安裝 `ChatRoomMessage` hook，而由中央入口呼叫。`ServerSocket` 也以每個 event 一個 dispatcher 管理所有訂閱者。
+
+**Runtime data tree**：關係請求、冷卻、ACK、房間狀態集中於 `core/state.js` 的 `relationRuntime`；HeartLock 則依 `lifecycle`、`timers`、`vibe`、`operations`、`panel` 分組。具名 export 僅是指向同一份資料的引用，供既有模組逐步採用，沒有建立第二份狀態。
 
 ---
 
@@ -101,7 +112,7 @@ npm run dev         # vite build --watch + preview :5175（配 loader.local.user
 
 - **CI**：push `main` → `.github/workflows/deploy.yml` → build + 部署 GitHub Pages。
 - **Bundle**：`https://awdrrawd.github.io/BC-AFC/assets/main.js`
-- **圖片**：`Images/AFC-*.png`，程式內以 `https://raw.githubusercontent.com/awdrrawd/BC-AFC/main/Images/…` 直連（推送即生效）。
+- **圖片**：來源保存在 `Images/AFC-*.png`，build 複製至 `public/`，程式透過 `https://awdrrawd.github.io/BC-AFC/…` 載入。維持獨立檔案可使用瀏覽器快取，也避免把 Base64 圖片寫入 HeartLock 設定。
 
 ### Loader
 

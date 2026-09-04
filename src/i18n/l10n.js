@@ -10,7 +10,7 @@
 //  用法：
 //    L10N.register(ns, table)    // 註冊翻譯表（見 strings/*；位置式 {0}{1}…）
 //    L10N.send(ns, key, ...args) // 發一條在地化 Action（Tag: Liko_L10N）
-//    L10N.install(modApi)        // 安裝唯一的接收端 ChatRoomMessage hook
+//    localizeChatRoomMessage(data) // 由中央 ChatRoomMessage hook 呼叫
 // ════════════════════════════════════════
 
 import './engine.js';   // 執行共用引擎 IIFE：建立 window.Liko.__Sys_i18n__ / __Sys_L10N__（含防重載）
@@ -22,4 +22,19 @@ export const L10N = window.Liko.__Sys_L10N__;
 export function sendLocalizedAction(ns, key, args) {
     L10N.send(ns, key, ...(Array.isArray(args) ? args : args == null ? [] : [args]));
 }
-export function installL10n(modApi) { L10N.install(modApi); }
+export function localizeChatRoomMessage(data) {
+    if (typeof L10N.localize === 'function') return L10N.localize(data);
+    const dict = Array.isArray(data?.Dictionary) ? data.Dictionary : null;
+    const marker = dict?.find(entry => entry?.Tag === 'Liko_L10N' && entry.key);
+    if (!marker) return;
+    let args = [];
+    try {
+        const parsed = JSON.parse(marker.data ?? '[]');
+        if (Array.isArray(parsed)) args = parsed;
+    } catch {}
+    const text = L10N.tl(L10N.lang(), marker.ns, marker.key, ...args);
+    if (text == null) return;
+    const custom = dict.find(entry => typeof entry?.Tag === 'string' && entry.Tag.includes('CUSTOM_SYSTEM_ACTION'));
+    if (custom) custom.Text = text;
+    else data.Content = text;
+}

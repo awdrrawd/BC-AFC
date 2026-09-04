@@ -9,7 +9,9 @@ import { log } from './util.js';
 import { ensureStorage, deleteConfig } from './storage.js';
 import { sendLocalizedAction } from '../i18n/l10n.js';
 
-export function startTimerCheck() { setInterval(checkTimers, 60000); }
+export function startTimerCheck() {
+    if (!state.timers.unlockCheck) state.timers.unlockCheck = setInterval(checkTimers, 60000);
+}
 
 export function checkTimers() {
     if (!ensureStorage()) return;
@@ -42,10 +44,10 @@ export function checkTimers() {
                 // 移除物品本身（_timerUnlocking 讓 hook 放行）
                 if (willRemove) {
                     try {
-                        state._timerUnlocking = true;
+                        state.operations.timerUnlocking = true;
                         InventoryRemove?.(Player, gn, false);
-                        state._timerUnlocking = false;
-                    } catch { state._timerUnlocking = false; }
+                        state.operations.timerUnlocking = false;
+                    } catch { state.operations.timerUnlocking = false; }
                 }
 
                 CharacterRefresh?.(Player, false);

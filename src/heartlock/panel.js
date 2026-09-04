@@ -9,11 +9,11 @@ import {
 } from './config.js';
 import { state } from './state.js';
 import { hlEl, dpInit } from './util.js';
-import { T } from './i18n.js';
+import { th as T } from '../i18n/i18n.js';
 import { getPadlockConfig } from './storage.js';
 import { closeNoteOverlay } from './note.js';
-import { requestHeartLockData } from './net.js';
 import { hlTabOverview, hlTabNote, hlTabTimer, hlTabControl, hlTabUnlock } from './tabs.js';
+import { emitHeartLockEvent, onHeartLockEvent } from './events.js';
 
 let _hlTimer = null;
 // tabs 需要在自身 refresh interval 內設定 _hlTimer，透過此 setter 共用
@@ -46,7 +46,7 @@ export function openHLPanel(ch, gn) {
     p.noteEditing = false; p.noteDraft = null;
     p.ctlEditing = false; p.unlockConfirming = false;
     dpInit(getPadlockConfig(ch, gn));
-    if (ch && !ch.IsPlayer()) requestHeartLockData(ch);
+    if (ch && !ch.IsPlayer()) emitHeartLockEvent('request-remote-data', ch);
 
     const sc = _hlScaleFactor();
     const c  = document.getElementById('MainCanvas');
@@ -162,3 +162,8 @@ export function panelLoad() {
     if (!ch || !gn) return;
     openHLPanel(ch, gn);
 }
+
+onHeartLockEvent('panel-refresh', hlRefreshCurrentTab);
+onHeartLockEvent('panel-show-tab', ({ character, groupName, tabId }) => hlShowTab(character, groupName, tabId));
+onHeartLockEvent('panel-close', removeHLPanel);
+onHeartLockEvent('panel-set-timer', setHlTimer);

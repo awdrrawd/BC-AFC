@@ -4,26 +4,26 @@
 // ════════════════════════════════════════
 
 import { isInitialized, AFCLockAccessOn } from './state.js';
-import { getSharedSettings, getPrivateSettings } from './settings.js';
+import { getSharedSettings } from './settings.js';
 import { waitFor, daysSince, formatDuration, chatLocalNotice } from '../util/util.js';
 import { isAFCLover } from '../relations/lovers.js';
 import { initiateBreakup } from '../relations/breakup.js';
 import { proposeToCharacter } from '../relations/propose.js';
+import { subscribeChatRoomMessage } from '../hooks/chat-message-channel.js';
 
-export async function setupCommands() {
+export async function setupCommands(registry) {
     await waitFor(() => !!window.Commands);
-    CommandCombine([
+    const definitions = [
         {
             Tag: "afc-debug-hidden",
             Description: "診斷：下一條 Hidden 訊息的欄位結構",
             Action: () => {
-                const handler = (data) => {
+                const unregister = subscribeChatRoomMessage((data) => {
                     if (data?.Type !== 'Hidden') return;
                     chatLocalNotice(`Hidden 欄位: ${Object.keys(data).join(', ')}`);
                     chatLocalNotice(`Sender=${data.Sender}, SenderMemberNumber=${data.SenderMemberNumber}, Content=${data.Content}`);
-                    ServerSocket.off('ChatRoomMessage', handler);
-                };
-                ServerSocket.on('ChatRoomMessage', handler);
+                    unregister();
+                });
                 chatLocalNotice('等待下一條 Hidden 訊息...');
             }
         },
@@ -62,15 +62,22 @@ export async function setupCommands() {
             Tag: "afc-lastseen",
             Description: "顯示所有戀人的最後見面時間",
             Action: () => {
-                const priv   = getPrivateSettings();
                 const lovers = getSharedSettings()?.lovers ?? [];
                 if (lovers.length === 0) { chatLocalNotice("暫無戀人資料"); return; }
                 for (const l of lovers) {
-                    const ts  = priv?.lastSeen?.[l.memberNumber];
+                    const ts  = l.lastSeen;
                     const str = ts ? `${daysSince(ts)} 天前` : "從未記錄";
                     chatLocalNotice(`${l.name}: 最後見面 ${str}`);
                 }
             }
         },
-    ]);
+    ];
+    CommandCombine(definitions);
+    registry.add(() => {
+        if (!Array.isArray(window.Commands)) return;
+        const tags = new Set(definitions.map(command => command.Tag));
+        for (let index = window.Commands.length - 1; index >= 0; index--) {
+            if (tags.has(window.Commands[index]?.Tag)) window.Commands.splice(index, 1);
+        }
+    });
 }

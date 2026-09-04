@@ -37,10 +37,9 @@
     //  優先讀「已持久化」的 BondageClubLanguage —— BC 啟動時 TranslationLanguage 先是
     //  預設 "EN"，稍後才由 TranslationLoad() 覆寫成真正語系，直接信任它會抓到瞬間的 EN。
     //  故：localStorage → TranslationLanguage → 瀏覽器語系 → EN。
-    const SUPPORTED = ['TW', 'CN', 'EN', 'JA', 'KO', 'DE', 'FR', 'RU', 'UA'];
     function detectLang() {
         let raw = '';
-        try { raw = (typeof localStorage !== 'undefined' && localStorage.getItem('BondageClubLanguage')) || ''; } catch (e) {}
+        try { raw = (typeof localStorage !== 'undefined' && localStorage.getItem('BondageClubLanguage')) || ''; } catch {}
         if (!raw && typeof TranslationLanguage !== 'undefined' && TranslationLanguage) raw = String(TranslationLanguage);
         if (!raw && typeof navigator !== 'undefined') raw = navigator.language || '';
 
@@ -180,10 +179,9 @@
 
     // ── 對外 API：Liko.__Sys_L10N__（聊天訊息在地化）─────────────────────────────────
     //  送出時 Text 放英文底本（沒裝插件者看到英文），Dictionary 夾帶 { Tag:'Liko_L10N', ns, key, data }。
-    //  接收端 hook ChatRoomMessage，偵測標記→用「自己的語言」重寫 Text 後顯示（含自己發的）。
+    //  接收端由插件的中央 ChatRoomMessage hook 呼叫 localize()。
     const L10N_TAG   = 'Liko_L10N';
     const CUSTOM_TAG = 'CUSTOM_SYSTEM_ACTION';
-    let _l10nInstalled = false;
 
     function msg_tl(lang, ns, key, ...args) {
         return _resolve('msg', lang, ns, key, args.length ? args : null);
@@ -203,31 +201,21 @@
                     { Tag: L10N_TAG, ns, key: String(key), data: JSON.stringify(args) },
                 ],
             });
-        } catch (e) {}
+        } catch {}
     }
 
-    function msg_install(modApi) {
-        if (_l10nInstalled || !modApi?.hookFunction) return;
-        _l10nInstalled = true;
+    function msg_localize(data) {
         try {
-            modApi.hookFunction('ChatRoomMessage', 5, (a, next) => {
-                const data = a[0];
-                try {
-                    const dict = data && Array.isArray(data.Dictionary) ? data.Dictionary : null;
-                    const d = dict && dict.find(x => x && x.Tag === L10N_TAG && x.key);
-                    if (d) {
-                        let arr = [];
-                        try { const p = JSON.parse(d.data ?? '[]'); if (Array.isArray(p)) arr = p; } catch (e) {}
-                        const local = msg_tl(detectLang(), d.ns, d.key, ...arr);
-                        if (local != null) {
-                            const custom = dict.find(x => x && typeof x.Tag === 'string' && x.Tag.includes(CUSTOM_TAG));
-                            if (custom) custom.Text = local; else data.Content = local;
-                        }
-                    }
-                } catch (e) {}
-                return next(a);
-            });
-        } catch (e) { console.warn('🐈‍⬛ [Liko L10N] hook 失敗:', e.message); }
+            const dict = data && Array.isArray(data.Dictionary) ? data.Dictionary : null;
+            const d = dict && dict.find(x => x && x.Tag === L10N_TAG && x.key);
+            if (!d) return;
+            let arr = [];
+            try { const p = JSON.parse(d.data ?? '[]'); if (Array.isArray(p)) arr = p; } catch {}
+            const local = msg_tl(detectLang(), d.ns, d.key, ...arr);
+            if (local == null) return;
+            const custom = dict.find(x => x && typeof x.Tag === 'string' && x.Tag.includes(CUSTOM_TAG));
+            if (custom) custom.Text = local; else data.Content = local;
+        } catch {}
     }
 
     window.Liko.__Sys_L10N__ = {
@@ -238,7 +226,8 @@
         t: msg_t,
         tl: msg_tl,
         send: msg_send,
-        install: msg_install,
+        localize: msg_localize,
+        install: () => {},
         loadScript,
         loadLangs: (ns, urlMap, lang) => _loadLangs('msg', ns, urlMap, lang),
         ensure: (ns, spec, lang) => (typeof spec === 'string' ? loadScript(spec) : _loadLangs('msg', ns, spec, lang)),

@@ -12,6 +12,7 @@ import {
 } from './storage.js';
 import { notifyRemove } from './net.js';
 import { rebaselineCurseIfNeeded } from './bcx-compat.js';
+import { onHeartLockEvent } from './events.js';
 
 // ── 解鎖輔助（直接操作 Property，繞過 InventoryUnlock hook 干擾）──
 /** 解除自己身上指定部位的心鎖。回傳是否確實解了一個心鎖。 */
@@ -32,8 +33,8 @@ function _unlockSelfItem(gn, removeRestraint = false) {
         }
     }
     if (item && removeRestraint) {
-        try { state._timerUnlocking = true; InventoryRemove?.(Player, gn, false); }
-        finally { state._timerUnlocking = false; }
+        try { state.operations.timerUnlocking = true; InventoryRemove?.(Player, gn, false); }
+        finally { state.operations.timerUnlocking = false; }
     }
     return unlocked;
 }
@@ -42,13 +43,13 @@ function _unlockSelfItem(gn, removeRestraint = false) {
  *  正規移除順序：先清設定(ES+DB、bump ALL)，再移除身上物品，避免移除動作誤觸還原機制。 */
 export function removeLock(groupName, { removeRestraint = false } = {}) {
     if (!groupName || !ensureStorage()) return false;
-    state._unlocking = true;   // 抑制 integrity 還原（雙保險）
+    state.operations.unlocking = true;   // 抑制 integrity 還原（雙保險）
     try {
         delete Player.HeartLock.padlocks[groupName];   // 1) 先清 ES 設定
         saveAndSync();                                 //    寫入 ES+DB、bump ALL
         _unlockSelfItem(groupName, removeRestraint);   // 2) 再移除身上物品
         try { CharacterRefresh?.(Player, false); ChatRoomCharacterUpdate?.(Player); } catch {}
-    } finally { state._unlocking = false; }
+    } finally { state.operations.unlocking = false; }
     return true;
 }
 
@@ -56,7 +57,7 @@ export function removeLock(groupName, { removeRestraint = false } = {}) {
  *  同樣先清設定再移除物品。 */
 export function clearAllLocks({ removeRestraints = false } = {}) {
     if (!ensureStorage()) return 0;
-    state._unlocking = true;
+    state.operations.unlocking = true;
     let count = 0;
     try {
         const groups = Object.keys(Player.HeartLock.padlocks ?? {});
@@ -65,18 +66,18 @@ export function clearAllLocks({ removeRestraints = false } = {}) {
         for (const gn of groups)          // 2) 再逐一移除身上物品
             if (_unlockSelfItem(gn, removeRestraints)) count++;
         try { CharacterRefresh?.(Player, false); ChatRoomCharacterUpdate?.(Player); } catch {}
-    } finally { state._unlocking = false; }
+    } finally { state.operations.unlocking = false; }
     log(`clearAllLocks: cleared ${count} lock(s)`);
     return count;
 }
 
 // ── Asset 建立 ──
 export function createHeartLockAsset() {
-    if (state.assetCreated) return true;
+    if (state.lifecycle.assetCreated) return true;
     if (!window.AssetFemale3DCG || !window.AssetGroupGet || !window.AssetAdd || !window.InventoryAdd) return false;
     const itemMiscDef = AssetFemale3DCG.find(g => g.Group === 'ItemMisc');
     if (!itemMiscDef) return false;
-    if (itemMiscDef.Asset?.find(a => a.Name === HEARTLOCK_NAME)) { state.assetCreated = true; return true; }
+    if (itemMiscDef.Asset?.find(a => a.Name === HEARTLOCK_NAME)) { state.lifecycle.assetCreated = true; return true; }
     const group = AssetGroupGet?.('Female3DCG', 'ItemMisc');
     if (!group) { console.error('🐈‍⬛ [HeartLock] ItemMisc group not ready, will retry.'); return false; }
     const def = { AllowType: ['LockPickSeed'], Effect: [], Extended: true, IsLock: true, Name: HEARTLOCK_NAME, PickDifficulty: 20, Time: 10, Value: 70, Wear: false };
@@ -86,7 +87,7 @@ export function createHeartLockAsset() {
         AssetAdd(group, def, null, itemMiscDef);
         if (Player?.Inventory && !Player.Inventory.some(i => i.Asset?.Name === HEARTLOCK_NAME))
             InventoryAdd(Player, HEARTLOCK_NAME, 'ItemMisc');
-        state.assetCreated = true;
+        state.lifecycle.assetCreated = true;
         return true;
     } catch (e) { console.error('🐈‍⬛ [HeartLock] Asset creation failed', e); return false; }
 }
@@ -186,6 +187,9 @@ export function backfillSnapshots() {
     if (changed) saveAndSync();
 }
 
+onHeartLockEvent('storage-restored', reapplyFromAppearance);
+onHeartLockEvent('storage-backfill', backfillSnapshots);
+
 export function watchForUnlock(character, groupName, item) {
     let checks = 0;
     const iv = setInterval(() => {
@@ -215,12 +219,12 @@ export function restoreLockFromConfig(gn, cfg, updateUI = true) {
         if (!cfg._fullSnapshot?.assetName) {
             // 無 snapshot 可重建原物品 → 至少移除入侵物品並清該部位設定（無法完整還原）
             log('restore: swapped item but no snapshot →', gn, '→ remove intruder + clear config');
-            try { state._restoring = true; InventoryRemove?.(Player, gn, false); } finally { state._restoring = false; }
+            try { state.operations.restoring = true; InventoryRemove?.(Player, gn, false); } finally { state.operations.restoring = false; }
             deleteConfig(gn);
             return 'skip';
         }
         log('restore: detected item swap on', gn, '→ restoring original from snapshot');
-        try { state._restoring = true; InventoryRemove?.(Player, gn, false); } finally { state._restoring = false; }
+        try { state.operations.restoring = true; InventoryRemove?.(Player, gn, false); } finally { state.operations.restoring = false; }
         item = null;   // 落入下方重穿流程
     }
     if (!item) {
@@ -229,12 +233,12 @@ export function restoreLockFromConfig(gn, cfg, updateUI = true) {
         try {
             const asset = AssetGet?.(Player.AssetFamily, gn, snap.assetName);
             if (!asset) { _markPendingRestore(gn); return 'pending'; }   // Echo 等自訂物件尚未註冊
-            state._restoring = true;
+            state.operations.restoring = true;
             item = InventoryWear?.(Player, snap.assetName, gn, snap.color, asset.Difficulty, Player.MemberNumber, snap.craft);
-            state._restoring = false;
+            state.operations.restoring = false;
             if (!item) item = InventoryGet?.(Player, gn);
             if (!item) { _markPendingRestore(gn); return 'pending'; }
-        } catch (e) { state._restoring = false; log('restore: error', e); return 'skip'; }
+        } catch (e) { state.operations.restoring = false; log('restore: error', e); return 'skip'; }
     }
     // 到此 item 的 asset 應與 cfg 相符（原本相符，或已由 snapshot 重穿）
     if (cfg.assetName && item.Asset?.Name !== cfg.assetName) return 'skip';
@@ -272,7 +276,7 @@ export function cleanHeartLockProperty(C, itemOrGrp) {
 
 export function checkLockIntegrity() {
     if (!ensureStorage()) return;
-    if (state._unlocking) return;
+    if (state.operations.unlocking) return;
     const padlocks = Player.HeartLock?.padlocks ?? {};
     for (const gn of Object.keys(padlocks)) {
         const cfg = padlocks[gn];
@@ -294,7 +298,7 @@ export function checkLockIntegrity() {
  *  依使用者原則：有設定(該鎖) → 還原成真鎖；無設定(不該有鎖) → 抹掉假貼圖。 */
 export function cleanupFakeLocks() {
     if (!ensureStorage()) return;
-    if (state._unlocking || state._restoring) return;
+    if (state.operations.unlocking || state.operations.restoring) return;
     const padlocks = Player.HeartLock?.padlocks ?? {};
     let changed = false;
     (Player.Appearance ?? []).forEach(item => {

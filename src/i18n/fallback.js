@@ -314,10 +314,6 @@ const AFC_FALLBACK = {
         "TW": "🐈‍⬛ [AFC] 載入失敗，請重新整理頁面。",
         "EN": "🐈‍⬛ [AFC] Load failed. Please refresh the page."
     },
-    "legacyDetected": {
-        "TW": "🐈‍⬛ [AFC] 偵測到不相容的舊版 AFC 資料，已重置為預設（戀人鎖未受影響）。",
-        "EN": "🐈‍⬛ [AFC] Old/incompatible AFC data was detected and has been reset to defaults (lover locks were left untouched)."
-    },
     "factoryTitle": {
         "TW": "初廠設定",
         "EN": "Factory Reset"

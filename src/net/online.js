@@ -11,22 +11,30 @@ import {
 import { getSharedSettings } from '../core/settings.js';
 import { sleep, waitFor } from '../util/util.js';
 import { sendBeep } from './beep.js';
+import { registerSocketListener } from '../core/socket.js';
 
 export async function refreshOnlineFriends() {
     if (Date.now() - lastOnlineFetch < 30000) return;  // 節流 30 秒
     setLastOnlineFetch(Date.now());
     return new Promise(resolve => {
         let resolved = false;
-        const timer = setTimeout(() => { if (!resolved) { resolved = true; resolve(); } }, 5000);
+        let unregister = () => {};
+        const timer = setTimeout(() => {
+            if (!resolved) {
+                resolved = true;
+                unregister();
+                resolve();
+            }
+        }, 5000);
         const handler = (data) => {
             if (data?.Query !== "OnlineFriends") return;
-            ServerSocket.off("AccountQueryResult", handler);
+            unregister();
             clearTimeout(timer);
             setOnlineFriendsCache(new Map((data.Result ?? []).map(f => [f.MemberNumber, f])));
             setLastOnlineFetch(Date.now());
             if (!resolved) { resolved = true; resolve(); }
         };
-        ServerSocket.on("AccountQueryResult", handler);
+        unregister = registerSocketListener("AccountQueryResult", handler);
         ServerSend("AccountQuery", { Query: "OnlineFriends" });
     });
 }
@@ -48,10 +56,10 @@ export async function syncWithOnlineLovers() {
         if (data?.Query === "OnlineFriends")
             onlineFriends = new Map((data.Result ?? []).map(f => [f.MemberNumber, f]));
     };
-    ServerSocket.on("AccountQueryResult", handler);
+    const unregister = registerSocketListener("AccountQueryResult", handler);
     ServerSend("AccountQuery", { Query: "OnlineFriends" });
     await waitFor(() => onlineFriends !== null, 5000);
-    ServerSocket.off("AccountQueryResult", handler);
+    unregister();
     if (!onlineFriends) return;
 
     setOnlineFriendsCache(onlineFriends);

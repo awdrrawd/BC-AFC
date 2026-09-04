@@ -240,9 +240,6 @@
     "toastFail": {
         "EN": "🐈‍⬛ [AFC] Load failed. Please refresh the page."
     },
-    "legacyDetected": {
-        "EN": "🐈‍⬛ [AFC] Old/incompatible AFC data was detected and has been reset to defaults (lover locks were left untouched)."
-    },
     "factoryTitle": {
         "EN": "Factory Reset"
     },

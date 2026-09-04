@@ -5,7 +5,7 @@
 // ════════════════════════════════════════
 
 export const MOD_NAME    = "AbundantiaFlorumChromatica";
-export const MOD_VERSION = (typeof __AFC_VERSION__ !== 'undefined' && __AFC_VERSION__) || "0.7.0";
+export const MOD_VERSION = (typeof __AFC_VERSION__ !== 'undefined' && __AFC_VERSION__) || "0.7.1";
 export const AFC_BEEP_TYPE = "AFC::Beep";
 // AccountBeep 跨房通道（vanilla BC 對非空/非 Leash 的 BeepType 靜默忽略 → 不彈通知）
 export const AFC_AB_TYPE   = "afcBeep";
@@ -47,7 +47,7 @@ export const AB = {
 
 export const STAGE = { DATING: 0, ENGAGED: 1, MARRIED: 2 };
 
-// 英文標籤（STAGE_LABEL 用於向後相容驗證）
+// 階段識別名稱，亦用於驗證可接受的升格目標
 export const STAGE_LABEL = { 0: "dating", 1: "engaged", 2: "married" };
 
 export const STAGE_COLOR = {
@@ -71,9 +71,6 @@ export const PROFILE_PANEL_X = 540;
 export const PROFILE_PANEL_Y = 150;
 export const PROFILE_PANEL_W = 1170;
 export const PROFILE_PANEL_H = 640;
-
-// 舊版資料判別門檻（短期輔助）
-export const LEGACY_OK_VER = '0.6.1';
 
 // localStorage 本地存底前綴
 export const LS_PREFIX = "AFC_DB::";

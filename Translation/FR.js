@@ -240,9 +240,6 @@
     "toastFail": {
         "FR": "🐈‍⬛ [AFC] Échec du chargement. Veuillez rafraîchir la page."
     },
-    "legacyDetected": {
-        "FR": "🐈‍⬛ [AFC] Des données AFC anciennes/incompatibles ont été détectées et réinitialisées (les verrous d'amant sont intacts)."
-    },
     "factoryTitle": {
         "FR": "Réinit. usine"
     },

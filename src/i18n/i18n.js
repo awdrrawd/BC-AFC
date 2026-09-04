@@ -66,6 +66,7 @@ export function tns(ns, key, ...args) {
 }
 
 export function t(key, ...args) { return tns('afc', key, ...args); }
+export function th(key, ...args) { return tns('hl', key, ...args); }
 
 /** 取得戀人階段的本地化標籤（數字 0/1/2） */
 export function stageLabel(stage) {

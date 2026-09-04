@@ -9,8 +9,8 @@ import { state } from './state.js';
 import { sendLocalizedAction } from '../i18n/l10n.js';
 import { ensureStorage, getOrCreateConfig, deleteConfig, saveAndSync } from './storage.js';
 import { isMemberAllowedByMe } from './permissions.js';
-import { hlRefreshCurrentTab } from './panel.js';
 import { rebaselineCurseIfNeeded } from './bcx-compat.js';
+import { emitHeartLockEvent, onHeartLockEvent } from './events.js';
 
 export function sendSettingsChange(character, groupName) {
     if (!character || character.IsPlayer()) return;
@@ -30,6 +30,9 @@ export function broadcastStorage() {
         });
     } catch {}
 }
+
+onHeartLockEvent('storage-saved', broadcastStorage);
+onHeartLockEvent('request-remote-data', requestHeartLockData);
 
 export function requestHeartLockData(character) {
     if (!character || character.IsPlayer()) return;
@@ -80,7 +83,7 @@ export function handleHidden(data) {
                 s.HeartLock = e.Data;
                 // 只有面板正在顯示該角色的鎖時才刷新，避免無關廣播觸發不必要的重繪
                 if (s.MemberNumber === state.panel.targetChar?.MemberNumber) {
-                    hlRefreshCurrentTab();
+                    emitHeartLockEvent('panel-refresh');
                 }
             }
         }

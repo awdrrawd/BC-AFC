@@ -5,7 +5,7 @@
 // ════════════════════════════════════════
 
 import { NOTE_OVERLAY_ID, CC } from './config.js';
-import { T } from './i18n.js';
+import { th as T } from '../i18n/i18n.js';
 import { hlEl } from './util.js';
 
 export function closeNoteOverlay() {

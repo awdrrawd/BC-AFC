@@ -1,9 +1,9 @@
-<h1 align="center">🌸 Liko-ACF — Abundantia Florum ─Chromatica─</h1>
+<h1 align="center">🌸 Liko-AFC — Abundantia Florum ─Chromatica─</h1>
 <h3 align="center">繁戀如花 ─繽紛─</h3>
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-0.7.0-purple.svg)
+![Version](https://img.shields.io/badge/version-0.7.1-purple.svg)
 ![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)
 ![BondageClub](https://img.shields.io/badge/BondageClub-Compatible-pink.svg)
 ![EN](https://img.shields.io/badge/EN-✔️-blue.svg)
@@ -14,8 +14,8 @@
 一個 BondageClub UserScript 插件，拓展原生戀人系統，支援多名戀人、關係進展（交往→訂婚→結婚）以及心形鎖拓展。  
 A BondageClub UserScript plugin extending the native lover system — multiple lovers, relationship stages (dating → engaged → married), and a Heart Padlock extension.
 
-> 本插件內含 **BC Heart Lock Extension（心形鎖拓展）**，安裝 ACF 後心形鎖功能會自動載入，無需另行安裝。  
-> This plugin includes the **BC Heart Lock Extension**. It loads automatically with ACF — no separate install needed.
+> 本插件內含 **BC Heart Lock Extension（心形鎖拓展）**，安裝 AFC 後心形鎖功能會自動載入，無需另行安裝。
+> This plugin includes the **BC Heart Lock Extension**. It loads automatically with AFC — no separate install needed.
 
 ## 📚 文件 · Documentation
 
@@ -108,13 +108,13 @@ Multilingual: Traditional Chinese, Simplified Chinese, English, German, French, 
 
 ## 📦 安裝方式 · Installation
 
-> 安裝 ACF 後，心形鎖拓展（Heart Lock Extension）會**自動載入**，無需另行安裝。  
-> After installing ACF, the Heart Lock Extension **loads automatically** — no separate install needed.
+> 安裝 AFC 後，心形鎖拓展（Heart Lock Extension）會**自動載入**，無需另行安裝。
+> After installing AFC, the Heart Lock Extension **loads automatically** — no separate install needed.
 
 ### 🧩 透過 PCM 管理器（推薦） · Via PCM Manager (Recommended)
 
-若你已安裝 [Liko PCM](https://awdrrawd.github.io/liko-Plugin-Repository/)，可在插件列表中直接啟用 ACF，無需單獨安裝。  
-If you have [Liko PCM](https://awdrrawd.github.io/liko-Plugin-Repository/) installed, enable ACF directly from the plugin list.
+若你已安裝 [Liko PCM](https://awdrrawd.github.io/liko-Plugin-Repository/)，可在插件列表中直接啟用 AFC，無需單獨安裝。
+If you have [Liko PCM](https://awdrrawd.github.io/liko-Plugin-Repository/) installed, enable AFC directly from the plugin list.
 
 ---
 
@@ -126,8 +126,8 @@ If you have [Liko PCM](https://awdrrawd.github.io/liko-Plugin-Repository/) insta
 2. 登入 BondageClub 後，前往主設定頁面點擊頂部的 **ADD-ON**。  
    After logging in, click **ADD-ON** at the top of the main settings page.
 
-3. 在列表中找到 **Liko-ACF**，選擇版本後點擊 **Save**。  
-   Find **Liko-ACF** in the list, select your preferred branch, and click **Save**.
+3. 在列表中找到 **Liko-AFC**，選擇版本後點擊 **Save**。
+   Find **Liko-AFC** in the list, select your preferred branch, and click **Save**.
 
 4. 重新載入 BC。  
    Reload BondageClub.

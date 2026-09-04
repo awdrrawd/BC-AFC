@@ -42,7 +42,7 @@ export function getCurrentViewingCharacter() {
                 return ChatRoomCharacter?.find(c => c.MemberNumber === InformationSheetSelection) ?? Player;
             return InformationSheetSelection;
         }
-    } catch (e) {}
+    } catch {}
     return Player;
 }
 

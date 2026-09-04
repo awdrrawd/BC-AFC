@@ -3,32 +3,16 @@
 //  ExtensionSettings 儲存 + 本地存底 DB（localStorage）+ 啟動對帳
 // ════════════════════════════════════════
 
-import { DEFAULT_STORAGE, EXT_KEY, EXT_KEY_OLD, IDB_NAME, IDB_STORE, IDB_VER } from './config.js';
+import { DEFAULT_STORAGE, EXT_KEY, IDB_NAME, IDB_STORE, IDB_VER } from './config.js';
 import { clone, log } from './util.js';
-import { broadcastStorage } from './net.js';
-import { reapplyFromAppearance, backfillSnapshots } from './lock.js';
-import { T } from './i18n.js';
+import { th as T } from '../i18n/i18n.js';
+import { emitHeartLockEvent } from './events.js';
 
 export function ensureStorage() {
     if (!window.Player) return false;
     if (!Player.ExtensionSettings) Player.ExtensionSettings = {};
     const es = Player.ExtensionSettings;
-    // 一次性搬遷：舊 key 'HeartLock' → 'AFC_HeartLock'（保留作用中的鎖設定）
     let targetChanged = false;
-    if (es[EXT_KEY_OLD] !== undefined) {
-        if ((!es[EXT_KEY] || typeof es[EXT_KEY] !== 'object') && typeof es[EXT_KEY_OLD] === 'object') {
-            es[EXT_KEY] = es[EXT_KEY_OLD];
-            targetChanged = true;
-        }
-        const previous = es[EXT_KEY_OLD];
-        es[EXT_KEY_OLD] = null;
-        try {
-            if (typeof ServerPlayerExtensionSettingsSync === 'function') ServerPlayerExtensionSettingsSync(EXT_KEY_OLD);
-            delete es[EXT_KEY_OLD];
-        } catch {
-            es[EXT_KEY_OLD] = previous;
-        }
-    }
     if (!es[EXT_KEY] || typeof es[EXT_KEY] !== 'object') {
         es[EXT_KEY] = clone(DEFAULT_STORAGE);
         targetChanged = true;
@@ -76,7 +60,7 @@ export function saveAndSync() {
     Player.HeartLock.updatedAt = Date.now();   // ALL 時間戳：任何上鎖/解鎖/設定變動都更新
     try { if (typeof ServerPlayerExtensionSettingsSync === 'function') ServerPlayerExtensionSettingsSync(EXT_KEY); } catch {}
     _hlDbWrite();   // 同步寫 localStorage + 非同步寫 IndexedDB（後手）
-    broadcastStorage();
+    emitHeartLockEvent('storage-saved');
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -153,7 +137,7 @@ function _hlAdoptDB(data) {
     if (!Player.ExtensionSettings[EXT_KEY].padlocks) Player.ExtensionSettings[EXT_KEY].padlocks = {};
     Player.HeartLock = Player.ExtensionSettings[EXT_KEY];
     saveAndSync();                         // bump ALL 並回寫 DB，使三份一致
-    try { reapplyFromAppearance(); } catch {}
+    emitHeartLockEvent('storage-restored');
     try { CharacterRefresh?.(Player, false); ChatRoomCharacterUpdate?.(Player); } catch {}
 }
 
@@ -203,9 +187,9 @@ export async function reconcileHLStorage() {
     }
 
     // 情況3：角色身上有鎖但設定缺失 → 依身上資料重建（owner 取 LockMemberNumber，缺則跳過）
-    try { reapplyFromAppearance(); } catch {}
+    emitHeartLockEvent('storage-restored');
     // 舊鎖回填：身上有鎖物品但 _fullSnapshot/craft 缺漏 → 從當前物品補齊
-    try { backfillSnapshots(); } catch {}
+    emitHeartLockEvent('storage-backfill');
 
     // 僅「從 DB 後手救回」才提示（從角色/ES 同步一律靜默）
     if (restoredFromDb) _notifyDbRestoreAnomaly();

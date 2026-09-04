@@ -7,16 +7,13 @@
 // ════════════════════════════════════════
 
 import { STAGE } from '../core/config.js';
-import { AFCLockAccessOn, pendingRestoreOut, setLastKnownLoverCount } from '../core/state.js';
-import { getSharedSettings, saveSharedSettings } from '../core/settings.js';
-import { _lsReadLovers } from '../core/storage.js';
-import { isAFCLover, targetHasAFC, reconcileStage, updateLastSeen } from './lovers.js';
+import { AFCLockAccessOn, pendingRestoreOut } from '../core/state.js';
+import { readBackupLovers } from '../core/lover-backup.js';
+import { isAFCLover, targetHasAFC, reconcileStage, updateLastSeen, upsertLover } from './lovers.js';
 import { proposeRestore } from './restore.js';
 
 export function reconcileWithRoom() {
-    const s = getSharedSettings();
-    if (!s) return;
-    const dbLovers = _lsReadLovers();
+    const dbLovers = readBackupLovers();
     for (const C of ChatRoomCharacter ?? []) {
         if (!C?.MemberNumber || C.MemberNumber === Player.MemberNumber) continue;
         // 見面即更新最後見面（單向本地紀錄；對方有無 AFC 都算）
@@ -30,7 +27,7 @@ export function reconcileWithRoom() {
         if (!iHaveC && cHasMe) {
             const fromDB = dbLovers.find(l => Number(l.memberNumber) === Number(num));
             if (fromDB) {
-                s.lovers.push({
+                upsertLover({
                     memberNumber: num, name: fromDB.name ?? C.Name,
                     stage:     fromDB.stage     ?? STAGE.DATING,
                     startDate: fromDB.startDate ?? Date.now(),
@@ -38,8 +35,6 @@ export function reconcileWithRoom() {
                     lastSeen:  Date.now(),
                 });
                 AFCLockAccessOn.add(num);
-                setLastKnownLoverCount(s.lovers.length);
-                saveSharedSettings();
                 console.log("🐈‍⬛ [AFC] 🔧 自本地DB補回戀人:", num);
             }
             // 否則：交給 ChatRoomAFCCanRestore 的手動恢復入口

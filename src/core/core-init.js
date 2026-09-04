@@ -7,17 +7,21 @@
 import { MOD_NAME, MOD_VERSION } from './config.js';
 import {
     modApi, setModApi, isInitialized, setInitialized, setLastKnownLoverCount,
-    setProfilePanelOpen, AFCLockAccessOn, pendingOutgoing, pendingIncoming, _pendingAcks,
-    loversPrivateRoom, onlineFriendsCache,
+    setProfilePanelOpen, AFCLockAccessOn, pendingOutgoing, pendingIncoming,
+    pendingStageProp, pendingStageInc, pendingRestoreOut, pendingRestoreInc, _pendingAcks,
+    loversPrivateRoom, onlineFriendsCache, _recentBeepKeys, _lastProposalSent,
+    setCurrentPrivateRoomName,
 } from './state.js';
 import { loadToastSystem, toast } from '../util/toast.js';
 import { waitFor } from '../util/util.js';
 import { t, detectLang, ensureAfcI18n } from '../i18n/i18n.js';
 import { registerFallback } from '../i18n/fallback.js';
-import { legacyCleanupOnce, _migrateOldBackupToDB } from './legacy.js';
 import { getSharedSettings, getPrivateSettings, syncLockPermsToShared } from './settings.js';
 import { reconcileLocalDB } from './storage.js';
-import { setupHooks } from './hooks.js';
+import { setupHooks } from '../hooks/index.js';
+import { createHookRegistry } from '../hooks/registry.js';
+import { waitForLogin } from '../hooks/lifecycle.js';
+import { clearChatRoomMessageSubscribers } from '../hooks/chat-message-channel.js';
 import { setupCommands } from './commands.js';
 import { registerSettingsUI } from '../ui/settings-page.js';
 import { syncWithOnlineLovers } from '../net/online.js';
@@ -26,8 +30,10 @@ import { getLoverRegions, isPanelOpen, getPanelRect } from '../ui/profile.js';
 import { requestRoomNamesFromLovers } from '../net/roomname.js';
 import { unregisterAllSocketListeners } from './socket.js';
 import { _clearAck } from '../net/beep.js';
-import { initHeartLock } from '../heartlock/init.js';
-import { L10N } from '../i18n/l10n.js';
+import { initHeartLock, cleanupHeartLock } from '../heartlock/init.js';
+import { clearRequestStore } from '../relations/request-manager.js';
+
+let hookRegistry = null;
 
 export async function initialize() {
     console.log(`🐈‍⬛ [AFC] ✅ v${MOD_VERSION} loaded`);
@@ -49,6 +55,7 @@ export async function initialize() {
         version:    MOD_VERSION,
         repository: "https://github.com/awdrrawd/BC-AFC",
     }));
+    hookRegistry = createHookRegistry(modApi);
 
     // 2. 載入 Toast 系統
     await loadToastSystem();
@@ -57,43 +64,29 @@ export async function initialize() {
     //  抓根目錄 Translation/<LANG>.js 的完整字庫覆蓋後備（fire-and-forget，後備確保載入前不會顯示 raw key）。
     registerFallback();
     ensureAfcI18n();
-    L10N.install(modApi);
 
     // ── 階段二：登入後（需要 Player + 設定資料）───────────────
-    await waitForLogin();
+    await waitForLogin(hookRegistry);
     await waitFor(() => Player?.OnlineSharedSettings !== undefined && Player?.ExtensionSettings !== undefined);
 
-    completeInit();
+    if (!completeInit()) return;
 
     // 啟動 Heart Lock（bundle 內模組，共用 AFC 的 modApi）
-    try { await initHeartLock(modApi); } catch (e) { console.error("🐈‍⬛ [AFC] ❌ Heart Lock 啟動失敗:", e); }
-}
-
-function waitForLogin() {
-    if (typeof Player !== 'undefined' && Player?.MemberNumber !== undefined) return Promise.resolve();
-    return new Promise(resolve => {
-        const removeHook = modApi.hookFunction('LoginResponse', 0, (args, next) => {
-            const result = next(args);
-            queueMicrotask(() => {
-                if (typeof Player === 'undefined' || Player?.MemberNumber === undefined) return;
-                removeHook();
-                resolve();
-            });
-            return result;
-        });
-    });
+    try {
+        await initHeartLock(modApi, hookRegistry);
+    } catch (e) {
+        cleanupHeartLock();
+        console.error("🐈‍⬛ [AFC] ❌ Heart Lock 啟動失敗:", e);
+    }
 }
 
 function completeInit() {
-    if (isInitialized) return;
-    if (!Player?.MemberNumber) return;
-    if (!Player?.OnlineSharedSettings) return;
-    if (!Player?.ExtensionSettings) return;
+    if (isInitialized) return true;
+    if (!Player?.MemberNumber) return false;
+    if (!Player?.OnlineSharedSettings) return false;
+    if (!Player?.ExtensionSettings) return false;
 
     try {
-        // 舊版資料一次性處理（短期輔助）：依版本判別，現行格式靜默清殘留、舊資料重置+提醒
-        legacyCleanupOnce();
-
         getSharedSettings();  // 初始化 AFC（含備份恢復）
         const priv = getPrivateSettings();
 
@@ -102,8 +95,8 @@ function completeInit() {
         // 初始化後設定已知戀人數量基準，並強制存備份
         const shared = Player.OnlineSharedSettings?.AFC;
         setLastKnownLoverCount(shared?.lovers?.length ?? 0);
-        setupHooks();
-        setupCommands();
+        setupHooks(hookRegistry);
+        setupCommands(hookRegistry).catch(error => console.error('🐈‍⬛ [AFC] 指令註冊失敗:', error));
 
         // 登入後才能正確取得 TranslationLanguage，ButtonText 翻譯才準確
         registerSettingsUI();
@@ -111,7 +104,6 @@ function completeInit() {
         syncWithOnlineLovers();
 
         // 登入比對本機 DB（資料丟失/換裝置/不一致），並向在線戀人請求房名
-        _migrateOldBackupToDB();
         reconcileLocalDB();
         requestRoomNamesFromLovers();
 
@@ -164,22 +156,31 @@ function completeInit() {
 
         // Toast 通知成功
         toast(t('toastLoaded', MOD_VERSION), 5000, "#C2185B");
+        return true;
 
     } catch (e) {
         console.error("🐈‍⬛ [AFC] ❌ 初始化失敗:", e);
         toast(t('toastFail'), 8000, "#e53935");
+        cleanup();
+        return false;
     }
 }
 
 export function cleanup() {
+    cleanupHeartLock();
+    clearChatRoomMessageSubscribers();
+    hookRegistry?.dispose();
+    hookRegistry = null;
     unregisterAllSocketListeners();
     for (const k of Object.keys(_pendingAcks)) _clearAck(k);
-    for (const k of Object.keys(pendingOutgoing)) clearTimeout(pendingOutgoing[k].timer);
-    for (const k of Object.keys(pendingIncoming)) {
-        clearInterval(pendingIncoming[k].timer);
-        document.getElementById(pendingIncoming[k].uiId)?.remove();
-    }
+    for (const pending of [pendingOutgoing, pendingIncoming, pendingStageProp, pendingStageInc,
+                           pendingRestoreOut, pendingRestoreInc]) clearRequestStore(pending);
     AFCLockAccessOn.clear();
+    _recentBeepKeys.clear();
+    onlineFriendsCache.clear();
+    for (const key of Object.keys(loversPrivateRoom)) delete loversPrivateRoom[key];
+    for (const key of Object.keys(_lastProposalSent)) delete _lastProposalSent[key];
+    setCurrentPrivateRoomName('');
     setProfilePanelOpen(false);
     setInitialized(false);
     console.log("🐈‍⬛ [AFC] 🗑️ 已清理資源");

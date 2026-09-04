@@ -5,7 +5,7 @@
 
 import { MOD_VERSION } from './config.js';
 import { _lastKnownLoverCount, setLastKnownLoverCount } from './state.js';
-import { _dbSync } from './storage.js';
+import { writeLoverBackup } from './lover-backup.js';
 import { broadcastAFCData } from '../net/sync-data.js';
 
 export function getSharedSettings() {
@@ -54,14 +54,11 @@ function _unpackPrivate(p) {
         enableAFCLock:    !!c[3],
         enableOwnerLock: !!c[4],
         lockSettings:    { allowTimerExtension: c[5] !== 0 && c[5] !== false, allowSelfUnlock: !!c[6] },
-        lastSeen:        {},   // 已移至 lover.lastSeen
-        lastProposalSent:{},  // runtime only
     };
 }
 
-// v0.7.0：ExtensionSettings.AFC 只留私人設定檔，不再夾帶戀人備份（l）。
-// 戀人備份改放 localStorage「DB」，避免與 ExtensionSettings 一起被伺服器清空。
-function _packPrivate(s, _loversIgnored) {
+// ExtensionSettings.AFC 只保存私人設定；戀人備份存放於本機備份 repository。
+function _packPrivate(s) {
     return {
         v:   MOD_VERSION,
         cfg: [
@@ -73,8 +70,6 @@ function _packPrivate(s, _loversIgnored) {
             s.lockSettings?.allowTimerExtension ? 1 : 0,
             s.lockSettings?.allowSelfUnlock     ? 1 : 0,
         ],
-        // lp removed - runtime only
-        // l  removed - 戀人備份改存 localStorage（_lsWrite）
     };
 }
 
@@ -98,8 +93,7 @@ export function getPrivateSettings() {
 
 export function savePrivateSettings(settings) {
     try {
-        const lovers = getSharedSettings()?.lovers ?? [];
-        Player.ExtensionSettings.AFC = JSON.stringify(_packPrivate(settings, lovers));
+        Player.ExtensionSettings.AFC = JSON.stringify(_packPrivate(settings));
         if (typeof ServerPlayerExtensionSettingsSync === 'function')
             ServerPlayerExtensionSettingsSync("AFC");
     } catch (e) { console.error("🐈‍⬛ [AFC] ❌ 儲存私人設定失敗:", e.message); }
@@ -118,7 +112,7 @@ export function saveSharedSettings() {
         setLastKnownLoverCount(currentCount);
         ServerAccountUpdate?.QueueData?.({ OnlineSharedSettings: Player.OnlineSharedSettings });
         // 通過防呆後，同步寫一份本地存底 DB
-        _dbSync();
+        writeLoverBackup(afc.lovers);
     } catch (e) { console.error("🐈‍⬛ [AFC] ❌ 儲存共享設定失敗:", e.message); }
     // 同時廣播給房間內玩家
     broadcastAFCData();

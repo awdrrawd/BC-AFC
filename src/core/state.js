@@ -12,15 +12,27 @@ export function setModApi(v) { modApi = v; }
 export let isInitialized = false;
 export function setInitialized(v) { isInitialized = v; }
 
-// ── 授權 / 申請 / 房間狀態（const 容器，直接共用參照）──
-export const AFCLockAccessOn   = new Set();
-export const pendingOutgoing   = {};   // AFC 戀人申請（發起方）
-export const pendingIncoming   = {};   // AFC 戀人申請（接收方 UI）
-export const pendingStageProp  = {};   // 升格申請（發起方）
-export const pendingStageInc   = {};   // 升格申請（接收方 UI）
-export const loversPrivateRoom = {};
-export const pendingRestoreOut = {};
-export const pendingRestoreInc = {};
+// 關係領域的 runtime tree。以下具名匯出都是同一份資料的參照，方便各模組按需引用。
+export const relationRuntime = {
+    lockAccess: new Set(),
+    privateRooms: {},
+    requests: {
+        lover:   { outgoing: {}, incoming: {} },
+        stage:   { outgoing: {}, incoming: {} },
+        restore: { outgoing: {}, incoming: {} },
+    },
+    recentBeeps: new Set(),
+    proposalCooldowns: {},
+    pendingAcks: {},
+};
+export const AFCLockAccessOn   = relationRuntime.lockAccess;
+export const loversPrivateRoom = relationRuntime.privateRooms;
+export const pendingOutgoing   = relationRuntime.requests.lover.outgoing;
+export const pendingIncoming   = relationRuntime.requests.lover.incoming;
+export const pendingStageProp  = relationRuntime.requests.stage.outgoing;
+export const pendingStageInc   = relationRuntime.requests.stage.incoming;
+export const pendingRestoreOut = relationRuntime.requests.restore.outgoing;
+export const pendingRestoreInc = relationRuntime.requests.restore.incoming;
 
 export let currentPrivateRoomName = "";
 export function setCurrentPrivateRoomName(v) { currentPrivateRoomName = v; }
@@ -29,7 +41,7 @@ export let profilePanelOpen = false;
 export function setProfilePanelOpen(v) { profilePanelOpen = v; }
 
 // Beep 去重 Set（防止 AccountBeep + ChatRoom relay 重複觸發）
-export const _recentBeepKeys = new Set();
+export const _recentBeepKeys = relationRuntime.recentBeeps;
 
 export let profilePageFresh = false;  // 每次進入 Profile 頁面時強制刷新一次線上狀態
 export function setProfilePageFresh(v) { profilePageFresh = v; }
@@ -43,10 +55,10 @@ export function setLastOnlineFetch(v) { lastOnlineFetch = v; }
 
 // lastProposalSent：只需 runtime 保存，不需寫入 ExtensionSettings
 // 頁面重整後冷卻自然重置，這是正確行為
-export const _lastProposalSent = {};
+export const _lastProposalSent = relationRuntime.proposalCooldowns;
 
 // 可靠傳輸層
-export const _pendingAcks = {};   // mid -> { timer }
+export const _pendingAcks = relationRuntime.pendingAcks;   // mid -> { timer }
 export let _midSeq = 0;
 export function bumpMidSeq() { return _midSeq++; }
 

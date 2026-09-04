@@ -8,8 +8,10 @@ import {
     getPrivateSettings, getSharedSettings, savePrivateSettings,
     saveSharedSettings, syncLockPermsToShared,
 } from '../core/settings.js';
-import { factoryReset, _readBackupLovers } from '../core/storage.js';
+import { factoryReset } from '../core/storage.js';
+import { readBackupLovers } from '../core/lover-backup.js';
 import { initiateBreakup } from '../relations/breakup.js';
+import { restoreAllLovers, restoreLover } from '../relations/backup-restore.js';
 import { t, stageLabel, detectLang } from '../i18n/i18n.js';
 import { daysSince, chatLocalNotice } from '../util/util.js';
 
@@ -264,7 +266,7 @@ export const AFCSettingsUI = (() => {
 
     function _drawRestoreUI() {
         const onL = getSharedSettings()?.lovers ?? [];
-        const onR = _readBackupLovers();
+        const onR = readBackupLovers();
 
         MainCanvas.save();
         MainCanvas.fillStyle = "rgba(0,0,0,0.82)";
@@ -365,7 +367,7 @@ export const AFCSettingsUI = (() => {
             _showRestoreUI = false; _restoreScrollL = 0; _restoreScrollR = 0; return;
         }
         const onL = getSharedSettings()?.lovers ?? [];
-        const onR = _readBackupLovers();
+        const onR = readBackupLovers();
         const allLX = RUI.colLX + RUI.colW/2 - RUI.allBtnW/2;
         const allRX = RUI.colRX + RUI.colW/2 - RUI.allBtnW/2;
         if (MouseIn(allLX, RUI.allBtnY, RUI.allBtnW, RUI.allBtnH)) { _restoreConfirm = { source:'online', idx:-1, name:'' }; return; }
@@ -395,26 +397,10 @@ export const AFCSettingsUI = (() => {
     }
 
     function _doRestore({ source, idx }) {
-        const onL = getSharedSettings()?.lovers ?? [];
-        const onR = _readBackupLovers();
-        const srcLovers = source === 'online' ? onL : onR;
-        const s = getSharedSettings();
-        if (!s) return;
-
         if (idx === -1) {
-            // 全部使用
-            s.lovers = [...srcLovers];
-            saveSharedSettings();
-            chatLocalNotice(t('restoreOKMsg', srcLovers.length));
+            chatLocalNotice(t('restoreOKMsg', restoreAllLovers(source)));
         } else {
-            // 單筆復原
-            const entry = srcLovers[idx];
-            if (!entry) return;
-            const existing = s.lovers.findIndex(l => l.memberNumber === entry.memberNumber);
-            if (existing >= 0) s.lovers[existing] = { ...entry };
-            else s.lovers.push({ ...entry });
-            saveSharedSettings();
-            chatLocalNotice(t('restoreOKMsg', 1));
+            if (restoreLover(source, idx)) chatLocalNotice(t('restoreOKMsg', 1));
         }
     }
 

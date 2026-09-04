@@ -10,21 +10,25 @@ import { log, clone, waitFor } from './util.js';
 import {
     createHeartLockAsset, reapplyFromAppearance, checkLockIntegrity, removeLock, clearAllLocks,
 } from './lock.js';
-import { patchFunctions } from './hooks.js';
+import { installHeartLockHooks } from '../hooks/heartlock.js';
 import { ensureStorage, reconcileHLStorage, saveAndSync } from './storage.js';
 import { startVibeTimer } from './vibe.js';
 import { startTimerCheck } from './timer.js';
+import { removeHLPanel } from './panel.js';
+import { _pendingRestore } from './state.js';
+
+let disposeHooks = null;
 
 // 備援：若未取得共用 modApi，才自行註冊
 function getModApi() {
-    if (state.modApi) return state.modApi;
+    if (state.lifecycle.modApi) return state.lifecycle.modApi;
     if (!window.bcModSdk?.registerMod) return null;
     try {
-        state.modApi = window.bcModSdk.registerMod({
+        state.lifecycle.modApi = window.bcModSdk.registerMod({
             name: MOD_NAME, fullName: 'Heart Lock BC',
             version: MOD_VER, repository: 'https://github.com/awdrrawd/BC-AFC',
         });
-        return state.modApi;
+        return state.lifecycle.modApi;
     } catch (e) {
         if (!window.bcModSdk.getModsInfo?.().find(m => m.name === MOD_NAME))
             console.error('🐈‍⬛ [HeartLock] registerMod failed', e);
@@ -32,15 +36,15 @@ function getModApi() {
     }
 }
 
-export async function initHeartLock(sharedModApi) {
-    if (state.initialized) return;
+export async function initHeartLock(sharedModApi, hookRegistry) {
+    if (state.lifecycle.initialized) return;
 
     // 心形鎖文本（'hl' 命名空間）已由 AFC core-init 的 registerFallback()（內建後備）
     //  與 ensureAfcI18n()（執行期 fetch 根目錄 Translation/<LANG>.js）一併註冊，這裡不再重複註冊。
 
     // Phase 1：取得 modApi（優先用 AFC 傳入的共用 modApi）
-    if (sharedModApi) state.modApi = sharedModApi;
-    const modApi = state.modApi ?? getModApi();
+    if (sharedModApi) state.lifecycle.modApi = sharedModApi;
+    const modApi = state.lifecycle.modApi ?? getModApi();
     if (!modApi) { console.error('🐈‍⬛ [HeartLock] modApi unavailable.'); return; }
 
     // Phase 2：AFC 核心已確認登入，這裡只等待遊戲資源就緒
@@ -50,7 +54,9 @@ export async function initHeartLock(sharedModApi) {
                  );
 
     createHeartLockAsset();
-    patchFunctions(modApi);
+    const scopedHooks = hookRegistry.scope();
+    disposeHooks = () => scopedHooks.dispose();
+    installHeartLockHooks(scopedHooks);
     await waitFor(() => window.Player?.ExtensionSettings !== undefined, 30000);
     ensureStorage();
     await reconcileHLStorage();   // 與後備 DB(IndexedDB+localStorage)對帳：四情境 + 舊鎖回填
@@ -58,8 +64,8 @@ export async function initHeartLock(sharedModApi) {
     reapplyFromAppearance();
     startVibeTimer();
     startTimerCheck();
-    setInterval(checkLockIntegrity, 3000);
-    state.initialized = true;
+    state.timers.integrity = setInterval(checkLockIntegrity, 3000);
+    state.lifecycle.initialized = true;
 
     // 對外 API：合併進 window.Liko.AFC.heartLock（AFC 與 Heart Lock 視為一體）
     //   若 AFC 尚未建立 window.Liko.AFC，先放一個殼，core-init 之後會 Object.assign 保留 .heartLock。
@@ -83,4 +89,21 @@ export async function initHeartLock(sharedModApi) {
     };
 
     log(`✅ v${MOD_VER} loaded.`);
+}
+
+export function cleanupHeartLock() {
+    disposeHooks?.();
+    disposeHooks = null;
+    clearInterval(state.timers.vibe);
+    clearInterval(state.timers.vibeAnimation);
+    clearInterval(state.timers.unlockCheck);
+    clearInterval(state.timers.integrity);
+    state.timers.vibe = null;
+    state.timers.vibeAnimation = null;
+    state.timers.unlockCheck = null;
+    state.timers.integrity = null;
+    state.vibe.cycle = 0;
+    _pendingRestore.clear();
+    removeHLPanel();
+    state.lifecycle.initialized = false;
 }

@@ -240,9 +240,6 @@
     "toastFail": {
         "DE": "🐈‍⬛ [AFC] Laden fehlgeschlagen. Bitte Seite neu laden."
     },
-    "legacyDetected": {
-        "DE": "🐈‍⬛ [AFC] Alte/inkompatible AFC-Daten wurden erkannt und auf Standard zurückgesetzt (Liebhaber-Schlösser blieben unberührt)."
-    },
     "factoryTitle": {
         "DE": "Werkseinstellungen"
     },

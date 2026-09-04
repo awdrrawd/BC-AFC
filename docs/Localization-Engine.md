@@ -29,7 +29,8 @@ AFC 使用一套**跨插件共用**的翻譯引擎（`src/i18n/engine.js`，即 
 | `tl(lang, ns, key, ...args)` | 以**指定語言**取字串 |
 | `has(ns, key)` | 是否有此鍵 |
 | `lang()` | 目前顯示語言（`'TW'`/`'EN'`/…） |
-| `install(modApi)` | 安裝**唯一**的接收端 `ChatRoomMessage` hook（冪等；由第一個呼叫者安裝即可） |
+| `localize(data)` | 解析並本地化一筆 `ChatRoomMessage`；由插件的中央訊息 hook 呼叫 |
+| `install(modApi)` | 舊呼叫介面，現為空操作；保留以免共用引擎的其他使用者發生錯誤 |
 | `loadScript(url)` / `loadLangs(ns, urlMap, lang)` / `ensure(ns, spec, lang)` | 從外部檔載入字庫（見 [外部字庫](#外部字庫)） |
 
 ### 翻譯表格式（key → 語言）
@@ -46,7 +47,7 @@ const MY_ACTIONS = {
 ```js
 const L10N = window.Liko?.__Sys_L10N__;
 L10N.register('myplugin', MY_ACTIONS);
-L10N.install(modApi);                    // 一次即可；別的插件先裝過也沒差
+L10N.localize(data);                     // 由插件唯一的 ChatRoomMessage hook 呼叫
 
 // 發一條在地化 Action：別人看英文底本，裝引擎者看自己語言
 L10N.send('myplugin', 'greet', Player.Name, targetName);
@@ -70,7 +71,7 @@ const s = L10N.t('myplugin', 'arrived', Player.Name);
 }
 ```
 
-接收端 hook（`install` 掛的）偵測 `Tag === 'Liko_L10N'`，用 `tl(lang, ns, key, ...JSON.parse(data))` 重寫那筆 `CUSTOM_SYSTEM_ACTION` 的 `Text`。沒裝引擎的客戶端不處理 → 看到英文底本。
+接收端的中央 hook 呼叫 `localize(data)`；它偵測 `Tag === 'Liko_L10N'`，用 `tl(lang, ns, key, ...JSON.parse(data))` 重寫那筆 `CUSTOM_SYSTEM_ACTION` 的 `Text`。沒裝引擎的客戶端不處理 → 看到英文底本。
 
 ### AFC / Heart Lock 已註冊的命名空間
 

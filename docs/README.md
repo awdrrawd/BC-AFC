@@ -16,7 +16,7 @@
 
 ```js
 const AFC = window.Liko?.AFC;              // 對外唯一入口（含 .heartLock 子節點）
-AFC?.version;                              // "0.7.0"
+AFC?.version;                              // "0.7.1"
 AFC?.isLover(123456);                      // 對方是否為我的拓展戀人
 AFC?.getLovers();                          // 我的戀人清單（唯讀複本）
 AFC?.isProfilePanelOpen();                 // 「更多戀人」面板是否展開中

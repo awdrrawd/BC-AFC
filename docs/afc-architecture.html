@@ -1,3 +1,99 @@
-<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>AFC 功能分支圖</title><style>:root{color-scheme:dark;--a:#a56cff;--b:#17131e;--l:#665778}*{box-sizing:border-box}body{margin:0;background:#0d0b11;color:#f5f1fa;font:14px system-ui}.app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}aside{padding:22px 14px;background:#121017;border-right:1px solid #352e40}h1{font-size:20px;margin:0 8px 16px}h2{margin:0 0 6px}input{width:100%;padding:10px;background:#0d0b11;border:1px solid #40364c;color:#fff;border-radius:7px}.g{margin:18px 8px 6px;color:#9f96aa;font-size:11px}button{color:#eee;background:transparent;border:0;cursor:pointer}.f{width:100%;padding:10px;text-align:left;border-radius:7px}.f:hover,.f.on{background:#2b2040;color:#d6c0ff}.main{padding:24px;min-width:0}.sub{color:#aaa1b4}.tree{margin-top:18px;padding:30px;min-height:560px;background:radial-gradient(circle at 20%,#20172c,#100e15 60%);border:1px solid #352d40;border-radius:12px;overflow:auto}.root,.branch,.file{padding:9px 11px;background:#211b2a;border:1px solid #493d57;border-left:4px solid var(--c,var(--a));border-radius:7px}.root{background:#382557}.bundle{display:grid;grid-template-columns:180px 220px minmax(280px,1fr);gap:70px;align-items:center;min-width:850px}.branches{display:grid;gap:16px}.row{display:grid;grid-template-columns:220px minmax(280px,1fr);gap:70px;align-items:center}.files{display:grid;gap:6px}.branch,.file{position:relative;text-align:left}.branch:before,.file:before{content:'';position:absolute;right:100%;top:50%;width:70px;border-top:2px solid var(--l)}.type{display:block;color:var(--c);font-size:10px}.detail{margin-top:14px;padding:14px;border-left:3px solid var(--a);background:var(--b)}code{color:#d9c8f5}@media(max-width:700px){.app{display:block}aside{position:static}.bundle{transform-origin:left top}.main{padding:15px}}</style></head><body><div class="app"><aside><h1>AFC 功能分支圖</h1><input id="q" placeholder="搜尋功能"><nav id="nav"></nav></aside><main class="main"><h2 id="title"></h2><div id="desc" class="sub"></div><section id="tree" class="tree"></section><div id="detail" class="detail"></div></main></div><script>
-const D=[['關係系統','戀人資料與關係階段', [['Core','狀態與儲存','core/state.js,core/storage.js'],['Relation','戀人與階段','relations/lovers.js,relations/stage.js'],['Relation','申請與恢復','relations/propose.js,relations/reconcile.js,relations/restore.js'],['UI','Profile 與申請','ui/profile.js,ui/proposal-ui.js']]],['分手與解除','單方面解除關係及通知流程',[['Relation','分手規則','relations/breakup.js'],['Net','BEEP 通知','net/beep.js,net/beep-router.js'],['Core','資料更新','core/storage.js,core/state.js']]],['LIKOSHARE 同步','在線、房間與戀人資料同步',[['Net','同步資料','net/sync-data.js'],['Net','在線與房間','net/online.js,net/roomname.js'],['Core','Socket','core/socket.js'],['Hook','BC Hooks','core/hooks.js']]],['Heart Lock','內建心形鎖面板、權限與狀態',[['UI','鎖面板','heartlock/panel.js,heartlock/tabs.js'],['Core','鎖與權限','heartlock/lock.js,heartlock/permissions.js'],['Storage','鎖資料','heartlock/storage.js,heartlock/state.js'],['Hook','BC/BCX 整合','heartlock/hooks.js,heartlock/bcx-compat.js']]],['Heart Lock 控制','筆記、計時、震動與高潮控制',[['Feature','愛情筆記','heartlock/note.js'],['Feature','計時器','heartlock/timer.js'],['Feature','震動','heartlock/vibe.js'],['Feature','高潮控制','heartlock/orgasm.js'],['Net','網路同步','heartlock/net.js']]],['設定與多語','偏好設定、指令與翻譯引擎',[['UI','設定頁','ui/settings-page.js'],['Core','設定與指令','core/settings.js,core/commands.js'],['i18n','翻譯系統','i18n/engine.js,i18n/i18n.js,i18n/l10n.js']]]];
-let A=D[0];const nav=document.querySelector('#nav'),tree=document.querySelector('#tree'),detail=document.querySelector('#detail');function list(q=''){nav.innerHTML='<div class=g>全部功能</div>';D.filter(x=>x.join().toLowerCase().includes(q.toLowerCase())).forEach(x=>{let b=document.createElement('button');b.className='f '+(x===A?'on':'');b.textContent=x[0];b.onclick=()=>{A=x;list(q);draw()};nav.append(b)})}function draw(){title.textContent=A[0];desc.textContent=A[1];tree.innerHTML=`<div class=bundle><div class=root>${A[0]}</div><div class=branches>${A[2].map(x=>`<div class=row><button class=branch style="--c:var(--a)" data-files="${x[2]}"><span class=type>${x[0]}</span>${x[1]}</button><div class=files>${x[2].split(',').map(f=>`<button class=file data-files="${f}"><span class=type>FILE</span>${f}</button>`).join('')}</div></div>`).join('')}</div></div>`;tree.querySelectorAll('button').forEach(b=>b.onclick=()=>show(b.textContent,b.dataset.files));show(A[0],A[2].flatMap(x=>x[2].split(',')).join(','))}function show(n,f){detail.innerHTML=`<b>${n}</b><br>${f.split(',').map(x=>`<code>src/${x}</code>`).join('　')}`}q.oninput=()=>list(q.value);list();draw();</script></body></html>
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AFC 架構導覽</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0c0910;--panel:#15111b;--card:#1d1725;--line:#4d405c;--pink:#ef7aa8;--violet:#aa86ff;--gold:#e6bd67;--cyan:#69cad1;--text:#f6f1f8;--muted:#aaa0b2}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(circle at 75% 0,#24172d 0,transparent 38%),var(--bg);color:var(--text);font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+    header{padding:42px clamp(20px,5vw,72px) 28px;border-bottom:1px solid #302737}header h1{margin:0;font-size:clamp(28px,4vw,46px);letter-spacing:.02em}header p{max-width:850px;margin:10px 0 0;color:var(--muted);font-size:16px}
+    .layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:28px;max-width:1500px;margin:auto;padding:28px}
+    aside{position:sticky;top:20px;align-self:start;background:rgba(21,17,27,.92);border:1px solid #382f41;border-radius:14px;padding:16px}input{width:100%;border:1px solid #493c55;border-radius:9px;padding:10px 12px;background:#0e0b12;color:var(--text)}nav{display:grid;gap:5px;margin-top:12px}nav button{border:0;border-radius:8px;padding:9px 11px;text-align:left;background:transparent;color:#d9d0df;cursor:pointer}nav button:hover,nav button.active{background:#32243f;color:#fff}
+    main{min-width:0}.section{margin-bottom:30px;scroll-margin-top:20px}.section h2{margin:0 0 6px;font-size:24px}.lead{margin:0 0 16px;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}.card{background:linear-gradient(145deg,var(--card),#15111b);border:1px solid #3d3248;border-top:3px solid var(--accent,var(--violet));border-radius:11px;padding:15px;min-width:0}.card h3{margin:0 0 5px;font-size:16px}.card p{margin:0;color:var(--muted)}code{display:inline-block;margin-top:9px;color:#e5d7f5;background:#0e0b12;border-radius:5px;padding:3px 6px;overflow-wrap:anywhere}
+    .flow{display:flex;align-items:stretch;gap:10px;overflow-x:auto;padding:5px 2px 13px}.node{flex:1 0 190px;padding:14px;border-radius:10px;background:#19141f;border:1px solid #40344a}.node strong{display:block;color:var(--accent,var(--pink));margin-bottom:4px}.arrow{display:grid;place-items:center;color:#7f6d8d;font-size:22px}
+    .tree{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.folder{border:1px solid #40354a;border-radius:11px;overflow:hidden;background:#131018}.folder h3{margin:0;padding:11px 13px;background:#251c2e;color:#eadff0}.folder ul{list-style:none;margin:0;padding:10px 13px}.folder li{padding:4px 0;color:#b9afc0}.folder b{color:#eee;font-weight:600}
+    .note{padding:14px 16px;border-left:4px solid var(--gold);background:#1e1920;border-radius:5px;color:#d8cedd}.hidden{display:none!important}
+    footer{padding:25px;text-align:center;color:#817789;border-top:1px solid #2d2533}
+    @media(max-width:780px){.layout{display:block;padding:18px}aside{position:static;margin-bottom:24px}header{padding:28px 20px}.arrow{transform:rotate(90deg)}.flow{flex-direction:column}.node{flex:auto}}
+  </style>
+</head>
+<body>
+<header><h1>AFC 架構導覽</h1><p>Abundantia Florum ─Chromatica─ 的目前模組邊界、單一 Hook／通道入口、關係資料與 HeartLock 流程。</p></header>
+<div class="layout">
+  <aside><input id="search" type="search" placeholder="搜尋模組、功能或檔案"><nav id="nav"></nav></aside>
+  <main id="content">
+    <section class="section" id="overview" data-keywords="總覽 初始化 app core init"><h2>執行流程</h2><p class="lead">入口只負責啟動；核心完成登入與設定初始化後，建立 Hook，再啟動 HeartLock。</p><div class="flow">
+      <div class="node"><strong>1. Bundle 入口</strong><code>src/main.js</code><br>建立 <code>window.Liko.AFC</code></div><div class="arrow">→</div>
+      <div class="node"><strong>2. 核心初始化</strong><code>core/core-init.js</code><br>等待 SDK、登入與設定資料</div><div class="arrow">→</div>
+      <div class="node"><strong>3. 統一 Hooks</strong><code>hooks/index.js</code><br>安裝 AFC 與通道入口</div><div class="arrow">→</div>
+      <div class="node"><strong>4. HeartLock</strong><code>heartlock/init.js</code><br>以獨立 registry scope 啟動</div>
+    </div></section>
+
+    <section class="section" id="hooks" data-keywords="hook registry socket channel dispatcher message sync listener"><h2>Hook 與通道</h2><p class="lead">所有 bcModSdk Hook 集中在 <code>src/hooks/</code>。相同遊戲函式只掛一次，再由內部處理器派送。</p><div class="grid">
+      <article class="card" style="--accent:var(--pink)"><h3>中央安裝入口</h3><p>AFC 畫面、同步、訊息與離線處理。</p><code>hooks/index.js</code></article>
+      <article class="card" style="--accent:var(--violet)"><h3>生命週期</h3><p>統一登記 hook、interval、timeout；scope 支援功能級回滾。</p><code>hooks/registry.js</code></article>
+      <article class="card" style="--accent:var(--cyan)"><h3>ChatRoomMessage</h3><p>唯一 Hook 依序處理 L10N、HeartLock、AFC Beep／Sync 與診斷訂閱。</p><code>hooks/chat-message-channel.js</code></article>
+      <article class="card" style="--accent:var(--gold)"><h3>ServerSocket</h3><p>每個 event 只註冊一個底層 dispatcher，內部可有多個訂閱者。</p><code>core/socket.js</code></article>
+      <article class="card"><h3>HeartLock Hooks</h3><p>鎖具、同步、圖示、面板與防拆行為。</p><code>hooks/heartlock.js</code></article>
+      <article class="card"><h3>其他 Hook 群組</h3><p>關係顯示、登入階段及高潮控制。</p><code>hooks/relationship-visual.js</code> <code>hooks/lifecycle.js</code> <code>hooks/orgasm.js</code></article>
+    </div></section>
+
+    <section class="section" id="relations" data-keywords="戀人 關係 propose stage restore breakup lover request"><h2>關係系統</h2><p class="lead">資料正規化與寫入集中在 service；申請、升格、恢復共享同一套 request manager。</p><div class="flow">
+      <div class="node"><strong>輸入驗證</strong><code>relations/lover-model.js</code><br>MemberNumber、日期與清單正規化</div><div class="arrow">→</div>
+      <div class="node"><strong>唯一寫入入口</strong><code>relations/lovers.js</code><br>新增、更新、移除、替換戀人</div><div class="arrow">→</div>
+      <div class="node"><strong>互動流程</strong><code>relations/propose.js</code><br><code>stage.js</code>／<code>restore.js</code>／<code>breakup.js</code></div>
+    </div><div class="grid">
+      <article class="card"><h3>請求生命週期</h3><p>送出、收到、倒數、接受、拒絕與過期清理。</p><code>relations/request-manager.js</code></article>
+      <article class="card"><h3>備份還原</h3><p>備份 repository 與還原策略分離。</p><code>core/lover-backup.js</code> <code>relations/backup-restore.js</code></article>
+      <article class="card"><h3>房內對帳</h3><p>房間角色資料載入後補齊不對稱關係。</p><code>relations/reconcile.js</code></article>
+    </div></section>
+
+    <section class="section" id="data" data-keywords="資料 state runtime storage settings backup tree"><h2>資料樹與持久化</h2><p class="lead">Runtime 狀態按功能分組；共享設定、私人設定及本機備份維持各自責任。</p><div class="grid">
+      <article class="card" style="--accent:var(--pink)"><h3>relationRuntime</h3><p><b>requests</b>：lover／stage／restore<br><b>lockAccess</b>、<b>privateRooms</b><br><b>recentBeeps</b>、<b>proposalCooldowns</b>、<b>pendingAcks</b></p><code>core/state.js</code></article>
+      <article class="card" style="--accent:var(--violet)"><h3>HeartLock state</h3><p><b>lifecycle</b>、<b>timers</b>、<b>vibe</b>、<b>operations</b>、<b>panel</b></p><code>heartlock/state.js</code></article>
+      <article class="card"><h3>OnlineSharedSettings</h3><p>戀人清單、心鎖權限、震動訊息設定；房內其他玩家可讀。</p><code>Player.OnlineSharedSettings.AFC</code></article>
+      <article class="card"><h3>ExtensionSettings</h3><p>AFC 私人設定及 HeartLock 鎖具狀態。</p><code>Player.ExtensionSettings</code></article>
+      <article class="card"><h3>本機備份</h3><p>戀人與 HeartLock 的獨立保險資料。</p><code>AFC_DB::&lt;帳號&gt;</code> <code>HL_DB::&lt;帳號&gt;</code></article>
+    </div></section>
+
+    <section class="section" id="network" data-keywords="網路 beep sync account room private roomname hidden ack"><h2>網路與房間事件</h2><p class="lead">AFC 不控制 BC 連線；只在既有事件上同步關係、房名與 HeartLock 資料。</p><div class="grid">
+      <article class="card"><h3>AFC::Beep</h3><p>同房關係操作；關鍵訊息重送至 ACK，接收端去重。</p><code>net/beep.js</code> <code>net/beep-router.js</code></article>
+      <article class="card"><h3>AFC::Sync</h3><p>廣播自己的戀人資料，供房內對帳。</p><code>net/sync-data.js</code></article>
+      <article class="card"><h3>AccountBeep</h3><p>跨房分享私人房名，供戀人從好友列表加入。</p><code>net/roomname.js</code></article>
+      <article class="card"><h3>HeartLock Hidden</h3><p>套用、設定、同步、移除與遠端解鎖。</p><code>heartlock/net.js</code></article>
+    </div></section>
+
+    <section class="section" id="heartlock" data-keywords="heartlock 心鎖 timer vibe note panel lock orgasm"><h2>HeartLock</h2><p class="lead">HeartLock 是 AFC bundle 內的功能模組，共用中央 I18N、Hook registry 與訊息入口。</p><div class="tree">
+      <div class="folder"><h3>核心</h3><ul><li><b>lock.js</b> 鎖具套用與完整性</li><li><b>permissions.js</b> 關係權限</li><li><b>storage.js</b> 保存與對帳</li><li><b>net.js</b> 遠端同步</li></ul></div>
+      <div class="folder"><h3>互動</h3><ul><li><b>panel.js</b> DOM 面板</li><li><b>tabs/</b> 總覽、筆記、計時、控制、解鎖</li><li><b>datepicker.js</b> 日期選擇</li></ul></div>
+      <div class="folder"><h3>運行功能</h3><ul><li><b>timer.js</b> 到期解鎖</li><li><b>vibe.js</b> 震動循環</li><li><b>hooks/orgasm.js</b> 高潮模式</li><li><b>events.js</b> 模組內事件</li></ul></div>
+    </div></section>
+
+    <section class="section" id="i18n" data-keywords="i18n l10n translation 翻譯 heartlock namespace"><h2>翻譯系統</h2><p class="lead">AFC 與 HeartLock 共用一套引擎。HeartLock 使用 <code>hl</code> namespace，沒有第二份 I18N。</p><div class="grid">
+      <article class="card"><h3>UI 翻譯</h3><p>設定頁、面板與本地提示。</p><code>i18n/i18n.js</code></article>
+      <article class="card"><h3>聊天 L10N</h3><p>中央 ChatRoomMessage hook 呼叫 localize，再以接收者語言改寫。</p><code>i18n/l10n.js</code></article>
+      <article class="card"><h3>字串資料</h3><p>AFC 與 HeartLock 文本集中存放。</p><code>i18n/strings/</code> <code>Translation/</code></article>
+    </div></section>
+
+    <section class="section" id="folders" data-keywords="目錄 folders files module structure"><h2>目錄責任</h2><div class="tree">
+      <div class="folder"><h3>core/</h3><ul><li>初始化、設定、狀態、儲存</li><li>Socket dispatcher、聊天指令</li></ul></div>
+      <div class="folder"><h3>hooks/</h3><ul><li>所有 bcModSdk Hook</li><li>通道派送與生命週期</li></ul></div>
+      <div class="folder"><h3>relations/</h3><ul><li>關係 model、service 與流程</li><li>請求及備份還原</li></ul></div>
+      <div class="folder"><h3>net/</h3><ul><li>Beep、Sync、房名及在線查詢</li></ul></div>
+      <div class="folder"><h3>heartlock/</h3><ul><li>心鎖領域邏輯、狀態及 UI</li></ul></div>
+      <div class="folder"><h3>ui/ · i18n/ · util/</h3><ul><li>共用 UI、翻譯及通用工具</li></ul></div>
+    </div><p class="note">建置入口為 <code>src/main.js</code>，Vite 輸出 <code>dist/assets/main.js</code> 與 <code>dist/assets/app.js</code>。</p></section>
+  </main>
+</div>
+<footer>AFC Architecture · generated from the current source layout</footer>
+<script>
+  const sections=[...document.querySelectorAll('.section')],nav=document.querySelector('#nav'),search=document.querySelector('#search');
+  for(const section of sections){const button=document.createElement('button');button.textContent=section.querySelector('h2').textContent;button.onclick=()=>section.scrollIntoView();button.dataset.target=section.id;nav.append(button)}
+  const buttons=[...nav.children];
+  const observer=new IntersectionObserver(entries=>{const visible=entries.filter(e=>e.isIntersecting).sort((a,b)=>b.intersectionRatio-a.intersectionRatio)[0];if(visible)buttons.forEach(b=>b.classList.toggle('active',b.dataset.target===visible.target.id))},{rootMargin:'-15% 0px -65%',threshold:[0,.2,.5]});sections.forEach(s=>observer.observe(s));
+  search.addEventListener('input',()=>{const query=search.value.trim().toLowerCase();sections.forEach((section,index)=>{const hit=!query||(section.textContent+' '+section.dataset.keywords).toLowerCase().includes(query);section.classList.toggle('hidden',!hit);buttons[index].classList.toggle('hidden',!hit)})});
+</script>
+</body>
+</html>

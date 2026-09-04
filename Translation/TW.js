@@ -240,9 +240,6 @@
     "toastFail": {
         "TW": "🐈‍⬛ [AFC] 載入失敗，請重新整理頁面。"
     },
-    "legacyDetected": {
-        "TW": "🐈‍⬛ [AFC] 偵測到不相容的舊版 AFC 資料，已重置為預設（戀人鎖未受影響）。"
-    },
     "factoryTitle": {
         "TW": "初廠設定"
     },
