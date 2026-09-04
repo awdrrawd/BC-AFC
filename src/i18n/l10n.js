@@ -5,7 +5,7 @@
 //  引擎由同資料夾的 engine.js（BC_i18n.js 的同步副本）以 side-effect import 執行；引擎自帶
 //  防重載旗標（__Sys_i18n__），所以 PCM 或同作者其他插件已先載入引擎時，這裡會自動沿用同一
 //  實例、不會重建——不再有「AFC 先評估就自建另一份 L10N」的情況。
-//  ⚠️ engine.js 是 BC_i18n.js 的複本，更新引擎時請與主 repo 的 Plugins/expand/BC_i18n.js 一起同步。
+//  engine.js 是 canonical BC_i18n.js 的部署副本；只從主 repo 完整同步，不在 AFC 內分叉修改。
 //
 //  用法：
 //    L10N.register(ns, table)    // 註冊翻譯表（見 strings/*；位置式 {0}{1}…）

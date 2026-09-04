@@ -1,6 +1,6 @@
 // ════════════════════════════════════════
 //  AFC i18n 內建後備（TW + EN）— 自動產生，請勿手改。
-//  真正的翻譯來源在根目錄 Translation/<LANG>.js（執行期 fetch，載入後會覆蓋此後備）。
+//  真正的翻譯來源在根目錄 Translation/<namespace>/<LANG>.json（執行期 fetch，載入後會覆蓋此後備）。
 //  作用：Translation 尚未載入或 fetch 失敗（離線）時，UI 不會顯示 raw key。
 // ════════════════════════════════════════
 import { L10N } from './l10n.js';

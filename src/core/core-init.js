@@ -61,7 +61,7 @@ export async function initialize() {
     await loadToastSystem();
 
     // 共用 L10N 引擎：先註冊內建後備（TW+EN，afc + hl 兩命名空間），再啟動執行期 fetch
-    //  抓根目錄 Translation/<LANG>.js 的完整字庫覆蓋後備（fire-and-forget，後備確保載入前不會顯示 raw key）。
+    //  抓根目錄 Translation/<namespace>/<LANG>.json 的完整字庫覆蓋後備（fire-and-forget，後備確保載入前不會顯示 raw key）。
     registerFallback();
     ensureAfcI18n();
 

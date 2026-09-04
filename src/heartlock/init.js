@@ -40,7 +40,7 @@ export async function initHeartLock(sharedModApi, hookRegistry) {
     if (state.lifecycle.initialized) return;
 
     // 心形鎖文本（'hl' 命名空間）已由 AFC core-init 的 registerFallback()（內建後備）
-    //  與 ensureAfcI18n()（執行期 fetch 根目錄 Translation/<LANG>.js）一併註冊，這裡不再重複註冊。
+    //  與 ensureAfcI18n()（執行期 fetch Translation/hl/<LANG>.json）一併註冊，這裡不再重複註冊。
 
     // Phase 1：取得 modApi（優先用 AFC 傳入的共用 modApi）
     if (sharedModApi) state.lifecycle.modApi = sharedModApi;

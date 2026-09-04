@@ -120,4 +120,4 @@ I18N.loadLangs('myplugin', {
 }, currentLang);
 ```
 
-> ⚠️ `src/i18n/engine.js` 是 `BC_i18n.js` 的**複本**。更新引擎時，請與主 repo 的 `Plugins/expand/BC_i18n.js` 一起同步。
+> `src/i18n/engine.js` 是 canonical `BC_i18n.js` 的部署副本；唯一來源為主 repo 的 `Plugins/expand/BC_i18n.js`，更新時必須以原檔完整覆蓋，不在 AFC 內單獨修改。

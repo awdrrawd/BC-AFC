@@ -25,7 +25,7 @@ src/
 │  ├─ orgasm.js           HeartLock 高潮控制 hook
 │  └─ lifecycle.js        登入階段的一次性 hook
 ├─ i18n/
-│  ├─ engine.js           共用翻譯引擎（BC_i18n.js 複本 → window.Liko.__Sys_i18n__/__Sys_L10N__）
+│  ├─ engine.js           canonical BC_i18n.js 的部署副本（→ window.Liko.__Sys_i18n__/__Sys_L10N__）
 │  ├─ i18n.js             AFC 本地 UI 翻譯（薄封裝）
 │  ├─ l10n.js             聊天在地化（薄封裝共用引擎）
 │  └─ strings/            文本資料（非引擎）：afc-ui / afc-actions / heartlock-ui / heartlock-actions

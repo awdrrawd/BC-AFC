@@ -56,13 +56,4 @@ export default [
       'no-cond-assign': 'off',
     },
   },
-  {
-    // 翻譯字庫（一國一檔）：執行期 fetch 後 new Function 執行的 IIFE，非 ES module。
-    files: ['Translation/**/*.js'],
-    languageOptions: {
-      ecmaVersion: 2022,
-      sourceType: 'script',
-      globals: { ...globals.browser },
-    },
-  },
 ];

@@ -1,8 +1,8 @@
 // ════════════════════════════════════════
 //  AFC module: i18n.js  （薄轉接層，不含引擎、不含文本）
 //  UI 字串走共用 L10N 引擎（window.Liko.__Sys_L10N__）；文本改為「執行期 fetch」：
-//    根目錄 Translation/<LANG>.js（一國一檔，同時註冊 afc + hl 兩命名空間、{0} 佔位）。
-//    翻譯者只需改 Translation/<LANG>.js，build 會複製到 public/ 部署，免動程式。
+//    根目錄 Translation/<namespace>/<LANG>.json（一國一檔、純資料、{0} 相容佔位）。
+//    翻譯者只需改對應 JSON，build 會複製到 public/ 部署，免動程式。
 //    載入前/離線時用內建後備 src/i18n/fallback.js（TW+EN）；fetch 到的完整字庫會覆蓋後備。
 //    t(key, ...args)：等同 L10N.tl(detectLang(), 'afc', key, ...args)。
 //  多國語系：EN / TW / CN / DE / FR / RU / UA，每次呼叫動態偵測語系。
@@ -13,7 +13,7 @@ import { L10N } from './l10n.js';
 // 支援語系（缺翻譯的 key 由引擎自動 fallback：TW/CN 互退→EN；其餘→EN）
 export const SUPPORTED_LANGS = ['TW', 'CN', 'EN', 'DE', 'FR', 'RU', 'UA'];
 
-// 執行期 fetch 的語言檔（一國一檔，含 afc + hl 兩命名空間）
+// 執行期 fetch 的語言檔
 const T_LANGS = ['EN', 'TW', 'CN', 'DE', 'FR', 'RU', 'UA'];
 
 // 依 bundle（/assets/main.js）位置解析出 Pages 根目錄的資源網址（GitHub Pages 部署）。
@@ -26,15 +26,18 @@ function assetUrl(path) {
     } catch { return String(path); }
 }
 
-// 抓「目前語言 + EN 後備」（CN 再加 TW）的字庫檔並註冊到共用引擎；每檔同時註冊 afc + hl。
+// 抓「目前語言 + EN 後備」（CN 再加 TW）的純 JSON 字庫並註冊到共用引擎。
 //  引擎依 URL 去重、自帶時間戳破快取；fetch 失敗時沿用內建後備（fallback.js）。
 export async function ensureAfcI18n() {
     try {
         const eng = window.Liko?.__Sys_L10N__;
         if (!eng?.ensure) return;
-        const urlMap = {};
-        for (const c of T_LANGS) urlMap[c] = assetUrl('Translation/' + c + '.js');
-        await eng.ensure('afc', urlMap, detectLang());
+        const maps = {};
+        for (const ns of ['afc', 'hl']) {
+            maps[ns] = {};
+            for (const c of T_LANGS) maps[ns][c] = assetUrl(`Translation/${ns}/${c}.json`);
+        }
+        await Promise.all(['afc', 'hl'].map(ns => eng.ensure(ns, maps[ns], detectLang())));
     } catch (e) { console.warn('🐈‍⬛ [AFC] 翻譯載入失敗，改用內建後備:', e.message); }
 }
 
