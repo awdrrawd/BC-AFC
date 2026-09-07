@@ -32,11 +32,20 @@ import { HL_PANEL_ID } from '../heartlock/config.js';
 import { removeHLPanel } from '../heartlock/panel.js';
 import { ensureStorage as ensureHeartLockStorage } from '../heartlock/storage.js';
 import { dispatchChatRoomMessage } from './chat-message-channel.js';
+import { getSharedSettings } from '../core/settings.js';
 
 export function setupHooks(registry) {
     const { hook } = registry;
     installRelationshipVisualHooks(registry);
     installRelationshipDialogHooks(registry);
+    // 僅擴充房間管理頁的「加入戀人」快捷操作，不改角色原生戀人資料。
+    hook('ChatRoomConcatenateWhitelist', 0, (args, next) => {
+        const result = next(args);
+        if (CurrentScreen !== 'ChatAdmin' || !args[0]?.includes('Lovers')) return result;
+        const lovers = (getSharedSettings()?.lovers ?? []).map(l => Number(l.memberNumber))
+            .filter(num => Number.isSafeInteger(num) && num > 0);
+        return [...new Set([...result, ...lovers])];
+    });
 
     // ── Profile 頁面 ────────────────────────────────────────────
     // DrawTextFit hook：攔截 BC 的主人文字，取得精確 Y 座標作為備用

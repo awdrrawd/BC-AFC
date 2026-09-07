@@ -50,12 +50,14 @@ export function _clearAck(mid) {
 // ChatRoomName / ChatRoomSpace / Private，接收端直接讀 data.ChatRoomName。
 export function sendAccountBeep(target, msg, includeRoom = false) {
     try {
-        if (!Player?.FriendList?.includes(target)) return;   // 必須是好友才送得出
+        if (!window.ServerSocket?.connected) return false; // 避免斷線時排入 socket 發送佇列
+        if (!Player?.FriendList?.includes(target)) return false;   // 必須是好友才送得出
         ServerSend("AccountBeep", {
             MemberNumber: target,
             BeepType:     AFC_AB_TYPE,
             Message:      msg,
             IsSecret:     !includeRoom,
         });
-    } catch {}
+        return true;
+    } catch { return false; }
 }

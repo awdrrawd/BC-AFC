@@ -27,7 +27,7 @@ import { registerSettingsUI } from '../ui/settings-page.js';
 import { syncWithOnlineLovers } from '../net/online.js';
 import { isAFCLover, getLoverEntry } from '../relations/lovers.js';
 import { getLoverRegions, isPanelOpen, getPanelRect } from '../ui/profile.js';
-import { requestRoomNamesFromLovers } from '../net/roomname.js';
+import { installRoomSync } from '../hooks/room-sync.js';
 import { unregisterAllSocketListeners } from './socket.js';
 import { _clearAck } from '../net/beep.js';
 import { initHeartLock, cleanupHeartLock } from '../heartlock/init.js';
@@ -103,9 +103,10 @@ function completeInit() {
 
         syncWithOnlineLovers();
 
-        // 登入比對本機 DB（資料丟失/換裝置/不一致），並向在線戀人請求房名
+        installRoomSync(hookRegistry);
+
+        // 登入比對本機 DB（資料丟失/換裝置/不一致）。
         reconcileLocalDB();
-        requestRoomNamesFromLovers();
 
         if (typeof modApi.onUnload === 'function') modApi.onUnload(() => cleanup());
 
