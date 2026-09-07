@@ -163,18 +163,16 @@ export function installHeartLockHooks(registry) {
     // ── 鎖圖示 tooltip ──
     try { hook('InterfaceTextGet', 2, (args, next) => { const key = String(args[0] ?? ''); if (key === HEARTLOCK_NAME) return T('lockedBy', HEARTLOCK_NAME); return next(args); }); } catch {}
     try {
-        hook('ElementButton.Create', 11, (args, next) => {
-            const opts = args[2];
-            if (opts?.icons && Array.isArray(opts.icons)) {
-                opts.icons = opts.icons.map(icon => {
-                    if (icon === HEARTLOCK_NAME) return { name: HEARTLOCK_NAME, iconSrc: getSetting('previewImage') };
-                    if (typeof icon === 'object' && icon?.name === HEARTLOCK_NAME) return { ...icon, iconSrc: getSetting('previewImage') };
+        // 訂製特性頁與圖示重載直接呼叫 _ParseIcons，不會經過 Create。
+        hook('ElementButton._ParseIcons', 11, (args, next) => {
+            if (Array.isArray(args[1])) {
+                args[1] = args[1].map(icon => {
+                    if (icon === HEARTLOCK_NAME) return { name: HEARTLOCK_NAME, iconSrc: getSetting('previewImage'), tooltipText: T('lockedBy', HEARTLOCK_NAME) };
+                    if (typeof icon === 'object' && icon?.name === HEARTLOCK_NAME) return { ...icon, iconSrc: getSetting('previewImage'), tooltipText: icon.tooltipText ?? T('lockedBy', HEARTLOCK_NAME) };
                     return icon;
                 });
             }
-            const result = next(args);
-            setTimeout(() => { try { document.querySelectorAll(`[id$="icon-li-${HEARTLOCK_NAME}"]`).forEach(li => { if (!li.textContent?.trim()) li.textContent = T('lockedBy', HEARTLOCK_NAME); }); } catch {} }, 0);
-            return result;
+            return next(args);
         });
     } catch {}
 
