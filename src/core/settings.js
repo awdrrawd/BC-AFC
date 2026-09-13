@@ -4,25 +4,45 @@
 // ════════════════════════════════════════
 
 import { MOD_VERSION } from './config.js';
-import { _lastKnownLoverCount, setLastKnownLoverCount } from './state.js';
-import { writeLoverBackup } from './lover-backup.js';
+import { setLastKnownLoverCount } from './state.js';
+import { normalizeLoverList } from '../relations/lover-model.js';
 import { broadcastAFCData } from '../net/sync-data.js';
 
+// Own data is authoritative in ExtensionSettings. Public data is only a projection.
 export function getSharedSettings() {
-    if (!Player?.OnlineSharedSettings) return null;
-    if (!Player.OnlineSharedSettings.AFC)
-        Player.OnlineSharedSettings.AFC = {
-            lovers: [],
-            lockPerms:    { enableAFCLock: true, enableOwnerLock: false },
-            vibeMsgMode:  'broadcast',
-            enableVibeSound: true,
-        };
-    if (!Player.OnlineSharedSettings.AFC.lockPerms)
-        Player.OnlineSharedSettings.AFC.lockPerms = { enableAFCLock: true, enableOwnerLock: false };
-    if (Player.OnlineSharedSettings.AFC.enableVibeSound === undefined)
-        Player.OnlineSharedSettings.AFC.enableVibeSound = true;
-
-    return Player.OnlineSharedSettings.AFC;
+    const memberNumber = Player?.MemberNumber;
+    const es = Player?.ExtensionSettings;
+    if (!Number.isSafeInteger(memberNumber) || memberNumber <= 0 || !es) return null;
+    if (es.AFC_Data) {
+        if (es.AFC_Data.memberNumber !== memberNumber || !Array.isArray(es.AFC_Data.lovers)) {
+            console.warn('[AFC] Refusing AFC data with invalid account ownership');
+            return null;
+        }
+        return es.AFC_Data;
+    }
+    const old = Player.OnlineSharedSettings?.AFC;
+    if (old && !es.AFC_LegacyPublic) {
+        es.AFC_LegacyPublic = structuredClone(old);
+        ServerPlayerExtensionSettingsSync('AFC_LegacyPublic');
+    }
+    const backup = es.AFC_LoverBackup;
+    const owned = backup?.memberNumber === memberNumber && Array.isArray(backup.lovers) ? backup : null;
+    let source = owned ?? old;
+    if (source?.memberNumber != null && source.memberNumber !== memberNumber) source = null;
+    // Legacy public records have no owner marker. Never silently adopt a populated list.
+    if (source?.lovers?.length && source.memberNumber == null && !window.confirm(
+        `AFC: Import these legacy lovers for account #${memberNumber}?\n` +
+        source.lovers.map(l => `${l.name ?? ''} (#${l.memberNumber})`).join('\n')
+    )) source = null;
+    es.AFC_Data = {
+        memberNumber,
+        lovers: normalizeLoverList(Array.isArray(source?.lovers) ? source.lovers : []),
+        lockPerms: { enableAFCLock: true, enableOwnerLock: false },
+        vibeMsgMode: old?.vibeMsgMode ?? 'broadcast',
+        enableVibeSound: old?.enableVibeSound ?? true,
+    };
+    ServerPlayerExtensionSettingsSync('AFC_Data');
+    return es.AFC_Data;
 }
 
 /*
@@ -36,12 +56,10 @@ export function getSharedSettings() {
  *   [5] allowTimerExtension
  *   [6] allowSelfUnlock
  *
- * lp  = lastProposalSent { [memberNumber]: timestamp }
- * l   = lovers 備份（緊湊陣列，與 OnlineSharedSettings 同步）
- *        每筆：[memberNumber, name, stage(0/1/2), startDate, stageDate, lastSeen]
+ * 戀人主資料存放於 ExtensionSettings.AFC_Data。
  */
 export function defaultPrivate() {
-    return { v: MOD_VERSION, cfg: [0, 1, 1, 1, 0, 1, 0], l: [] };
+    return { v: MOD_VERSION, cfg: [0, 1, 1, 1, 0, 1, 0] };
 }
 
 function _unpackPrivate(p) {
@@ -57,7 +75,7 @@ function _unpackPrivate(p) {
     };
 }
 
-// ExtensionSettings.AFC 只保存私人設定；戀人備份存放於本機備份 repository。
+// ExtensionSettings.AFC 只保存私人設定；戀人主資料存放於 AFC_Data。
 function _packPrivate(s) {
     return {
         v:   MOD_VERSION,
@@ -100,21 +118,14 @@ export function savePrivateSettings(settings) {
 }
 
 export function saveSharedSettings() {
-    try {
-        const afc = Player.OnlineSharedSettings?.AFC;
-        if (!afc) return;
-        const currentCount = afc.lovers?.length ?? 0;
-        // 偵測「有戀人 → 突然變 0」的異常，跳過儲存
-        if (_lastKnownLoverCount > 0 && currentCount === 0) {
-            console.warn(`🐈‍⬛ [AFC] ⚠️ 偵測到戀人資料異常清空（${_lastKnownLoverCount} → 0），跳過儲存`);
-            return;
-        }
-        setLastKnownLoverCount(currentCount);
+    const afc = getSharedSettings();
+    if (!afc) return;
+    setLastKnownLoverCount(afc.lovers.length);
+    ServerPlayerExtensionSettingsSync('AFC_Data');
+    if (Player.OnlineSharedSettings) {
+        Player.OnlineSharedSettings.AFC = structuredClone(afc);
         ServerAccountUpdate?.QueueData?.({ OnlineSharedSettings: Player.OnlineSharedSettings });
-        // 通過防呆後，同步寫一份本地存底 DB
-        writeLoverBackup(afc.lovers);
-    } catch (e) { console.error("🐈‍⬛ [AFC] ❌ 儲存共享設定失敗:", e.message); }
-    // 同時廣播給房間內玩家
+    }
     broadcastAFCData();
 }
 

@@ -84,7 +84,7 @@
   "factoryDone": "🐈‍⬛ [AFC] AFC has been reset to factory defaults.",
   "restoreTitle": "Lover Data Restore",
   "restoreOnline": "Online Data",
-  "restoreBackup": "Backup Data",
+  "restoreBackup": "Legacy online backup",
   "restoreBtn": "Restore",
   "restoreAllBtn": "Use All This Data",
   "restoreEmpty": "(No data)",

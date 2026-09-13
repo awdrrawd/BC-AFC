@@ -347,8 +347,8 @@ const AFC_FALLBACK = {
         "EN": "Online Data"
     },
     "restoreBackup": {
-        "TW": "備份資料",
-        "EN": "Backup Data"
+        "TW": "舊版線上備份",
+        "EN": "Legacy online backup"
     },
     "restoreBtn": {
         "TW": "復原",
@@ -400,6 +400,7 @@ const AFC_FALLBACK = {
     }
 };
 const HL_FALLBACK = {
+    "confirmLockRecovery": {"TW":"發現缺失或不同的心鎖：{0}。恢復後可能無法自行解鎖。是否恢復？","EN":"Restore missing or different Heart Locks on {0}? You may not be able to unlock them yourself."},
     "tabOverview": {
         "TW": "總覽",
         "EN": "Overview"
