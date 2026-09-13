@@ -1,23 +1,25 @@
+import { isHeartLock, isProtected, sanitizeOutfitItem } from './outfit-api.js';
 // ════════════════════════════════════════
 //  HeartLock module: init.js
 //  initHeartLock(modApi)：由 AFC core-init 於 phase 1 呼叫，共用 AFC 的 modApi。
 //  （原獨立版自行 registerMod；此處保留 getModApi 作為備援。）
 // ════════════════════════════════════════
 
-import { MOD_VER, MOD_NAME, EXT_KEY } from './config.js';
+import { MOD_VER, MOD_NAME } from './config.js';
 import { state } from './state.js';
 import { log, clone, waitFor } from './util.js';
 import {
     createHeartLockAsset, reapplyFromAppearance, checkLockIntegrity, removeLock, clearAllLocks,
 } from './lock.js';
 import { installHeartLockHooks } from '../hooks/heartlock.js';
-import { ensureStorage, reconcileHLStorage, saveAndSync } from './storage.js';
+import { ensureStorage, reconcileHLStorage, saveAndSync, restoreStorageWithConsent } from './storage.js';
 import { startVibeTimer } from './vibe.js';
 import { startTimerCheck } from './timer.js';
 import { removeHLPanel } from './panel.js';
 import { _pendingRestore } from './state.js';
 
 let disposeHooks = null;
+let initializationGeneration = 0;
 
 // 備援：若未取得共用 modApi，才自行註冊
 function getModApi() {
@@ -38,6 +40,9 @@ function getModApi() {
 
 export async function initHeartLock(sharedModApi, hookRegistry) {
     if (state.lifecycle.initialized) return;
+    const generation = ++initializationGeneration;
+    const memberNumber = Player?.MemberNumber;
+    const active = () => generation === initializationGeneration && Player?.MemberNumber === memberNumber;
 
     // 心形鎖文本（'hl' 命名空間）已由 AFC core-init 的 registerFallback()（內建後備）
     //  與 ensureAfcI18n()（執行期 fetch Translation/hl/<LANG>.json）一併註冊，這裡不再重複註冊。
@@ -53,13 +58,14 @@ export async function initHeartLock(sharedModApi, hookRegistry) {
                   !!AssetGroupGet?.('Female3DCG', 'ItemMisc')
                  );
 
+    if (!active()) return;
     createHeartLockAsset();
     const scopedHooks = hookRegistry.scope();
     disposeHooks = () => scopedHooks.dispose();
     installHeartLockHooks(scopedHooks);
     await waitFor(() => window.Player?.ExtensionSettings !== undefined, 30000);
-    ensureStorage();
-    await reconcileHLStorage();   // 與後備 DB(IndexedDB+localStorage)對帳：四情境 + 舊鎖回填
+    if (!active() || !ensureStorage()) return;
+    reconcileHLStorage();
     saveAndSync();
     reapplyFromAppearance();
     startVibeTimer();
@@ -77,21 +83,17 @@ export async function initHeartLock(sharedModApi, hookRegistry) {
         getPadlocks:    () => { ensureStorage(); return clone(Player.HeartLock.padlocks ?? {}); },
         removeLock:     (gn, opts)  => removeLock(gn, opts),
         clearAllLocks:  (opts)      => clearAllLocks(opts),
-        restoreStorage: (data) => {
-            if (!ensureStorage() || !data || typeof data !== 'object') return false;
-            Player.ExtensionSettings[EXT_KEY] = clone(data);
-            if (!Player.ExtensionSettings[EXT_KEY].padlocks) Player.ExtensionSettings[EXT_KEY].padlocks = {};
-            Player.HeartLock = Player.ExtensionSettings[EXT_KEY];
-            saveAndSync();
-            try { reapplyFromAppearance(); } catch {}
-            return true;
-        },
+        isHeartLock,
+        isProtected,
+        sanitizeOutfitItem,
+        restoreStorage: restoreStorageWithConsent,
     };
 
     log(`✅ v${MOD_VER} loaded.`);
 }
 
 export function cleanupHeartLock() {
+    initializationGeneration++;
     disposeHooks?.();
     disposeHooks = null;
     clearInterval(state.timers.vibe);

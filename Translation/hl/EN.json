@@ -58,5 +58,6 @@
   "pendingRestore": "The {1} on {0} cannot be restored yet because a dependent item (e.g. an Echo restraint) has not loaded. It will retry on next login or page refresh.",
   "timerExpired": "The {1} on {0} dissolves into a gentle shimmer as the promised moment arrives.",
   "unlockDone": "{0} unlocked the {2} on {1}.",
-  "dbRestoreAnomaly": "⚠ {0}'s HeartLock online data was abnormally lost and has been restored from the local backup for: {1}. If this was not you, please check with the lock owner."
+  "dbRestoreAnomaly": "⚠ {0}'s HeartLock online data was abnormally lost and has been restored from the local backup for: {1}. If this was not you, please check with the lock owner.",
+  "confirmLockRecovery": "Restore missing or different Heart Locks on {0}? You may not be able to unlock them yourself."
 }

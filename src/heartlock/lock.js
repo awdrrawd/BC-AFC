@@ -187,6 +187,18 @@ export function backfillSnapshots() {
     if (changed) saveAndSync();
 }
 
+onHeartLockEvent('storage-recovery-approved', () => {
+    for (const [group, cfg] of Object.entries(Player.HeartLock?.padlocks ?? {})) {
+        const item = InventoryGet?.(Player, group);
+        if (item?.Property?.LockedBy === HSLOCK_NAME && item.Property.HeartLockId === cfg.lockId) continue;
+        // 公開備份沒有完整服裝快照時，不刪除或替換現有的不同道具。
+        if (item && cfg.assetName !== item.Asset?.Name && !cfg._fullSnapshot) {
+            deleteConfig(group);
+            continue;
+        }
+        restoreLockFromConfig(group, cfg);
+    }
+});
 onHeartLockEvent('storage-restored', reapplyFromAppearance);
 onHeartLockEvent('storage-backfill', backfillSnapshots);
 
