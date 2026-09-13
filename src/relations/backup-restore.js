@@ -1,6 +1,6 @@
 import { getSharedSettings } from '../core/settings.js';
 import { readBackupLovers } from '../core/lover-backup.js';
-import { replaceLovers, upsertLover } from './lovers.js';
+import { getLoverEntry, upsertLover } from './lovers.js';
 
 function sourceLovers(source) {
     return source === 'online' ? (getSharedSettings()?.lovers ?? []) : readBackupLovers();
@@ -8,11 +8,15 @@ function sourceLovers(source) {
 
 export function restoreAllLovers(source) {
     const lovers = sourceLovers(source);
-    replaceLovers(lovers);
-    return lovers.length;
+    let restored = 0;
+    for (const lover of lovers) {
+        if (!getLoverEntry(lover.memberNumber) && upsertLover(lover)) restored++;
+    }
+    return restored;
 }
 
 export function restoreLover(source, index) {
     const lover = sourceLovers(source)[index];
-    return lover ? upsertLover(lover) : null;
+    if (!lover) return null;
+    return getLoverEntry(lover.memberNumber) ?? upsertLover(lover);
 }

@@ -6,7 +6,10 @@
 import { MOD_VERSION } from './config.js';
 import { setLastKnownLoverCount } from './state.js';
 import { normalizeLoverList } from '../relations/lover-model.js';
+import { readLegacyLocalLovers } from './lover-backup.js';
 import { broadcastAFCData } from '../net/sync-data.js';
+
+const deferredMigrations = new WeakSet();
 
 // Own data is authoritative in ExtensionSettings. Public data is only a projection.
 export function getSharedSettings() {
@@ -25,15 +28,28 @@ export function getSharedSettings() {
         es.AFC_LegacyPublic = structuredClone(old);
         ServerPlayerExtensionSettingsSync('AFC_LegacyPublic');
     }
-    const backup = es.AFC_LoverBackup;
-    const owned = backup?.memberNumber === memberNumber && Array.isArray(backup.lovers) ? backup : null;
-    let source = owned ?? old;
-    if (source?.memberNumber != null && source.memberNumber !== memberNumber) source = null;
-    // Legacy public records have no owner marker. Never silently adopt a populated list.
-    if (source?.lovers?.length && source.memberNumber == null && !window.confirm(
-        `AFC: Import these legacy lovers for account #${memberNumber}?\n` +
-        source.lovers.map(l => `${l.name ?? ''} (#${l.memberNumber})`).join('\n')
-    )) source = null;
+    if (deferredMigrations.has(es)) return null;
+    const valid = record => Array.isArray(record?.lovers) &&
+        (record.memberNumber == null || record.memberNumber === memberNumber);
+    // On first migration, current online data wins over every backup.
+    if (old?.memberNumber != null && old.memberNumber !== memberNumber) {
+        console.warn('[AFC] Refusing public data owned by another account');
+        return null;
+    }
+    let source = valid(old) && old.lovers.length ? old : null;
+    if (!source) {
+        const backup = es.AFC_LoverBackup;
+        source = valid(backup) && backup.memberNumber === memberNumber && backup.lovers.length ? backup : null;
+        if (!source) source = readLegacyLocalLovers();
+        if (source?.lovers?.length && !window.confirm(
+            `AFC: Restore backup lovers for account #${memberNumber}?\n` +
+            source.lovers.map(l => `${l.name ?? ''} (#${l.memberNumber})`).join('\n')
+        )) {
+            // Cancel is a deferred migration, never an empty committed list.
+            deferredMigrations.add(es);
+            return null;
+        }
+    }
     es.AFC_Data = {
         memberNumber,
         lovers: normalizeLoverList(Array.isArray(source?.lovers) ? source.lovers : []),

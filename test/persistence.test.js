@@ -24,7 +24,7 @@ test('legacy backup reads are account scoped and never use browser storage', () 
 function settings(Player, accept = true) {
     let questions = 0;
     const c = run('../src/core/settings.js', { Player, MOD_VERSION: 'test',
-        normalizeLoverList: list => structuredClone(list), setLastKnownLoverCount() {},
+        normalizeLoverList: list => structuredClone(list), setLastKnownLoverCount() {}, readLegacyLocalLovers: () => null,
         window: { confirm() { questions++; return accept; } },
         ServerPlayerExtensionSettingsSync() {}, ServerAccountUpdate: { QueueData() {} }, broadcastAFCData() {},
     });
@@ -35,7 +35,7 @@ test('ES is authoritative; public writes and account switching cannot change the
     const Player = { MemberNumber: 1, ExtensionSettings: {}, OnlineSharedSettings: { AFC: { lovers: [{ memberNumber: 2 }] } } };
     const { c, questions } = settings(Player);
     const own = c.getSharedSettings();
-    assert.equal(questions(), 1);
+    assert.equal(questions(), 0);
     c.saveSharedSettings();
     Player.OnlineSharedSettings.AFC.lovers[0].memberNumber = 9;
     assert.equal(own.lovers[0].memberNumber, 2);
@@ -47,13 +47,39 @@ test('ES is authoritative; public writes and account switching cannot change the
     assert.equal(c.getSharedSettings().lovers.length, 0);
 });
 
-test('declining legacy migration preserves source but does not adopt its lovers', () => {
-    const Player = { MemberNumber: 1, ExtensionSettings: {}, OnlineSharedSettings: { AFC: { lovers: [{ memberNumber: 2 }] } } };
+test('online lovers migrate without prompting and win over the legacy backup', () => {
+    const Player = { MemberNumber: 1, ExtensionSettings: { AFC_LoverBackup: { memberNumber: 1, lovers: [{ memberNumber: 8 }] } }, OnlineSharedSettings: { AFC: { lovers: [{ memberNumber: 2 }] } } };
     const { c, questions } = settings(Player, false);
-    assert.equal(c.getSharedSettings().lovers.length, 0);
-    c.getSharedSettings();
+    c.readLegacyLocalLovers = () => { throw Error('must not read local backup'); };
+    assert.equal(c.getSharedSettings().lovers[0].memberNumber, 2);
+    assert.equal(questions(), 0);
+});
+
+test('canceling fallback recovery never writes empty data or repeats the prompt', () => {
+    const Player = { MemberNumber: 1, ExtensionSettings: {}, OnlineSharedSettings: { AFC: { lovers: [] } } };
+    const { c, questions } = settings(Player, false);
+    c.readLegacyLocalLovers = () => ({ memberNumber: 1, lovers: [{ memberNumber: 2 }] });
+    assert.equal(c.getSharedSettings(), null);
+    c.saveSharedSettings();
     assert.equal(questions(), 1);
-    assert.equal(Player.ExtensionSettings.AFC_LegacyPublic.lovers.length, 1);
+    assert.equal(Player.ExtensionSettings.AFC_Data, undefined);
+    assert.equal(Player.OnlineSharedSettings.AFC.lovers.length, 0);
+});
+
+test('accepted local fallback migrates when public lovers are empty', () => {
+    const Player = { MemberNumber: 1, ExtensionSettings: {}, OnlineSharedSettings: { AFC: { lovers: [] } } };
+    const { c } = settings(Player);
+    c.readLegacyLocalLovers = () => ({ memberNumber: 1, lovers: [{ memberNumber: 2 }] });
+    assert.equal(c.getSharedSettings().lovers[0].memberNumber, 2);
+});
+
+test('legacy local fallback rejects foreign owners and never reads anonymous keys', () => {
+    const keys = [];
+    const c = run('../src/core/lover-backup.js', { Player: { MemberNumber: 1, AccountName: '' },
+        localStorage: { getItem(key) { keys.push(key); return JSON.stringify({ memberNumber: 9, lovers: [{ memberNumber: 2 }] }); } },
+    });
+    assert.equal(c.readLegacyLocalLovers(), null);
+    assert.deepEqual(keys, ['AFC_DB::1']);
 });
 
 function locks(current, backup, accept) {
@@ -140,4 +166,21 @@ test('late online query from a previous account cannot update the new account ca
     handlers.get('AccountQueryResult')({ Query: 'OnlineFriends', Result: [{ MemberNumber: 3 }] });
     assert.equal(await pending, false);
     assert.equal(updates, 0);
+});
+
+test('backup recovery adds missing lovers without deleting others or resetting dates', () => {
+    const lovers = [{ memberNumber: 2, startDate: 100 }, { memberNumber: 3, startDate: 200 }];
+    const c = run('../src/relations/backup-restore.js', {
+        getSharedSettings: () => ({ lovers }),
+        readBackupLovers: () => [{ memberNumber: 2, startDate: 999 }, { memberNumber: 4, startDate: 300 }],
+        getLoverEntry: num => lovers.find(l => l.memberNumber === num),
+        upsertLover: lover => { lovers.push(lover); return lover; },
+    });
+    assert.equal(c.restoreAllLovers('backup'), 1);
+    assert.equal(lovers.length, 3);
+    assert.equal(lovers[0].startDate, 100);
+    assert.equal(c.restoreLover('backup', 0).startDate, 100);
+    c.readBackupLovers = () => [];
+    assert.equal(c.restoreAllLovers('backup'), 0);
+    assert.equal(lovers.length, 3);
 });
