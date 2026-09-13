@@ -10,21 +10,20 @@ import {
     setProfilePanelOpen, AFCLockAccessOn, pendingOutgoing, pendingIncoming,
     pendingStageProp, pendingStageInc, pendingRestoreOut, pendingRestoreInc, _pendingAcks,
     loversPrivateRoom, onlineFriendsCache, _recentBeepKeys, _lastProposalSent,
-    setCurrentPrivateRoomName,
+    setCurrentPrivateRoomName, setLastOnlineFetch,
 } from './state.js';
 import { loadToastSystem, toast } from '../util/toast.js';
 import { waitFor } from '../util/util.js';
 import { t, detectLang, ensureAfcI18n } from '../i18n/i18n.js';
 import { registerFallback } from '../i18n/fallback.js';
 import { getSharedSettings, getPrivateSettings, syncLockPermsToShared } from './settings.js';
-import { reconcileLocalDB } from './storage.js';
 import { setupHooks } from '../hooks/index.js';
 import { createHookRegistry } from '../hooks/registry.js';
 import { waitForLogin } from '../hooks/lifecycle.js';
 import { clearChatRoomMessageSubscribers } from '../hooks/chat-message-channel.js';
 import { setupCommands } from './commands.js';
-import { registerSettingsUI } from '../ui/settings-page.js';
-import { syncWithOnlineLovers } from '../net/online.js';
+import { registerSettingsUI, AFCSettingsUI } from '../ui/settings-page.js';
+import { syncWithOnlineLovers, cancelOnlineFetch } from '../net/online.js';
 import { isAFCLover, getLoverEntry } from '../relations/lovers.js';
 import { getLoverRegions, isPanelOpen, getPanelRect } from '../ui/profile.js';
 import { getLoverRoom } from '../net/roomname.js';
@@ -68,6 +67,22 @@ export async function initialize() {
 
     // ── 階段二：登入後（需要 Player + 設定資料）───────────────
     await waitForLogin(hookRegistry);
+    // Clear prior session requests and timers before processing a successful new login.
+    hookRegistry.hook('LoginResponse', 100, (args, next) => {
+        const data = args[0];
+        if (data?.Name && data?.AccountName && data?.ID) {
+            cleanupSession();
+            cleanupHeartLock();
+        }
+        const result = next(args);
+        if (data?.Name && data?.AccountName && data?.ID) queueMicrotask(() => {
+            const priv = getPrivateSettings();
+            if (priv) syncLockPermsToShared(priv);
+            initHeartLock(modApi, hookRegistry).catch(console.error);
+            syncWithOnlineLovers();
+        });
+        return result;
+    });
     await waitFor(() => Player?.OnlineSharedSettings !== undefined && Player?.ExtensionSettings !== undefined);
 
     if (!completeInit()) return;
@@ -94,7 +109,7 @@ function completeInit() {
         // 確保鎖的權限已同步到 OnlineSharedSettings
         if (priv) syncLockPermsToShared(priv);
         // 初始化後設定已知戀人數量基準，並強制存備份
-        const shared = Player.OnlineSharedSettings?.AFC;
+        const shared = getSharedSettings();
         setLastKnownLoverCount(shared?.lovers?.length ?? 0);
         setupHooks(hookRegistry);
         setupCommands(hookRegistry).catch(error => console.error('🐈‍⬛ [AFC] 指令註冊失敗:', error));
@@ -106,8 +121,7 @@ function completeInit() {
 
         installRoomSync(hookRegistry);
 
-        // 登入比對本機 DB（資料丟失/換裝置/不一致）。
-        reconcileLocalDB();
+
 
         if (typeof modApi.onUnload === 'function') modApi.onUnload(() => cleanup());
 
@@ -166,6 +180,14 @@ export function cleanup() {
     hookRegistry?.dispose();
     hookRegistry = null;
     unregisterAllSocketListeners();
+    cleanupSession();
+    setInitialized(false);
+    console.log("🐈‍⬛ [AFC] 🗑️ 已清理資源");
+}
+
+function cleanupSession() {
+    cancelOnlineFetch();
+    AFCSettingsUI.load();
     for (const k of Object.keys(_pendingAcks)) _clearAck(k);
     for (const pending of [pendingOutgoing, pendingIncoming, pendingStageProp, pendingStageInc,
                            pendingRestoreOut, pendingRestoreInc]) clearRequestStore(pending);
@@ -176,6 +198,6 @@ export function cleanup() {
     for (const key of Object.keys(_lastProposalSent)) delete _lastProposalSent[key];
     setCurrentPrivateRoomName('');
     setProfilePanelOpen(false);
-    setInitialized(false);
-    console.log("🐈‍⬛ [AFC] 🗑️ 已清理資源");
+    setLastOnlineFetch(0);
+    setLastKnownLoverCount(-1);
 }

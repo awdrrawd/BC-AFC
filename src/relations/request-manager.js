@@ -12,12 +12,17 @@ export function scheduleOutgoing(store, key, duration, onExpire) {
 
 export function showIncoming({ store, key, uiId, title, subText, expireMessage, onAccept }) {
     if (store[key]) return false;
+    const account = Player;
+    const memberNumber = Player.MemberNumber;
     const close = () => clearRequest(store, key, uiId);
     const element = createProposalUI({
         uiId,
         title,
         subText,
-        onAccept: () => onAccept(close),
+        onAccept: () => {
+            if (Player !== account || Player.MemberNumber !== memberNumber) { close(); return; }
+            onAccept(close);
+        },
         onDecline: close,
     });
     if (!element) return false;

@@ -40,7 +40,7 @@ export const AFCSettingsUI = (() => {
     let _scrollOffset  = 0;
     let _showRestoreUI = false;
 
-    function load() { _breakupModal = null; _factoryModal = false; _scrollOffset = 0; _showRestoreUI = false; }
+    function load() { _restoreConfirm = null; _breakupModal = null; _factoryModal = false; _scrollOffset = 0; _showRestoreUI = false; }
 
     // ── run()：每幀繪製 ────────────────────────────────────────
     function run() {
@@ -99,7 +99,7 @@ export const AFCSettingsUI = (() => {
 
         // vibeMsgMode — 兩個 checkbox：震動信息 + 廣播
         // vibeMsgMode: 'off'=兩個都關, 'broadcast'=兩個都開, 'local'=震動開廣播關
-        const vibeMsgMode  = Player.OnlineSharedSettings?.AFC?.vibeMsgMode ?? 'broadcast';
+        const vibeMsgMode  = getSharedSettings()?.vibeMsgMode ?? 'broadcast';
         const vibeOn       = vibeMsgMode !== 'off';
         const broadcastOn  = vibeMsgMode === 'broadcast';
 
@@ -120,7 +120,7 @@ export const AFCSettingsUI = (() => {
 
         // 震動音效 checkbox（inline，x=800）— 獨立開關，僅本人聽到
         const SOUND_CB_X = 800;
-        const soundOn = Player.OnlineSharedSettings?.AFC?.enableVibeSound ?? true;
+        const soundOn = getSharedSettings()?.enableVibeSound ?? true;
         DrawCheckbox(SOUND_CB_X, 765, CB_SZ, CB_SZ, "", soundOn);
         _lbl(t('vibeSoundLabel'), SOUND_CB_X + CB_SZ + 10, 795, 180, "Black", 28);
 

@@ -58,5 +58,6 @@
   "pendingRestore": "Das {1} von {0} kann noch nicht wiederhergestellt werden, da ein abhängiges Objekt (z. B. eine Echo-Fessel) nicht geladen ist. Neuer Versuch beim nächsten Login oder Seiten-Neuladen.",
   "timerExpired": "Das {1} von {0} löst sich in sanftes Licht auf, als der vereinbarte Moment kommt.",
   "unlockDone": "{0} hat {2} von {1} entsperrt.",
-  "dbRestoreAnomaly": "⚠ {0}s HeartLock-Onlinedaten gingen unerwartet verloren und wurden aus der lokalen Sicherung wiederhergestellt für: {1}. Falls du das nicht warst, wende dich bitte an den Schlossbesitzer."
+  "dbRestoreAnomaly": "⚠ {0}s HeartLock-Onlinedaten gingen unerwartet verloren und wurden aus der lokalen Sicherung wiederhergestellt für: {1}. Falls du das nicht warst, wende dich bitte an den Schlossbesitzer.",
+  "confirmLockRecovery": "Restore missing or different Heart Locks on {0}? You may not be able to unlock them yourself."
 }
