@@ -58,5 +58,6 @@
   "pendingRestore": "Le {1} de {0} ne peut pas encore être restauré car un objet dépendant (p. ex. une entrave Echo) n'est pas chargé. Nouvelle tentative à la prochaine connexion ou au rafraîchissement.",
   "timerExpired": "Le {1} de {0} se dissout en une douce lueur à l'heure convenue.",
   "unlockDone": "{0} a déverrouillé le {2} de {1}.",
-  "dbRestoreAnomaly": "⚠ Les données en ligne du HeartLock de {0} ont été anormalement perdues et restaurées depuis la sauvegarde locale pour : {1}. Si ce n'était pas vous, veuillez vérifier avec le propriétaire du verrou."
+  "dbRestoreAnomaly": "⚠ Les données en ligne du HeartLock de {0} ont été anormalement perdues et restaurées depuis la sauvegarde locale pour : {1}. Si ce n'était pas vous, veuillez vérifier avec le propriétaire du verrou.",
+  "confirmLockRecovery": "Restore missing or different Heart Locks on {0}? You may not be able to unlock them yourself."
 }

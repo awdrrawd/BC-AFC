@@ -13,13 +13,16 @@ import { isAFCLover } from '../relations/lovers.js';
 
 // 進房 / 改房 / 建房後：把房名廣播給所有在線戀人
 export async function broadcastRoomNameToLovers() {
+    const account = Player;
+    const memberNumber = Player?.MemberNumber;
+    const active = () => Player === account && Player?.MemberNumber === memberNumber;
     if (!window.ServerPlayerIsInChatRoom?.() || !ChatRoomData) return;
-    await refreshOnlineFriends();
+    if (!await refreshOnlineFriends() || !active()) return;
     let i = 1;
     for (const l of getSharedSettings()?.lovers ?? []) {
         if (!isOnline(l.memberNumber)) continue;
         await sleep(200 * i++);
-        if (!window.ServerPlayerIsInChatRoom?.()) return;
+        if (!active() || !window.ServerPlayerIsInChatRoom?.()) return;
         sendAccountBeep(l.memberNumber, AB.ROOM_NAME, true);
     }
 }

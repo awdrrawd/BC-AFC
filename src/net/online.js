@@ -14,8 +14,20 @@ import { sendBeep } from './beep.js';
 import { registerSocketListener } from '../core/socket.js';
 
 let onlineFetch = null;
+let fetchPlayer = null;
+let cancelFetch = null;
+export function cancelOnlineFetch() {
+    cancelFetch?.();
+    cancelFetch = null;
+    onlineFetch = null;
+    fetchPlayer = null;
+}
+
 export function refreshOnlineFriends(force = false) {
-    if (onlineFetch) return onlineFetch;
+    const account = Player;
+    const memberNumber = Player?.MemberNumber;
+    if (onlineFetch && fetchPlayer === account) return onlineFetch;
+    fetchPlayer = account;
     if (!force && Date.now() - lastOnlineFetch < 30000) return Promise.resolve(true);
     const request = new Promise(resolve => {
         let unregister = () => {};
@@ -26,9 +38,11 @@ export function refreshOnlineFriends(force = false) {
             clearTimeout(timer);
             resolve(success);
         };
+        cancelFetch = () => finish(false);
         const timer = setTimeout(() => finish(false), 5000);
         const handler = (data) => {
             if (data?.Query !== "OnlineFriends") return;
+            if (Player !== account || Player?.MemberNumber !== memberNumber) { finish(false); return; }
             if (!Array.isArray(data.Result)) { finish(false); return; }
             setOnlineFriendsCache(new Map((data.Result ?? []).map(f => [f.MemberNumber, f])));
             setLastOnlineFetch(Date.now());
@@ -39,7 +53,8 @@ export function refreshOnlineFriends(force = false) {
         try { ServerSend("AccountQuery", { Query: "OnlineFriends" }); }
         catch { finish(false); }
     });
-    onlineFetch = request.finally(() => { onlineFetch = null; });
+    const pending = request.finally(() => { if (onlineFetch === pending) onlineFetch = null; });
+    onlineFetch = pending;
     return onlineFetch;
 }
 
@@ -52,16 +67,20 @@ export function isOnline(memberNumber) {
 }
 
 export async function syncWithOnlineLovers() {
+    const account = Player;
+    const memberNumber = Player?.MemberNumber;
+    const active = () => Player === account && Player?.MemberNumber === memberNumber;
     const shared = getSharedSettings();
     if (!shared?.lovers.length) return;
 
-    if (!await refreshOnlineFriends()) return;
+    if (!await refreshOnlineFriends() || !active()) return;
     const onlineFriends = onlineFriendsCache;
 
     let i = 1;
     for (const lover of shared.lovers) {
         if (onlineFriends.has(lover.memberNumber)) {
             await sleep(200 * i++);
+            if (!active()) return;
             sendBeep(lover.memberNumber, BEEP.SYNC_REQUEST, { SenderName: Player.Name });
         }
     }

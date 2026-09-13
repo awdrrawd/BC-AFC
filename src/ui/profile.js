@@ -8,7 +8,7 @@ import {
     PROFILE_PANEL_X, PROFILE_PANEL_Y, PROFILE_PANEL_W, PROFILE_PANEL_H,
 } from '../core/config.js';
 import { profilePanelOpen, setProfilePanelOpen, _ownerTextY } from '../core/state.js';
-import { getPrivateSettings } from '../core/settings.js';
+import { getPrivateSettings, getSharedSettings } from '../core/settings.js';
 import { t, stageLabel } from '../i18n/i18n.js';
 import { daysSince, formatStartDate } from '../util/util.js';
 import { isOnline } from '../net/online.js';
@@ -34,20 +34,20 @@ export function getLoverRegions() {
 }
 
 export function getCurrentViewingCharacter() {
-    try {
-        if (typeof InformationSheetCharacter !== 'undefined' && InformationSheetCharacter)
-            return InformationSheetCharacter;
-        if (typeof InformationSheetSelection !== 'undefined' && InformationSheetSelection) {
-            if (typeof InformationSheetSelection === 'number')
-                return ChatRoomCharacter?.find(c => c.MemberNumber === InformationSheetSelection) ?? Player;
-            return InformationSheetSelection;
-        }
-    } catch {}
-    return Player;
+    if (typeof InformationSheetSelection === 'undefined' || !InformationSheetSelection) return null;
+    if (typeof InformationSheetSelection === 'object') return InformationSheetSelection;
+    if (InformationSheetSelection === Player?.MemberNumber) return Player;
+    return (typeof ChatRoomCharacter !== 'undefined' ? ChatRoomCharacter : [])
+        ?.find(c => c.MemberNumber === InformationSheetSelection) ?? null;
 }
 
 function getViewingCharacterAFCLovers() {
-    return getCurrentViewingCharacter()?.OnlineSharedSettings?.AFC?.lovers ?? [];
+    const character = getCurrentViewingCharacter();
+    if (!character) return [];
+    if (character.MemberNumber === Player?.MemberNumber) return getSharedSettings()?.lovers ?? [];
+    const data = character.OnlineSharedSettings?.AFC;
+    if (data?.memberNumber != null && data.memberNumber !== character.MemberNumber) return [];
+    return Array.isArray(data?.lovers) ? data.lovers : [];
 }
 
 export function drawProfileButton() {

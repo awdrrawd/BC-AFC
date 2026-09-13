@@ -210,3 +210,19 @@ const isLoverOfC = (C, memberNumber) =>
   (C.OnlineSharedSettings?.AFC?.lovers ?? [])
     .some(l => Number(l.memberNumber) === Number(memberNumber));
 ```
+
+
+## 心鎖與服裝工具整合
+
+以下 API 位於 window.Liko.AFC.heartLock，均不提供略過鎖權限或解鎖保護的開關：
+
+| 方法 | 回傳 | 用途 |
+|---|---|---|
+| isHeartLock(itemOrBundle) | boolean | 辨識 Property.Name / HeartLockId，包括舊套裝殘留標記 |
+| isProtected(character, groupName) | boolean | 該角色的指定部位是否有心鎖標記，服裝工具應跳過覆寫與移除 |
+| sanitizeOutfitItem(bundleEntry) | object | 回傳去除心鎖資料的深複本；保留道具和其他設定，不修改穿戴中的物品 |
+| restoreStorage(data) | boolean | 匯入私人心鎖儲存；補回缺失或不同的鎖時詢問使用者，取消回傳 false |
+
+AEE 已整合以上 API，未安裝 AFC 時也保留標記辨識後備。BCX 匯出、衣櫃保存/匯入/匯出均不攜帶心鎖；「包含鎖」開啟也不例外。套裝與 BCX 預覽/提交/取消保留現在受保護的部位。一般鎖仍依 AEE 原有設定處理。
+
+儲存方式改為 ExtensionSettings 主資料，公開設定只作輸出副本。`getLovers()` 維持原介面。`heartLock.restoreStorage(data)` 必須有與目前帳號相同的 `memberNumber`；缺失鎖需確認後才恢復。詳見 [Storage.md](Storage.md)。

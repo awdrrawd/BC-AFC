@@ -84,7 +84,7 @@
   "factoryDone": "🐈‍⬛ [AFC] AFC a été réinitialisé aux réglages d'usine.",
   "restoreTitle": "Restauration des données d'amant",
   "restoreOnline": "Données en ligne",
-  "restoreBackup": "Données de sauvegarde",
+  "restoreBackup": "Ancienne sauvegarde en ligne",
   "restoreBtn": "Restaurer",
   "restoreAllBtn": "Utiliser toutes ces données",
   "restoreEmpty": "(Aucune donnée)",

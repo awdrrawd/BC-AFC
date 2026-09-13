@@ -1,3 +1,4 @@
+import { getSharedSettings } from '../core/settings.js';
 // ════════════════════════════════════════
 //  HeartLock module: vibe.js
 //  震動：每 5 秒推進興奮值，每 60 秒發一次震動訊息（含音效）
@@ -41,13 +42,13 @@ export function vibeStep() {
     } catch {}
 
     // 震動音效（只有自己聽到）
-    if (Player.OnlineSharedSettings?.AFC?.enableVibeSound ?? true) {
+    if (getSharedSettings()?.enableVibeSound ?? true) {
         try { AudioPlaySoundEffect("VibrationShort"); } catch {}
     }
 
     state.vibe.cycle = (state.vibe.cycle + 1) % VIBE_MSG_CYCLE;
     if (state.vibe.cycle === 0) {
-        const mode = Player.OnlineSharedSettings?.AFC?.vibeMsgMode ?? 'broadcast';
+        const mode = getSharedSettings()?.vibeMsgMode ?? 'broadcast';
         if (mode !== 'off') {
             const nick = Player.Nickname || Player.Name;
             const msg = { low: T('vibelow', nick, HEARTLOCK_NAME), mid: T('vibemid', nick, HEARTLOCK_NAME), high: T('vibehigh', nick, HEARTLOCK_NAME) }[maxStr];

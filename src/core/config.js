@@ -72,8 +72,6 @@ export const PROFILE_PANEL_Y = 150;
 export const PROFILE_PANEL_W = 1170;
 export const PROFILE_PANEL_H = 640;
 
-// localStorage 本地存底前綴
-export const LS_PREFIX = "AFC_DB::";
 
 // 自架圖片（BC-AFC 倉庫，經 GitHub Pages 部署，CDN 快取、避免 raw 熱連結限速）
 export const AFC_SETTINGS_IMAGE = "https://awdrrawd.github.io/BC-AFC/AFC-ICON.png";
