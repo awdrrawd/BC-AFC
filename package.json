@@ -11,7 +11,8 @@
     "prebuild": "node scripts/copy-assets.mjs",
     "build": "vite build",
     "lint": "eslint .",
-    "test": "node --test"
+    "test": "node --test",
+    "check:assets": "node scripts/check-assets.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.30.1",

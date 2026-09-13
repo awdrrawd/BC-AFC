@@ -27,6 +27,7 @@ import { registerSettingsUI } from '../ui/settings-page.js';
 import { syncWithOnlineLovers } from '../net/online.js';
 import { isAFCLover, getLoverEntry } from '../relations/lovers.js';
 import { getLoverRegions, isPanelOpen, getPanelRect } from '../ui/profile.js';
+import { getLoverRoom } from '../net/roomname.js';
 import { installRoomSync } from '../hooks/room-sync.js';
 import { unregisterAllSocketListeners } from './socket.js';
 import { _clearAck } from '../net/beep.js';
@@ -125,15 +126,7 @@ function completeInit() {
             getLoverStage:    (num) => getLoverEntry(num)?.stage ?? null,
             /** 戀人目前分享的私人房間 { ChatRoomName, ChatRoomSpace }（無則 null）。
              *  供 FCM 等外掛顯示/加入戀人的私人房（房名經 AccountBeep 由戀人分享，僅 BC 好友間可得）。*/
-            getLoverRoom:     (num) => {
-                const r = loversPrivateRoom[num];
-                if (r) return { ChatRoomName: r.ChatRoomName ?? null, ChatRoomSpace: r.ChatRoomSpace ?? 'X' };
-                // 公開房：BC 好友資料本就帶房名，直接讀線上快取回傳（私人房才需 BEEP 分享）
-                const f = onlineFriendsCache.get(num);
-                if (f && !f.Private && f.ChatRoomName)
-                    return { ChatRoomName: f.ChatRoomName, ChatRoomSpace: f.ChatRoomSpace ?? 'X' };
-                return null;
-            },
+            getLoverRoom,
             /** 穿戴者是否允許我使用心鎖 */
             canUseHeartLock:  (ch)  => {
                 const lovers = ch?.OnlineSharedSettings?.AFC?.lovers ?? [];
@@ -143,7 +136,7 @@ function completeInit() {
                 || (Player.Lovership?.some(l => Number(l.MemberNumber) === Number(ch?.MemberNumber)) ?? false);
             },
             /** 取得戀人清單（唯讀複本，順序＝面板顯示順序）*/
-            getLovers:        () => [...(getSharedSettings()?.lovers ?? [])],
+            getLovers:        () => structuredClone(getSharedSettings()?.lovers ?? []),
             /** 我是否允許主人使用心鎖 */
             canOwnerLock:     () => getPrivateSettings()?.enableOwnerLock ?? false,
             /** 「更多戀人」面板目前是否展開中（且在角色資料頁）→ boolean */

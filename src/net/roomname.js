@@ -13,12 +13,13 @@ import { isAFCLover } from '../relations/lovers.js';
 
 // 進房 / 改房 / 建房後：把房名廣播給所有在線戀人
 export async function broadcastRoomNameToLovers() {
-    if (CurrentScreen !== "ChatRoom" || !ChatRoomData?.Private) return;
+    if (!window.ServerPlayerIsInChatRoom?.() || !ChatRoomData) return;
     await refreshOnlineFriends();
     let i = 1;
     for (const l of getSharedSettings()?.lovers ?? []) {
         if (!isOnline(l.memberNumber)) continue;
         await sleep(200 * i++);
+        if (!window.ServerPlayerIsInChatRoom?.()) return;
         sendAccountBeep(l.memberNumber, AB.ROOM_NAME, true);
     }
 }
@@ -40,7 +41,7 @@ export async function requestRoomNamesFromLovers(active) {
             continue;
         }
         if (!friend.Private && friend.ChatRoomName) {
-            updateSharedRoom({ ...friend, MemberNumber: num });
+            delete loversPrivateRoom[num];
             continue;
         }
         if (confirmedRooms.has(num)) continue;
@@ -57,6 +58,11 @@ export async function requestRoomNamesFromLovers(active) {
 function updateSharedRoom(data) {
     if (typeof data.ChatRoomName === 'string' && data.ChatRoomName.length > 0) {
         confirmedRooms.add(data.MemberNumber);
+        onlineFriendsCache.set(data.MemberNumber, {
+            ...onlineFriendsCache.get(data.MemberNumber), MemberNumber: data.MemberNumber,
+            ChatRoomName: data.ChatRoomName, ChatRoomSpace: data.ChatRoomSpace ?? 'X',
+            Private: data.Private ?? true,
+        });
         loversPrivateRoom[data.MemberNumber] = {
             ChatRoomName: data.ChatRoomName,
             ChatRoomSpace: data.ChatRoomSpace ?? 'X',
@@ -89,9 +95,26 @@ export function parseAccountBeep(data) {
             else
                 sendAccountBeep(from, AB.DEL_ROOM, false);
             break;
-        case AB.DEL_ROOM:
+        case AB.DEL_ROOM: {
             confirmedRooms.add(from);
+            const friend = onlineFriendsCache.get(from);
+            if (friend) onlineFriendsCache.set(from, { ...friend, ChatRoomName: null, Private: false });
             delete loversPrivateRoom[from];
             break;
+        }
     }
+}
+
+// 同步讀取，不在畫面重繪/API 查詢時發送網路請求。
+export function getLoverRoom(memberNumber) {
+    const num = Number(memberNumber);
+    if (!isAFCLover(num)) return null;
+    if (window.ServerPlayerIsInChatRoom?.() && window.ChatRoomCharacter?.some(c => c.MemberNumber === num))
+        return { ChatRoomName: ChatRoomData.Name, ChatRoomSpace: ChatRoomData.Space ?? 'X' };
+    const friend = onlineFriendsCache.get(num);
+    if (!friend) return null;
+    if (!friend.Private)
+        return friend.ChatRoomName ? { ChatRoomName: friend.ChatRoomName, ChatRoomSpace: friend.ChatRoomSpace ?? 'X' } : null;
+    const room = loversPrivateRoom[num];
+    return room ? { ...room } : null;
 }

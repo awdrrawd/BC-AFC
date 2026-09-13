@@ -10,7 +10,7 @@ import {
     AFCLockAccessOn, loversPrivateRoom, profilePanelOpen,
     setProfilePanelOpen, setProfilePageFresh, profilePageFresh,
     setLastOnlineFetch, setOwnerTextY, setInInfoSheet, _inInfoSheet,
-    currentPrivateRoomName, setCurrentPrivateRoomName,
+    setCurrentPrivateRoomName,
 } from '../core/state.js';
 import { registerSocketListener } from '../core/socket.js';
 import {
@@ -169,7 +169,7 @@ export function setupHooks(registry) {
         setTimeout(() => {
             ensureHeartLockStorage();
             syncWithOnlineLovers();
-            if (ChatRoomData?.Private) {
+            if (ChatRoomData) {
                 setCurrentPrivateRoomName(ChatRoomData.Name);
                 broadcastRoomNameToLovers();
             }
@@ -205,17 +205,16 @@ export function setupHooks(registry) {
                 }
             }
 
-            if (data?.Type === "RoomUpdate" && ChatRoomData?.Private
-                && ChatRoomData.Name !== currentPrivateRoomName) {
-                    setCurrentPrivateRoomName(ChatRoomData.Name);
-                    broadcastRoomNameToLovers();
-            }
+
         } catch (error) {
             console.error("🐈‍⬛ [AFC] ChatRoomMessage handler failed:", error);
         } finally {
             heartLockState.operations.serverSync = false;
         }
-        return next(args);
+        const result = next(args);
+        // BC 先套用房間設定，再廣播新房名與公開/私人狀態。
+        if (data?.Type === 'RoomUpdate' && ChatRoomData) broadcastRoomNameToLovers();
+        return result;
     });
 
     // ── 好友列表：填入私人房間名 ────────────────────────────────
@@ -242,7 +241,7 @@ export function setupHooks(registry) {
 
     // ── 離開私人房：通知戀人移除已分享的房名 ─────────────────────
     hook("ChatRoomLeave", 5, (args, next) => {
-        try { if (ChatRoomData?.Private) clearSharedRoomName(); } catch {}
+        try { if (ChatRoomData) clearSharedRoomName(); } catch {}
         setCurrentPrivateRoomName("");
         return next(args);
     });
