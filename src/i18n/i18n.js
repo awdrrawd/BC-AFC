@@ -43,7 +43,7 @@ export async function ensureAfcI18n() {
 
 // 每次呼叫時才偵測語系，避免模組載入時 TranslationLanguage 尚未設定
 export function detectLang() {
-    let code = '';
+    let code;
     if (typeof TranslationLanguage !== 'undefined' && TranslationLanguage) {
         code = String(TranslationLanguage).toUpperCase();
     } else {
