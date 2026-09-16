@@ -4,6 +4,7 @@
 // ════════════════════════════════════════
 
 import { HEARTLOCK_NAME } from './config.js';
+import { restoreHeartLockMarkers } from './r132-properties.js';
 import { clone } from './util.js';
 import { state } from './state.js';
 import { sendLocalizedAction } from '../i18n/l10n.js';
@@ -81,6 +82,7 @@ export function handleHidden(data) {
             const s = ChatRoomCharacter?.find(c => c.MemberNumber === data.Sender);
             if (s) {
                 s.HeartLock = e.Data;
+                restoreHeartLockMarkers(s);
                 // 只有面板正在顯示該角色的鎖時才刷新，避免無關廣播觸發不必要的重繪
                 if (s.MemberNumber === state.panel.targetChar?.MemberNumber) {
                     emitHeartLockEvent('panel-refresh');

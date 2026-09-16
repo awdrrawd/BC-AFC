@@ -4,6 +4,7 @@
 // ════════════════════════════════════════
 
 import { HEARTLOCK_NAME, HSLOCK_NAME } from './config.js';
+import { restoreHeartLockMarkers } from './r132-properties.js';
 import { state, _pendingRestore } from './state.js';
 import { log, clone } from './util.js';
 import { sendLocalizedAction } from '../i18n/l10n.js';
@@ -122,6 +123,7 @@ export function convertToHeartLock(character, item, groupName) {
 
 export function reapplyFromAppearance() {
     if (!ensureStorage()) return;
+    restoreHeartLockMarkers(Player);
     const padlocks = Player.HeartLock.padlocks;
     Player.Appearance?.forEach(item => {
         if (!item?.Property) return;

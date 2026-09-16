@@ -206,4 +206,6 @@ When using code from this project, please include a link to the source or retain
 
 ---
 
+[R132Beta3 分支修補與驗收](docs/r132-compatibility.md)
+
 🐾 Made with 🐾 by **Likolisu**

@@ -1,10 +1,11 @@
+import { installHeartLockRemovalHook } from '../heartlock/removal.js';
+import { installHeartLockPropertyHooks, restoreHeartLockMarkers } from '../heartlock/r132-properties.js';
 // ════════════════════════════════════════
 //  HeartLock 的遊戲函式 hooks（由中央 registry 安裝）
 // ════════════════════════════════════════
 
 import { HEARTLOCK_NAME, HSLOCK_NAME, HL_PANEL_ID, GRAB_WINDOW_MS, GRAB_COOLDOWN_MS } from '../heartlock/config.js';
 import { state, grabStateChar, grabStateSingle, _pendingRestore } from '../heartlock/state.js';
-import { log } from '../heartlock/util.js';
 import { th as T } from '../i18n/i18n.js';
 import { ensureStorage, getPadlockConfig, deleteConfig, getSetting } from '../heartlock/storage.js';
 import { restoreLockFromConfig, convertToHeartLock, watchForUnlock, reapplyFromAppearance, cleanHeartLockProperty } from '../heartlock/lock.js';
@@ -26,39 +27,8 @@ export function installHeartLockHooks(registry) {
     hook('InformationSheetResize', 0, (args, next) => {
         const r = next(args); _repositionHLPanel(); return r;
     });
-    hook('InventoryRemove', 0, (args, next) => {
-        const C = args[0], grp = args[1];
-        if (state.operations.restoring) return next(args);
-        // 計時器到期移除：穿戴者自己移除，直接放行
-        if (state.operations.timerUnlocking) return next(args);
-        if (!C?.IsPlayer?.()) {
-            const item = InventoryGet?.(C, grp);
-            if (item?.Property?.Name === HEARTLOCK_NAME) {
-                const cfg2 = getPadlockConfig(C, grp);
-                if (cfg2) { if (Number(cfg2.owner) !== Number(Player.MemberNumber)) { return; } notifyRemove(C, grp); }
-            }
-            return next(args);
-        }
-        const item = InventoryGet?.(Player, grp);
-        if (item?.Property?.Name === HEARTLOCK_NAME) {
-            const cfg2 = getPadlockConfig(Player, grp);
-            if (cfg2) {
-                if (Number(cfg2.owner) !== Number(Player.MemberNumber)) {
-                    log('InventoryRemove blocked — not owner');                        if (!state.operations.sendingResist) {
-                        state.operations.sendingResist = true;
-                        setTimeout(() => {
-                            try { sendLocalizedAction('hl', 'resistEscape', [Player.Nickname || Player.Name, HEARTLOCK_NAME]); } catch {}
-                            state.operations.sendingResist = false;
-                        }, 300);
-                    }
-                    return;
-                }
-                deleteConfig(grp);
-            }
-        }
-        if (state.operations.serverSync) return next(args);
-        return next(args);
-    });
+    installHeartLockRemovalHook(hook);
+    installHeartLockPropertyHooks(hook);
 
     // ── 有插件的人都能看到此鎖，但上鎖時才做權限檢查 ──
     hook('DialogInventoryAdd', 10, (args, next) => {
@@ -132,6 +102,8 @@ export function installHeartLockHooks(registry) {
 
     // ── CharacterRefresh ──
     hook('CharacterRefresh', 0, (args, next) => {
+        if (args[0]?.IsPlayer?.()) ensureStorage();
+        restoreHeartLockMarkers(args[0]);
         const result = next(args);
         if (args[0]?.IsPlayer?.()) setTimeout(() => { ensureStorage(); reapplyFromAppearance(); }, 300);
         return result;
@@ -338,6 +310,7 @@ export function installHeartLockHooks(registry) {
 
     // ── CharacterReleaseTotal 攔截 ──
     hook('CharacterReleaseTotal', 10, (args, next) => {
+        if (state.operations.safewordRelease) return next(args);
         const C = args[0];
         if (!C?.Appearance) return next(args);
         const snapshots = [];
