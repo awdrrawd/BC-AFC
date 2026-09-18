@@ -7,6 +7,11 @@ import { DEFAULT_STORAGE, HSLOCK_NAME, EXT_KEY } from './config.js';
 import { clone } from './util.js';
 import { th as T } from '../i18n/i18n.js';
 import { emitHeartLockEvent } from './events.js';
+import { confirmInAFC } from '../ui/confirmation.js';
+import { restoreHeartLockMarkers } from './r132-properties.js';
+import { state } from './state.js';
+
+const reconciliations = new WeakMap();
 
 export function ensureStorage() {
     if (!window.Player || !Number.isSafeInteger(Player.MemberNumber) || Player.MemberNumber <= 0) return false;
@@ -83,43 +88,77 @@ function adoptOnlineStorage(data) {
 }
 
 // 新的空資料是合法解鎖。只選較新的備份，補回缺失鎖必須先詢問。
-export function confirmLockRecovery(data) {
+export async function confirmLockRecovery(data, { remember = false } = {}) {
     if (!data || typeof data !== 'object' || !data.padlocks || Array.isArray(data.padlocks)) return null;
     if (data.memberNumber !== Player.MemberNumber) return null;
     const copy = clone(data);
     if (Object.values(copy.padlocks).some(cfg => !cfg || !Number.isSafeInteger(Number(cfg.owner)) || Number(cfg.owner) <= 0)) return null;
+    const account = Player;
+    const es = Player.ExtensionSettings;
+    const original = JSON.stringify(es[EXT_KEY]?.padlocks);
     const missing = Object.entries(copy.padlocks).filter(([group, cfg]) => {
         const item = Player.Appearance?.find(item => item.Asset?.Group?.Name === group);
         return !item?.Property?.HeartLockId || item.Property.HeartLockId !== cfg.lockId
             || item.Property.LockedBy !== HSLOCK_NAME || (cfg.assetName && item.Asset?.Name !== cfg.assetName);
-    }).map(([group]) => group);
-    if (missing.length && !window.confirm(T('confirmLockRecovery', missing.join(', ')))) return null;
+    });
+    const key = cfg => JSON.stringify([cfg.lockId, Number(cfg.owner), cfg.assetName ?? cfg._fullSnapshot?.assetName]);
+    const decisions = remember ? (copy.recoveryDecisions ?? {}) : {};
+    const undecided = missing.filter(([group, cfg]) => decisions[group]?.key !== key(cfg));
+    if (undecided.length) {
+        const accepted = await confirmInAFC(T('confirmLockRecovery', undecided.map(([group]) => group).join(', ')));
+        if (accepted == null || Player !== account || Player.ExtensionSettings !== es
+            || Player.MemberNumber !== copy.memberNumber || JSON.stringify(es[EXT_KEY]?.padlocks) !== original) return null;
+        if (!remember && !accepted) return null;
+        for (const [group, cfg] of undecided) decisions[group] = { key: key(cfg), accepted };
+    }
+    for (const [group, cfg] of missing) {
+        if (decisions[group]?.accepted === false) {
+            copy.declinedRecovery ??= {};
+            copy.declinedRecovery[group] = cfg;
+            delete copy.padlocks[group];
+        }
+    }
+    if (remember) copy.recoveryDecisions = decisions;
     return copy;
 }
 
-export function restoreStorageWithConsent(data) {
+export async function restoreStorageWithConsent(data) {
     if (!ensureStorage()) return false;
-    const approved = confirmLockRecovery(data);
-    if (!approved) return false;
+    const account = Player;
+    const es = Player.ExtensionSettings;
+    const approved = await confirmLockRecovery(data);
+    if (!approved || Player !== account || Player.ExtensionSettings !== es) return false;
     adoptOnlineStorage(approved);
     return true;
 }
 
 export function reconcileHLStorage() {
+    const es = Player?.ExtensionSettings;
+    if (!es) return Promise.resolve();
+    if (reconciliations.has(es)) return reconciliations.get(es);
+    const pending = reconcileCurrentLocks().finally(() => reconciliations.delete(es));
+    reconciliations.set(es, pending);
+    return pending;
+}
+
+async function reconcileCurrentLocks() {
     if (!ensureStorage()) return;
+    const account = Player;
+    const es = Player.ExtensionSettings;
+    // R132 can discard only the custom markers while the same native lock remains.
+    restoreHeartLockMarkers(Player);
     const current = clone(Player.HeartLock);
-    const approved = confirmLockRecovery(current);
+    const token = {};
+    state.operations.recoveryPending = token;
+    let approved;
+    try { approved = await confirmLockRecovery(current, { remember: true }); }
+    finally { if (state.operations.recoveryPending === token) state.operations.recoveryPending = false; }
+    if (Player !== account || Player.ExtensionSettings !== es || Player.MemberNumber !== current.memberNumber) return;
     if (approved) {
         Player.ExtensionSettings[EXT_KEY] = approved;
         Player.HeartLock = approved;
-        emitHeartLockEvent('storage-recovery-approved');
-    } else {
-        // Keep rejected data privately for manual inspection, outside the active lock set.
-        const padlocks = Object.fromEntries(Object.entries(current.padlocks ?? {}).filter(([group, cfg]) =>
-            Player.Appearance?.some(item => item.Asset?.Group?.Name === group && item.Property?.HeartLockId === cfg.lockId && item.Property?.LockedBy === HSLOCK_NAME)));
-        Player.ExtensionSettings[EXT_KEY] = { ...current, declinedRecovery: current.padlocks, padlocks };
-        Player.HeartLock = Player.ExtensionSettings[EXT_KEY];
-    }
+        if (Object.keys(approved.padlocks).length) emitHeartLockEvent('storage-recovery-approved');
+    } else return;
     emitHeartLockEvent('storage-restored');
     emitHeartLockEvent('storage-backfill');
     saveAndSync();

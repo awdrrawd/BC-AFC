@@ -3,16 +3,18 @@
 //  關係恢復流程（雙方資料不對稱時補齊，並保留原始關係日期與階段）
 // ════════════════════════════════════════
 
-import { STAGE, BEEP, PROPOSE_EXPIRE_MS } from '../core/config.js';
+import { STAGE, BEEP, PROPOSE_EXPIRE_MS, MAX_AFC_LOVERS } from '../core/config.js';
 import { pendingRestoreOut, pendingRestoreInc, AFCLockAccessOn } from '../core/state.js';
 import { t } from '../i18n/i18n.js';
 import { chatLocalNotice } from '../util/util.js';
 import { sendBeep } from '../net/beep.js';
-import { isAFCLover, getLoverEntry, updateLastSeen, upsertLover } from './lovers.js';
+import { isAFCLover, getLoverEntry, updateLastSeen, upsertLover, canAddLover, targetHasLoverRoom } from './lovers.js';
 import { clearRequest, scheduleOutgoing, showIncoming } from './request-manager.js';
 
 export function proposeRestore(C, quiet = false) {
     const target = C.MemberNumber;
+    if (!canAddLover(target)) { if (!quiet) chatLocalNotice(t('loverLimit', MAX_AFC_LOVERS)); return; }
+    if (!targetHasLoverRoom(C)) { if (!quiet) chatLocalNotice(t('targetLoverLimit', C.Name, MAX_AFC_LOVERS)); return; }
     const iHaveC = isAFCLover(target);
     const cHasMe = C.OnlineSharedSettings?.AFC?.lovers
     ?.some(l => Number(l.memberNumber) === Number(Player.MemberNumber)) ?? false;
@@ -43,6 +45,7 @@ export function proposeRestore(C, quiet = false) {
 
 export function handleIncomingRestore(senderNum, senderName, stage, startDate, stageDate) {
     if (pendingRestoreInc[senderNum]) return;
+    if (!canAddLover(senderNum)) { chatLocalNotice(t('loverLimit', MAX_AFC_LOVERS)); return; }
     const uiId = `el-restore-${senderNum}`;
     showIncoming({
         store: pendingRestoreInc, key: senderNum, uiId,
@@ -57,7 +60,9 @@ function acceptRestore(senderNum, senderName, stage, startDate, stageDate, close
     close();
     if (!isAFCLover(senderNum)) {
         // Case B：我（丟失方）收到保有方的申請，直接 addLover
-        upsertLover({ memberNumber: senderNum, name: senderName, stage, startDate, stageDate });
+        if (!upsertLover({ memberNumber: senderNum, name: senderName, stage, startDate, stageDate })) {
+            chatLocalNotice(t('loverLimit', MAX_AFC_LOVERS)); return;
+        }
     }
     // 無論哪個 Case，都把資料帶回給對方
     // Case A：我（保有方）已有對方，找出我記錄的對方資料，回傳讓對方 addLover
@@ -80,10 +85,11 @@ export function handleRestoreAccepted(fromNum, receiverName, stage, startDate, s
     clearRequest(pendingRestoreOut, fromNum);
     // Case A：我是丟失方，對方回傳資料，現在 addLover
     if (!isAFCLover(fromNum)) {
-        upsertLover({ memberNumber: fromNum, name: receiverName,
+        const restored = upsertLover({ memberNumber: fromNum, name: receiverName,
                       stage: stage ?? STAGE.DATING,
                       startDate: startDate ?? Date.now(),
                       stageDate: stageDate ?? Date.now() });
+        if (!restored) { chatLocalNotice(t('loverLimit', MAX_AFC_LOVERS)); return; }
     }
     AFCLockAccessOn.add(fromNum);
     updateLastSeen(fromNum);

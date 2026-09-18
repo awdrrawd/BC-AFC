@@ -3,14 +3,14 @@
 //  ① 申請流程（發起／接收）+ window.ChatRoomAFC* dialog 入口與 prerequisite
 // ════════════════════════════════════════
 
-import { STAGE, BEEP, PROPOSE_COOLDOWN_MS, PROPOSE_EXPIRE_MS, STAGE_PROMOTE_DAYS } from '../core/config.js';
+import { STAGE, BEEP, PROPOSE_COOLDOWN_MS, PROPOSE_EXPIRE_MS, STAGE_PROMOTE_DAYS, MAX_AFC_LOVERS } from '../core/config.js';
 import { _lastProposalSent, pendingOutgoing, pendingIncoming, AFCLockAccessOn } from '../core/state.js';
 import { getPrivateSettings, savePrivateSettings } from '../core/settings.js';
 import { chatLocalNotice, daysSince } from '../util/util.js';
 import { t } from '../i18n/i18n.js';
 import { sendBeep } from '../net/beep.js';
 import {
-    addLover, updateLastSeen, isAFCLover, isNativeLover, targetHasAFC, getLoverEntry,
+    addLover, updateLastSeen, isAFCLover, isNativeLover, targetHasAFC, getLoverEntry, canAddLover, targetHasLoverRoom,
 } from './lovers.js';
 import { initiateBreakup, broadcastEvent } from './breakup.js';
 import { proposeStageUpgrade } from './stage.js';
@@ -24,6 +24,7 @@ window.ChatRoomAFCCanPropose = function () {
     if (isAFCLover(C.MemberNumber)) return false;
     if (isNativeLover(C.MemberNumber)) return false;
     if (!targetHasAFC(C)) return false;
+    if (!canAddLover(C.MemberNumber) || !targetHasLoverRoom(C)) return false;
     return true;
 };
 
@@ -74,6 +75,8 @@ window.ChatRoomAFCProposeMarry  = function () { if (CurrentCharacter) proposeSta
 // ── ① 申請流程 — 發起方 ──
 export function proposeToCharacter(C) {
     const target = C.MemberNumber;
+    if (!canAddLover(target)) { chatLocalNotice(t('loverLimit', MAX_AFC_LOVERS)); return; }
+    if (!targetHasLoverRoom(C)) { chatLocalNotice(t('targetLoverLimit', C.Name, MAX_AFC_LOVERS)); return; }
     if (!Player.FriendList?.includes(target)) {
         chatLocalNotice(t('notFriend', C.Name)); return;
     }
@@ -107,6 +110,7 @@ export function handleIncomingProposal(senderNum, senderName) {
 
     // 若已是戀人（雙向確認）則不需要再提案
     if (isAFCLover(senderNum) || isNativeLover(senderNum)) return;  // 已是戀人
+    if (!canAddLover(senderNum)) { chatLocalNotice(t('loverLimit', MAX_AFC_LOVERS)); return; }
 
     sendBeep(senderNum, BEEP.PROPOSE_ACK);
 
@@ -127,7 +131,10 @@ export function cleanupIncomingUI(num) {
 
 function acceptProposal(senderNum, senderName, close = () => cleanupIncomingUI(senderNum)) {
     close();
-    addLover(senderNum, senderName, STAGE.DATING);
+    if (!addLover(senderNum, senderName, STAGE.DATING)) {
+        if (!isAFCLover(senderNum)) chatLocalNotice(t('loverLimit', MAX_AFC_LOVERS));
+        return;
+    }
     AFCLockAccessOn.add(senderNum);
     updateLastSeen(senderNum);
     broadcastEvent('becameLovers', senderNum, senderName);
@@ -140,7 +147,9 @@ export function handleAccepted(fromNum, receiverName) {
     if (!pendingOutgoing[fromNum]) return;
     clearRequest(pendingOutgoing, fromNum);
     if (!isAFCLover(fromNum)) {
-        addLover(fromNum, receiverName, STAGE.DATING);
+        if (!addLover(fromNum, receiverName, STAGE.DATING)) {
+            chatLocalNotice(t('loverLimit', MAX_AFC_LOVERS)); return;
+        }
         AFCLockAccessOn.add(fromNum);
         updateLastSeen(fromNum);
         chatLocalNotice(t('proposeOK', receiverName));

@@ -3,8 +3,8 @@
 //  戀人資料 CRUD + 查詢 + 最後見面 + 自動解除
 // ════════════════════════════════════════
 
-import { STAGE } from '../core/config.js';
-import { AFCLockAccessOn, loversPrivateRoom, setLastKnownLoverCount } from '../core/state.js';
+import { STAGE, MAX_AFC_LOVERS } from '../core/config.js';
+import { AFCLockAccessOn, loversPrivateRoom, setLastKnownLoverCount, pendingOutgoing, pendingRestoreOut } from '../core/state.js';
 import { getSharedSettings, saveSharedSettings } from '../core/settings.js';
 import { normalizeLover, normalizeLoverList, normalizeMemberNumber, sameMemberNumber } from './lover-model.js';
 
@@ -13,10 +13,33 @@ function commitLovers(settings) {
     saveSharedSettings();
 }
 
+export function canAddLover(memberNumber) {
+    const s = getSharedSettings();
+    const num = normalizeMemberNumber(memberNumber);
+    if (!s || num === null) return false;
+    if (s.lovers.some(l => sameMemberNumber(l.memberNumber, num))) return true;
+    // Reserve slots for outstanding outgoing proposals so simultaneous accepts
+    // cannot consume the last slot twice. Expired requests release their slots.
+    const occupied = new Set(s.lovers.map(l => Number(l.memberNumber)));
+    for (const key of [...Object.keys(pendingOutgoing), ...Object.keys(pendingRestoreOut)]) {
+        const pending = normalizeMemberNumber(key);
+        if (pending !== null && pending !== num) occupied.add(pending);
+    }
+    return occupied.size < MAX_AFC_LOVERS;
+}
+
+export function targetHasLoverRoom(character) {
+    const lovers = character?.OnlineSharedSettings?.AFC?.lovers;
+    if (!Array.isArray(lovers)) return true;
+    return lovers.some(l => sameMemberNumber(l.memberNumber, Player.MemberNumber))
+        || new Set(lovers.map(l => Number(l.memberNumber))).size < MAX_AFC_LOVERS;
+}
+
 export function addLover(memberNumber, name, stage = STAGE.DATING) {
     const s = getSharedSettings();
     const normalized = normalizeLover({ memberNumber, name, stage });
     if (!s || !normalized || s.lovers.some(l => sameMemberNumber(l.memberNumber, normalized.memberNumber))) return false;
+    if (!canAddLover(normalized.memberNumber)) return false;
     s.lovers.push(normalized);
     commitLovers(s);
     console.log("🐈‍⬛ [AFC] ✅ 新增戀人:", name, memberNumber);
@@ -27,6 +50,7 @@ export function upsertLover(input) {
     const s = getSharedSettings();
     const normalized = normalizeLover(input);
     if (!s || !normalized) return null;
+    if (!canAddLover(normalized.memberNumber)) return null;
     const index = s.lovers.findIndex(l => sameMemberNumber(l.memberNumber, normalized.memberNumber));
     if (index >= 0) s.lovers[index] = { ...s.lovers[index], ...normalized };
     else s.lovers.push(normalized);
@@ -37,7 +61,10 @@ export function upsertLover(input) {
 export function replaceLovers(lovers) {
     const s = getSharedSettings();
     if (!s) return [];
-    s.lovers = normalizeLoverList(lovers);
+    const next = normalizeLoverList(lovers);
+    const occupied = new Set([...next.map(l => l.memberNumber), ...Object.keys(pendingOutgoing).map(Number), ...Object.keys(pendingRestoreOut).map(Number)]);
+    if (occupied.size > MAX_AFC_LOVERS) return s.lovers;
+    s.lovers = next;
     commitLovers(s);
     return s.lovers;
 }

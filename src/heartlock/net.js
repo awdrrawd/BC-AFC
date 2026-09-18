@@ -6,6 +6,7 @@
 import { HEARTLOCK_NAME } from './config.js';
 import { restoreHeartLockMarkers } from './r132-properties.js';
 import { clone } from './util.js';
+import { snapshotItem } from './snapshot.js';
 import { state } from './state.js';
 import { sendLocalizedAction } from '../i18n/l10n.js';
 import { ensureStorage, getOrCreateConfig, deleteConfig, saveAndSync } from './storage.js';
@@ -104,8 +105,8 @@ export function handleHidden(data) {
         cfg.lockedAt = e.LockedAt; cfg.lockTs = Date.now(); cfg.assetName = e.AssetName ?? null; cfg.lockId = e.LockId ?? null;
         try {
             const item = InventoryGet?.(Player, e.Group);
-            if (item) {
-                cfg._fullSnapshot = { assetName: item.Asset?.Name, groupName: e.Group, color: item.Color ? clone(item.Color) : undefined, craft: item.Craft ? clone(item.Craft) : undefined, difficulty: item.Difficulty };
+            if (item && (!cfg.assetName || item.Asset?.Name === cfg.assetName)) {
+                cfg._fullSnapshot = snapshotItem(item, e.Group);
                 if (item?.Property) item.Property.HeartLockId = e.LockId;
             }
         } catch {}

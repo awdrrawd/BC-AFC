@@ -96,5 +96,15 @@
   "dbMismatchDiff": "Votre liste d'amants étendus en ligne diffère de la sauvegarde locale. Ouvrez Paramètres AFC → Restaurer pour concilier manuellement ; rien n'est écrasé automatiquement.",
   "becameLovers": "{0} (#{1}) et {2} (#{3}) sont devenus amants étendus.",
   "upgradedEngaged": "{0} (#{1}) et {2} (#{3}) ont fait évoluer leur relation étendue vers les [fiançailles].",
-  "upgradedMarried": "{0} (#{1}) et {2} (#{3}) ont fait évoluer leur relation étendue vers le [mariage]."
+  "upgradedMarried": "{0} (#{1}) et {2} (#{3}) ont fait évoluer leur relation étendue vers le [mariage].",
+  "daysCount": "{0} j",
+  "totalDays": "total : {0} j",
+  "yearsCount": "{0} an(s)",
+  "monthsCount": "{0} mois",
+  "relationshipDuration": "Ensemble depuis {0}",
+  "profilePage": "{0}/{1}",
+  "loverLimit": "La limite est de {0} partenaires étendus, demandes envoyées en attente comprises.",
+  "targetLoverLimit": "{0} a atteint la limite de {1} partenaires étendus.",
+  "neverRecorded": "Jamais enregistré",
+  "confirmLoverRecovery": "Restaurer la sauvegarde des partenaires du compte nº {0} ?\n\n{1}\n\nVotre choix sera enregistré. Après annulation, la restauration manuelle reste disponible dans les paramètres."
 }

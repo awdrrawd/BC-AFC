@@ -59,6 +59,7 @@ export const STAGE_COLOR = {
 export const PROPOSE_COOLDOWN_MS = 60  * 1000;
 export const PROPOSE_EXPIRE_MS   = 3   * 60 * 1000;
 export const STAGE_PROMOTE_DAYS  = 7;
+export const MAX_AFC_LOVERS = 20;
 
 // Profile 按鈕（依 profile.txt "More loves" 按鈕座標）
 export const PROFILE_BTN_X = 1020;

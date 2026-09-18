@@ -96,5 +96,15 @@
   "dbMismatchDiff": "Deine Online-Liste erweiterter Liebhaber weicht von der lokalen Sicherung ab. Öffne AFC-Einstellungen → Wiederherstellen zum manuellen Abgleich; nichts wird automatisch überschrieben.",
   "becameLovers": "{0} (#{1}) und {2} (#{3}) sind erweiterte Liebende geworden.",
   "upgradedEngaged": "{0} (#{1}) und {2} (#{3}) haben ihre erweiterte Beziehung zur [Verlobung] hochgestuft.",
-  "upgradedMarried": "{0} (#{1}) und {2} (#{3}) haben ihre erweiterte Beziehung zur [Ehe] hochgestuft."
+  "upgradedMarried": "{0} (#{1}) und {2} (#{3}) haben ihre erweiterte Beziehung zur [Ehe] hochgestuft.",
+  "daysCount": "{0} T.",
+  "totalDays": "insgesamt {0} T.",
+  "yearsCount": "{0} J.",
+  "monthsCount": "{0} Mon.",
+  "relationshipDuration": "Zusammen seit {0}",
+  "profilePage": "{0}/{1}",
+  "loverLimit": "Das Limit beträgt {0} erweiterte Partner, einschließlich ausstehender gesendeter Anfragen.",
+  "targetLoverLimit": "{0} hat das Limit von {1} erweiterten Partnern erreicht.",
+  "neverRecorded": "Nie erfasst",
+  "confirmLoverRecovery": "Partner-Sicherung für Konto #{0} wiederherstellen?\n\n{1}\n\nDeine Auswahl wird gespeichert. Nach dem Abbrechen kannst du die Daten weiterhin in den Einstellungen wiederherstellen."
 }

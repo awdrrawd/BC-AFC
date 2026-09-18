@@ -12,7 +12,7 @@ import { factoryReset } from '../core/storage.js';
 import { readBackupLovers } from '../core/lover-backup.js';
 import { initiateBreakup } from '../relations/breakup.js';
 import { restoreAllLovers, restoreLover } from '../relations/backup-restore.js';
-import { t, stageLabel, detectLang } from '../i18n/i18n.js';
+import { t, stageLabel } from '../i18n/i18n.js';
 import { daysSince, chatLocalNotice } from '../util/util.js';
 
 export const AFCSettingsUI = (() => {
@@ -327,8 +327,7 @@ export const AFCSettingsUI = (() => {
             const sLabel = stageLabel(l.stage);
             const days = daysSince(l.stageDate ?? l.startDate);
             // 名字 + 階段 + 天數 全在同一行，靠左
-            const _lang = detectLang();
-            const rowText = `♥ ${l.name}  (#${l.memberNumber})  [${sLabel}]  ${days}${(_lang==='TW'||_lang==='CN')?'天':'d'}`;
+            const rowText = `♥ ${l.name}  (#${l.memberNumber})  [${sLabel}]  ${t('daysCount', days)}`;
             _lbl(rowText, colX, ry + RUI.rowH/2, RUI.colW - RUI.rBtnW - 14, nameColor, 22);
             DrawButton(colX + RUI.colW - RUI.rBtnW - 6, ry + (RUI.rowH - RUI.rBtnH)/2, RUI.rBtnW, RUI.rBtnH, t('restoreBtn'), "#8B1A2E", "");
         }

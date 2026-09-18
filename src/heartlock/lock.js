@@ -5,6 +5,8 @@
 
 import { HEARTLOCK_NAME, HSLOCK_NAME } from './config.js';
 import { restoreHeartLockMarkers } from './r132-properties.js';
+import { restoreSnapshotCraft } from './craft.js';
+import { snapshotItem, restoreSnapshotProperty } from './snapshot.js';
 import { state, _pendingRestore } from './state.js';
 import { log, clone } from './util.js';
 import { sendLocalizedAction } from '../i18n/l10n.js';
@@ -99,7 +101,7 @@ export function convertToHeartLock(character, item, groupName) {
     if (character.IsPlayer()) {
         const cfg = getOrCreateConfig(groupName);
         if (cfg) {
-            cfg._fullSnapshot = { assetName: item.Asset?.Name, groupName, color: item.Color ? clone(item.Color) : undefined, craft: item.Craft ? clone(item.Craft) : undefined, difficulty: item.Difficulty };
+            cfg._fullSnapshot = snapshotItem(item, groupName);
         }
     }
     item.Property.Name = HEARTLOCK_NAME;
@@ -122,6 +124,7 @@ export function convertToHeartLock(character, item, groupName) {
 }
 
 export function reapplyFromAppearance() {
+    if (state.operations.recoveryPending) return;
     if (!ensureStorage()) return;
     restoreHeartLockMarkers(Player);
     const padlocks = Player.HeartLock.padlocks;
@@ -145,12 +148,7 @@ export function reapplyFromAppearance() {
             note: '', unlockTime: null, vibe: 'off', orgasmMode: 'normal',
             assetName: item.Asset?.Name ?? null,
             lockId: item.Property.HeartLockId ?? null,
-            _fullSnapshot: {
-                assetName: item.Asset?.Name, groupName: gn,
-                color: item.Color ? clone(item.Color) : undefined,
-                craft: item.Craft ? clone(item.Craft) : undefined,
-                difficulty: item.Difficulty,
-            },
+            _fullSnapshot: snapshotItem(item, gn),
         };
     });
     for (const gn of Object.keys(padlocks)) {
@@ -171,16 +169,17 @@ export function backfillSnapshots() {
         if (!item?.Property) continue;
         const isHL = item.Property.Name === HEARTLOCK_NAME || !!item.Property.HeartLockId;
         if (!isHL) continue;
+        if ((cfg.assetName && cfg.assetName !== item.Asset?.Name)
+            || (cfg.lockId && cfg.lockId !== item.Property.HeartLockId)
+            || Number(cfg.owner) !== Number(item.Property.LockMemberNumber)) continue;
         const snap = cfg._fullSnapshot;
-        const snapMissing = !snap || !snap.assetName || (item.Craft && !snap.craft);
-        if (snapMissing) {
-            cfg._fullSnapshot = {
-                assetName: item.Asset?.Name, groupName: gn,
-                color: item.Color ? clone(item.Color) : undefined,
-                craft: item.Craft ? clone(item.Craft) : undefined,
-                difficulty: item.Difficulty,
-            };
+        if (!snap?.assetName) {
+            cfg._fullSnapshot = snapshotItem(item, gn);
             changed = true;
+        } else if (snap.assetName === item.Asset.Name && snap.groupName === gn) {
+            // Upgrade old snapshots in place: never erase saved Craft with damaged live data.
+            if (item.Craft && !snap.craft) { snap.craft = clone(item.Craft); changed = true; }
+            if (!snap.property) { snap.property = clone(item.Property); changed = true; }
         }
         if (cfg.assetName == null && item.Asset?.Name) { cfg.assetName = item.Asset.Name; changed = true; }
         if (cfg.lockId == null && item.Property.HeartLockId) { cfg.lockId = item.Property.HeartLockId; changed = true; }
@@ -195,7 +194,7 @@ onHeartLockEvent('storage-recovery-approved', () => {
         if (item?.Property?.LockedBy === HSLOCK_NAME && item.Property.HeartLockId === cfg.lockId) continue;
         // 公開備份沒有完整服裝快照時，不刪除或替換現有的不同道具。
         if (item && cfg.assetName !== item.Asset?.Name && !cfg._fullSnapshot) {
-            deleteConfig(group);
+            _markPendingRestore(group);
             continue;
         }
         restoreLockFromConfig(group, cfg);
@@ -227,19 +226,24 @@ function _markPendingRestore(gn) {
 
 // 回傳：'ok' 成功復原 / 'pending' 相依物件未載入暫掛 / 'skip' 不需處理
 export function restoreLockFromConfig(gn, cfg, updateUI = true) {
+    if (state.operations.recoveryPending) return 'skip';
     let item = InventoryGet?.(Player, gn);
-    // 物品被替換成不同 asset → 視為竄改：移除入侵物品，改用 snapshot 重穿原物品(含 craft/顏色)。
-    if (item && cfg.assetName && item.Asset?.Name !== cfg.assetName) {
-        if (!cfg._fullSnapshot?.assetName) {
-            // 無 snapshot 可重建原物品 → 至少移除入侵物品並清該部位設定（無法完整還原）
-            log('restore: swapped item but no snapshot →', gn, '→ remove intruder + clear config');
-            try { state.operations.restoring = true; InventoryRemove?.(Player, gn, false); } finally { state.operations.restoring = false; }
-            deleteConfig(gn);
-            return 'skip';
+    const swapped = item && cfg.assetName && item.Asset?.Name !== cfg.assetName;
+    const restoreEquipment = !item || swapped || item.Property?.LockedBy !== HSLOCK_NAME
+        || (cfg.lockId && item.Property?.HeartLockId !== cfg.lockId);
+    if (!item || swapped) {
+        const snap = cfg._fullSnapshot;
+        if (!snap?.assetName || snap.groupName !== gn
+            || (cfg.assetName && snap.assetName !== cfg.assetName)
+            || !AssetGet?.(Player.AssetFamily, gn, snap.assetName)) {
+            _markPendingRestore(gn);
+            return 'pending';
         }
-        log('restore: detected item swap on', gn, '→ restoring original from snapshot');
-        try { state.operations.restoring = true; InventoryRemove?.(Player, gn, false); } finally { state.operations.restoring = false; }
-        item = null;   // 落入下方重穿流程
+        if (swapped) {
+            try { state.operations.restoring = true; InventoryRemove?.(Player, gn, false); }
+            finally { state.operations.restoring = false; }
+            item = null;
+        }
     }
     if (!item) {
         const snap = cfg._fullSnapshot;
@@ -248,7 +252,7 @@ export function restoreLockFromConfig(gn, cfg, updateUI = true) {
             const asset = AssetGet?.(Player.AssetFamily, gn, snap.assetName);
             if (!asset) { _markPendingRestore(gn); return 'pending'; }   // Echo 等自訂物件尚未註冊
             state.operations.restoring = true;
-            item = InventoryWear?.(Player, snap.assetName, gn, snap.color, asset.Difficulty, Player.MemberNumber, snap.craft);
+            item = InventoryWear?.(Player, snap.assetName, gn, snap.color, 0, Player.MemberNumber, null, false);
             state.operations.restoring = false;
             if (!item) item = InventoryGet?.(Player, gn);
             if (!item) { _markPendingRestore(gn); return 'pending'; }
@@ -256,11 +260,26 @@ export function restoreLockFromConfig(gn, cfg, updateUI = true) {
     }
     // 到此 item 的 asset 應與 cfg 相符（原本相符，或已由 snapshot 重穿）
     if (cfg.assetName && item.Asset?.Name !== cfg.assetName) return 'skip';
+    const snapshot = cfg._fullSnapshot;
+    if (restoreEquipment && snapshot?.assetName === item.Asset.Name && snapshot.groupName === gn) {
+        restoreSnapshotProperty(item, snapshot);
+        if (snapshot.color != null) item.Color = clone(snapshot.color);
+        if (Number.isFinite(snapshot.difficulty)) item.Difficulty = snapshot.difficulty;
+        // A complete protected-item snapshot also replaces the craft of a freshly
+        // equipped same-asset substitute; intact locks keep their current settings.
+        if (snapshot.property) delete item.Craft;
+    }
+    restoreSnapshotCraft(item, cfg._fullSnapshot);
     try {
         const hsAsset = AssetGet?.('Female3DCG', 'ItemMisc', HSLOCK_NAME);
-        if (hsAsset) InventoryLock?.(Player, item, { Asset: hsAsset }, cfg.owner);
+        if (hsAsset) InventoryLock?.(Player, item, { Asset: hsAsset }, cfg.owner, false);
     } catch {}
+    if (item.Property?.LockedBy !== HSLOCK_NAME) { _markPendingRestore(gn); return 'pending'; }
     if (!item.Property) item.Property = {};
+    // R132 InventoryLock resolves numeric owners through the room character list;
+    // the saved owner can be offline during login recovery.
+    item.Property.LockMemberNumber = Number(cfg.owner);
+    if (typeof cfg.ownerName === 'string') item.Property.LockMemberName = cfg.ownerName;
     item.Property.Name = HEARTLOCK_NAME;
     item.Property.LockPickSeed = '8,3,5,10,4,2,6,7,1,9,0,11';
     item.Property.ExclusiveUnlock = true;
@@ -269,6 +288,9 @@ export function restoreLockFromConfig(gn, cfg, updateUI = true) {
     _pendingRestore.delete(gn);   // 復原成功 → 解除暫掛
     // 該部位同時有 BCX 屬性詛咒時 → 重新蓋章其基準，避免 BCX 判為改動而洗版
     try { rebaselineCurseIfNeeded(gn); } catch {}
+    if (updateUI) {
+        try { CharacterRefresh?.(Player, false); ChatRoomCharacterUpdate?.(Player); } catch {}
+    }
     return 'ok';
 }
 
@@ -289,6 +311,7 @@ export function cleanHeartLockProperty(C, itemOrGrp) {
 }
 
 export function checkLockIntegrity() {
+    if (state.operations.recoveryPending) return;
     if (!ensureStorage()) return;
     if (state.operations.unlocking) return;
     const padlocks = Player.HeartLock?.padlocks ?? {};
@@ -296,13 +319,24 @@ export function checkLockIntegrity() {
         const cfg = padlocks[gn];
         if (!cfg) continue;
         const item = InventoryGet?.(Player, gn);
-        if (!item) continue;
+        if (!item) {
+            if (!_pendingRestore.has(gn)) restoreLockFromConfig(gn, cfg);
+            continue;
+        }
         // asset 被替換也算違規（交由 restoreLockFromConfig 移除入侵物品並重穿原物品）
         const badAsset    = cfg.assetName && item.Asset?.Name !== cfg.assetName;
         const badLockedBy = item.Property?.LockedBy !== HSLOCK_NAME;
         const badName     = item.Property?.Name     !== HEARTLOCK_NAME;
         const badLockId   = cfg.lockId && item.Property?.HeartLockId !== cfg.lockId;
-        if (badAsset || badLockedBy || badName || badLockId) restoreLockFromConfig(gn, cfg);
+        if (badAsset || badLockedBy || badName || badLockId) {
+            if (!_pendingRestore.has(gn)) restoreLockFromConfig(gn, cfg);
+        }
+        else if (cfg.lockId && Number(cfg.owner) === Number(item.Property?.LockMemberNumber)
+            && restoreSnapshotCraft(item, cfg._fullSnapshot)) {
+            // Repair metadata lost by an earlier restore without re-locking the item.
+            try { rebaselineCurseIfNeeded(gn); } catch {}
+            try { CharacterRefresh?.(Player, false); ChatRoomCharacterUpdate?.(Player); } catch {}
+        }
     }
     cleanupFakeLocks();
 }

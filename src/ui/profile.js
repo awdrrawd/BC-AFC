@@ -16,6 +16,19 @@ import { isOnline } from '../net/online.js';
 // 每幀繪製時記錄各戀人條目的螢幕矩形，供其他插件（如 FCM）在上面疊按鈕/快速搜尋。
 //  透過 window.Liko.AFC.getProfileLoverRegions() 對外公開（見 core-init.js）。
 let _loverRegions = [];
+let profilePage = 0;
+let pageCharacter = null;
+const PAGE_SIZE = 10;
+const PAGE_BUTTON = { x: 1750, y: 180, w: 80, h: 40 };
+const NEXT_PAGE_SVG = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="40" viewBox="0 0 80 40"><path d="M4 2 L76 20 L4 38 Z" fill="#E8618C" stroke="#FFB6C1" stroke-width="2" stroke-linejoin="round"/></svg>');
+
+function currentPage(lovers) {
+    const character = getCurrentViewingCharacter()?.MemberNumber ?? null;
+    if (character !== pageCharacter) { pageCharacter = character; profilePage = 0; }
+    profilePage = Math.min(profilePage, Math.max(0, Math.ceil(lovers.length / PAGE_SIZE) - 1));
+    return profilePage;
+}
 
 /** 「更多戀人」面板目前是否展開中（且在角色資料頁）。 */
 export function isPanelOpen() {
@@ -55,7 +68,7 @@ export function drawProfileButton() {
     const lovers = getViewingCharacterAFCLovers();
     const label  = profilePanelOpen ? t('btnClose') : t('btnOpen', lovers.length);
     DrawButton(PROFILE_BTN_X, PROFILE_BTN_Y, PROFILE_BTN_W, PROFILE_BTN_H,
-               label, "White", "", "Extended Lover List");
+               label, "White", "", t('panelTitle'));
 }
 
 // 格式化戀人名稱行（無 #、無 stage）
@@ -74,13 +87,14 @@ function formatLoverDateLine(l, priv) {
         return `${tag} ${formatStartDate(l.startDate)}`;
     }
     // 時長模式：顯示當前階段天數
-    return `${tag} ${daysSince(stageStart)}天`;
+    return `${tag} ${t('daysCount', daysSince(stageStart))}`;
 }
 
 export function drawProfilePanel() {
     _loverRegions = [];
     if (!profilePanelOpen || CurrentScreen !== "InformationSheet") return;
     const lovers    = getViewingCharacterAFCLovers();
+    const page = currentPage(lovers);
     const priv      = getPrivateSettings();
     const isOwnProfile = getCurrentViewingCharacter()?.MemberNumber === Player.MemberNumber;
 
@@ -109,6 +123,10 @@ export function drawProfilePanel() {
 
     // 標題
     DrawText(t('panelTitle'), 1160, 180, "White", "");
+    if (lovers.length > PAGE_SIZE) {
+        DrawImageResize(NEXT_PAGE_SVG, PAGE_BUTTON.x, PAGE_BUTTON.y, PAGE_BUTTON.w, PAGE_BUTTON.h);
+        DrawTextFit(t('profilePage', page + 1, Math.ceil(lovers.length / PAGE_SIZE)), 1790, 245, 110, '#E8618C');
+    }
 
     if (lovers.length === 0) {
         DrawText(t('panelEmpty'), 1160, 400, "#888", "");
@@ -158,7 +176,7 @@ export function drawProfilePanel() {
         });
     }
 
-    lovers.forEach((l, i) => {
+    lovers.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE).forEach((l, i) => {
         const col = i < 5 ? 0 : 1;
         const row = i % 5;
         if (row < NAME_Y.length) drawEntry(l, col, row);
@@ -166,9 +184,21 @@ export function drawProfilePanel() {
 }
 
 export function handleProfileClick() {
-    if (CurrentScreen !== "InformationSheet") return;
-    if (MouseIn(PROFILE_BTN_X, PROFILE_BTN_Y, PROFILE_BTN_W, PROFILE_BTN_H))
+    if (CurrentScreen !== "InformationSheet") return false;
+    if (MouseIn(PROFILE_BTN_X, PROFILE_BTN_Y, PROFILE_BTN_W, PROFILE_BTN_H)) {
+        profilePage = 0;
+        _loverRegions = [];
         setProfilePanelOpen(!profilePanelOpen);
+        return true;
+    }
+    if (profilePanelOpen && MouseIn(PAGE_BUTTON.x, PAGE_BUTTON.y, PAGE_BUTTON.w, PAGE_BUTTON.h)) {
+        const lovers = getViewingCharacterAFCLovers();
+        if (lovers.length <= PAGE_SIZE) return false;
+        profilePage = (currentPage(lovers) + 1) % Math.ceil(lovers.length / PAGE_SIZE);
+        _loverRegions = [];
+        return true;
+    }
+    return false;
 }
 
 // ════════════════════════════════════════

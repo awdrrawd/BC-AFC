@@ -96,5 +96,15 @@
   "dbMismatchDiff": "检测到在线拓展恋人数据与本机备份不一致。请至「拓展恋人设置 → 恢复」自行确认，系统不会自动覆盖任何一方。",
   "becameLovers": "{0} (#{1}) 与 {2} (#{3}) 结为拓展恋人。",
   "upgradedEngaged": "{0} (#{1}) 与 {2} (#{3}) 升格为拓展 [订婚]。",
-  "upgradedMarried": "{0} (#{1}) 与 {2} (#{3}) 升格为拓展 [结婚]。"
+  "upgradedMarried": "{0} (#{1}) 与 {2} (#{3}) 升格为拓展 [结婚]。",
+  "daysCount": "{0}天",
+  "totalDays": "共{0}天",
+  "yearsCount": "{0}年",
+  "monthsCount": "{0}个月",
+  "relationshipDuration": "交往 {0}",
+  "profilePage": "{0}/{1}",
+  "loverLimit": "拓展恋人上限为 {0} 人（包含等待回复的申请）。",
+  "targetLoverLimit": "{0} 的拓展恋人已达 {1} 人上限。",
+  "neverRecorded": "从未记录",
+  "confirmLoverRecovery": "账号 #{0} 有一份恋人备份。是否恢复？\n\n{1}\n\n这次选择会保存；取消后仍可在设置中手动恢复。"
 }
