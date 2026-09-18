@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AFC profile pagination preview</title>
+<body style="margin:0;background:#eee;font:16px sans-serif">
+<p style="margin:12px">AFC profile preview · Click the pink triangle to cycle pages.</p>
+<canvas id="preview" width="2000" height="1000" style="display:block;width:100%;height:auto" aria-label="AFC lover profile"></canvas>
+<p id="visible" aria-live="polite" style="margin:12px"></p>
+<script type="module">
+import { drawProfilePanel, handleProfileClick, getLoverRegions } from '../../src/ui/profile.js';
+import { setProfilePanelOpen } from '../../src/core/state.js';
+import { registerFallback } from '../../src/i18n/fallback.js';
+window.TranslationLanguage = 'EN';
+registerFallback();
+window.CurrentScreen = 'InformationSheet';
+const lovers = Array.from({ length: 20 }, (_, i) => ({ name: `Lover ${i + 1}`, memberNumber: 10001 + i,
+    stage: i % 3, startDate: Date.now() - (i + 1) * 86400000 }));
+window.Player = { MemberNumber: 1, ExtensionSettings: {
+    AFC: JSON.stringify({ cfg: [1, 0, 1, 1, 0, 1, 0] }), AFC_Data: { memberNumber: 1, lovers },
+} };
+window.InformationSheetSelection = Player;
+const canvas = document.querySelector('canvas');
+window.MainCanvas = canvas.getContext('2d');
+MainCanvas.font = '30px sans-serif'; MainCanvas.textBaseline = 'middle'; MainCanvas.textAlign = 'center';
+window.DrawText = (text, x, y, color) => { MainCanvas.fillStyle = color; MainCanvas.fillText(text, x, y); };
+window.DrawTextFit = (text, x, y, width, color) => { MainCanvas.fillStyle = color; MainCanvas.fillText(text, x, y, width); };
+const images = new Map();
+window.DrawImageResize = (url, x, y, w, h) => {
+    if (!images.has(url)) { const image = new Image(); images.set(url, image); image.onload = render; image.src = url; }
+    const image = images.get(url); if (image.complete && image.naturalWidth) MainCanvas.drawImage(image, x, y, w, h);
+};
+let mouse = [0, 0];
+window.MouseIn = (x, y, w, h) => mouse[0] >= x && mouse[0] < x + w && mouse[1] >= y && mouse[1] < y + h;
+function render() {
+    MainCanvas.clearRect(0, 0, 2000, 1000); drawProfilePanel();
+    document.querySelector('#visible').textContent = getLoverRegions().map(l => l.name).join(', ');
+}
+canvas.onclick = event => {
+    const bounds = canvas.getBoundingClientRect();
+    mouse = [(event.clientX - bounds.left) * 2000 / bounds.width, (event.clientY - bounds.top) * 1000 / bounds.height];
+    handleProfileClick(); render();
+};
+setProfilePanelOpen(true); render();
+</script>
+</body>
+</html>

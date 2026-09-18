@@ -121,6 +121,8 @@ export function setupHooks(registry) {
     //  hook 之前處理 → 正常可點。
     hook("InformationSheetClick", 7, (args, next) => {
         try {
+            if (!(typeof InformationSheetSecondScreen !== 'undefined' && InformationSheetSecondScreen)
+                && handleProfileClick()) return;
             const panelModal = profilePanelOpen && CurrentScreen === "InformationSheet"
                 && !(typeof InformationSheetSecondScreen !== 'undefined' && InformationSheetSecondScreen);
             if (panelModal
@@ -132,7 +134,6 @@ export function setupHooks(registry) {
             if (!MouseIn(PROFILE_BTN_X, PROFILE_BTN_Y, PROFILE_BTN_W, PROFILE_BTN_H)) {
                 setProfilePanelOpen(false);
             }
-            handleProfileClick();
         } catch {}
         return next(args);
     });

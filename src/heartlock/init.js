@@ -65,7 +65,8 @@ export async function initHeartLock(sharedModApi, hookRegistry) {
     installHeartLockHooks(scopedHooks);
     await waitFor(() => window.Player?.ExtensionSettings !== undefined, 30000);
     if (!active() || !ensureStorage()) return;
-    reconcileHLStorage();
+    await reconcileHLStorage();
+    if (!active()) return;
     saveAndSync();
     reapplyFromAppearance();
     startVibeTimer();

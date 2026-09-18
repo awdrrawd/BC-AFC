@@ -4,7 +4,9 @@
 // ════════════════════════════════════════
 
 import { HEARTLOCK_NAME } from './config.js';
+import { restoreHeartLockMarkers } from './r132-properties.js';
 import { clone } from './util.js';
+import { snapshotItem } from './snapshot.js';
 import { state } from './state.js';
 import { sendLocalizedAction } from '../i18n/l10n.js';
 import { ensureStorage, getOrCreateConfig, deleteConfig, saveAndSync } from './storage.js';
@@ -81,6 +83,7 @@ export function handleHidden(data) {
             const s = ChatRoomCharacter?.find(c => c.MemberNumber === data.Sender);
             if (s) {
                 s.HeartLock = e.Data;
+                restoreHeartLockMarkers(s);
                 // 只有面板正在顯示該角色的鎖時才刷新，避免無關廣播觸發不必要的重繪
                 if (s.MemberNumber === state.panel.targetChar?.MemberNumber) {
                     emitHeartLockEvent('panel-refresh');
@@ -102,8 +105,8 @@ export function handleHidden(data) {
         cfg.lockedAt = e.LockedAt; cfg.lockTs = Date.now(); cfg.assetName = e.AssetName ?? null; cfg.lockId = e.LockId ?? null;
         try {
             const item = InventoryGet?.(Player, e.Group);
-            if (item) {
-                cfg._fullSnapshot = { assetName: item.Asset?.Name, groupName: e.Group, color: item.Color ? clone(item.Color) : undefined, craft: item.Craft ? clone(item.Craft) : undefined, difficulty: item.Difficulty };
+            if (item && (!cfg.assetName || item.Asset?.Name === cfg.assetName)) {
+                cfg._fullSnapshot = snapshotItem(item, e.Group);
                 if (item?.Property) item.Property.HeartLockId = e.LockId;
             }
         } catch {}

@@ -5,6 +5,7 @@
 
 import { isInitialized, AFCLockAccessOn } from './state.js';
 import { getSharedSettings } from './settings.js';
+import { t } from '../i18n/i18n.js';
 import { waitFor, daysSince, formatDuration, chatLocalNotice } from '../util/util.js';
 import { isAFCLover } from '../relations/lovers.js';
 import { initiateBreakup } from '../relations/breakup.js';
@@ -66,8 +67,8 @@ export async function setupCommands(registry) {
                 if (lovers.length === 0) { chatLocalNotice("暫無戀人資料"); return; }
                 for (const l of lovers) {
                     const ts  = l.lastSeen;
-                    const str = ts ? `${daysSince(ts)} 天前` : "從未記錄";
-                    chatLocalNotice(`${l.name}: 最後見面 ${str}`);
+                    const str = ts ? t('lastSeen', daysSince(ts)) : t('neverRecorded');
+                    chatLocalNotice(`${l.name}: ${str}`);
                 }
             }
         },

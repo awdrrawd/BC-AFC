@@ -96,5 +96,15 @@
   "dbMismatchDiff": "Your online extended-lover list differs from the local backup. Open AFC Settings → Restore to reconcile manually; nothing is overwritten automatically.",
   "becameLovers": "{0} (#{1}) and {2} (#{3}) became extended lovers.",
   "upgradedEngaged": "{0} (#{1}) and {2} (#{3}) upgraded their extended relationship to [engaged].",
-  "upgradedMarried": "{0} (#{1}) and {2} (#{3}) upgraded their extended relationship to [married]."
+  "upgradedMarried": "{0} (#{1}) and {2} (#{3}) upgraded their extended relationship to [married].",
+  "confirmLoverRecovery": "Restore backup lovers for account #{0}?\n\n{1}\n\nYour choice will be saved. You can still restore manually in Settings after canceling.",
+  "daysCount": "{0} d",
+  "totalDays": "total: {0} d",
+  "yearsCount": "{0} yr",
+  "monthsCount": "{0} mo",
+  "relationshipDuration": "Together for {0}",
+  "profilePage": "{0}/{1}",
+  "loverLimit": "The extended lover limit is {0}, including pending outgoing requests.",
+  "targetLoverLimit": "{0} has reached the limit of {1} extended lovers.",
+  "neverRecorded": "Never recorded"
 }

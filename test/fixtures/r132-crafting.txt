@@ -1,0 +1,432 @@
+// Native R132 crafting validation, unmodified excerpts.
+// Source: local Bondage-College-Mirror-bondageclub/Screens/Room/Crafting/Crafting.js
+// Source SHA256: cc18ce91282c3fe70665f2e29d053c6f1e7499992c3c163cd3eb9cdf6ed1926b
+const CraftingStatusType = {
+	OK: 2,
+	ERROR: 1,
+	CRITICAL_ERROR: 0,
+};
+
+var CraftingValidationRecord = {
+	Color: {
+		Validate: function(craft, asset) {
+			if (typeof craft.Color !== "string") {
+				return false;
+			} else if ((craft.Color === "") || (asset == null)) {
+				return true;
+			} else {
+				const Colors = craft.Color.replace(" ", "").split(",");
+				return Colors.every((c) => CommonIsColor(c) || (c === "Default"));
+			}
+		},
+		GetDefault: function(craft, asset) {
+			if ((typeof craft.Color !== "string") || (asset == null)) {
+				return "";
+			} else {
+				const Colors = craft.Color.replace(" ", "").split(",");
+				const ColorsNew = Colors.map((c, i) => CommonIsColor(c) ? c : asset.DefaultColor[i] || "Default");
+				return ColorsNew.join(",");
+			}
+		},
+		StatusCode: CraftingStatusType.ERROR,
+	},
+	Partial: {
+		Validate: function (c, a, _, partial) {
+			return partial ? c.Partial === undefined : c.Partial === false;
+		},
+		GetDefault: function (c, a, _, partial) {
+			return partial ? undefined : false;
+		},
+		StatusCode: CraftingStatusType.ERROR,
+	},
+	Description: {
+		Validate: (c, a) => typeof c.Description === "string",
+		GetDefault: (c, a) => "",
+		StatusCode: CraftingStatusType.ERROR,
+		Partial: true,
+	},
+	DifficultyFactor: {
+		Validate: function (c, a) {
+			return (c.DifficultyFactor == null || CommonIsInteger(c.DifficultyFactor, -100, 4)) ? true : false;
+		},
+		GetDefault: function (c, a) {
+			return CommonIsInteger(c.DifficultyFactor) ? CommonClamp(c.DifficultyFactor, -100, 4) : undefined;
+		},
+		StatusCode: CraftingStatusType.ERROR,
+	},
+	Disabled: {
+		Validate: function (c, a) {
+			return c.Disabled == null || typeof c.Disabled === "boolean";
+		},
+		GetDefault: function (c, a) {
+			return undefined;
+		},
+		StatusCode: CraftingStatusType.ERROR,
+	},
+	Item: {
+		Validate: (c, a, checkPlayerInventory=false) => {
+			if (checkPlayerInventory) {
+				const groupName = CraftingAssets[c.Item]?.[0]?.DynamicGroupName;
+				return groupName ? InventoryAvailable(Player, c.Item, groupName) : false;
+			} else {
+				return Asset.some((i) => i.Name === c.Item);
+			}
+		},
+		GetDefault: (c, a, checkPlayerInventory=false) => {
+			if (checkPlayerInventory) {
+				return Asset.find((i) => i.Name === c.Item)?.Name ?? a?.Name ?? null;
+			} else {
+				return a?.Name ?? null;
+			}
+		},
+		StatusCode: CraftingStatusType.CRITICAL_ERROR,
+	},
+	Lock: {
+		Validate: function (c, a, checkPlayerInventory=false) {
+			if ((a != null) && (!a.AllowLock)) {
+				return (c.Lock === "");
+			} else if (c.Lock === "") {
+				return true;
+			}
+
+			const isValidLock = CraftingLockList.includes(c.Lock);
+			if (checkPlayerInventory) {
+				return isValidLock && InventoryAvailable(Player, c.Lock, "ItemMisc");
+			} else {
+				return isValidLock;
+			}
+		},
+		GetDefault: (c, a) => "",
+		StatusCode: CraftingStatusType.ERROR,
+	},
+	MemberName: {
+		Validate: (c, a) => c.MemberName == null || typeof c.MemberName === "string",
+		GetDefault: (c, a) => null,
+		StatusCode: CraftingStatusType.ERROR,
+		Partial: true,
+	},
+	MemberNumber: {
+		Validate: (c, a) => c.MemberNumber == null || typeof c.MemberNumber === "number",
+		GetDefault: (c, a) => null,
+		StatusCode: CraftingStatusType.ERROR,
+		Partial: true,
+	},
+	Name: {
+		Validate: (c, a) => !!c.Name && typeof c.Name === "string",
+		GetDefault: (c, a) => a ? a.Description : "Crafted Item",
+		StatusCode: CraftingStatusType.ERROR,
+		Partial: true,
+	},
+	OverridePriority: {
+		Validate: (c, a) => (c.OverridePriority == null) || Number.isInteger(c.OverridePriority),
+		GetDefault: (c, a) => null,
+		StatusCode: CraftingStatusType.ERROR,
+	},
+	Private: {
+		Validate: (c, a) => typeof c.Private === "boolean",
+		GetDefault: (c, a) => false,
+		StatusCode: CraftingStatusType.ERROR,
+		Partial: true,
+	},
+	Property: {
+		Validate: (c, a) => c.Property === undefined,
+		GetDefault: (c, a) => undefined,
+		StatusCode: CraftingStatusType.ERROR,
+		Partial: true,
+	},
+	Effects: {
+		Validate: function (c, a) {
+			if (!CommonIsObject(c.Effects)) {
+				return false;
+			}
+
+			let nEffects = 0;
+			for (const [effect, effectValue] of CommonEntries(c.Effects)) {
+				const prerequisite = CraftingEffectsPrerequisite[effect];
+				const validateProp = CraftingPropertyMap.get(effect);
+				if (
+					!prerequisite // Invalid effect type
+					|| !validateProp // Invalid effect type
+					|| effect === "Normal" // `Normal` is _never_ explicit and always implicit
+					|| !effectValue // Falsely value, equivalent to the value being absent
+					|| !CommonIsInteger(effectValue, 1, prerequisite.max ?? CraftingEffectsDefaultMaximumStack) // Value is either not an integer or out of bounds
+					|| (prerequisite.isDisabled?.(c) ?? false) // Conflict with other crafting effects
+					|| (a && !validateProp(a)) // Conflict with some asset property
+					|| nEffects >= CraftingEffectsDefaultMaximumEffects // Too many effects
+				) {
+					return false;
+				}
+				nEffects++;
+			}
+			return true;
+		},
+		GetDefault: (c, a) => {
+			if (!CommonIsObject(c.Effects)) {
+				return {};
+			}
+
+			/** @type {CraftingItem["Effects"]} */
+			const ret = {};
+			let nEffects = 0;
+			for (const [effect, effectValue] of CommonEntries(c.Effects)) {
+				const prerequisite = CraftingEffectsPrerequisite[effect];
+				const validateProp = CraftingPropertyMap.get(effect);
+				if (
+					!prerequisite // Invalid effect type
+					|| !validateProp // Invalid effect type
+					|| effect === "Normal" // `Normal` is _never_ explicit and always implicit
+					|| !effectValue // Falsely value, equivalent to the value being absent
+					|| !CommonIsInteger(effectValue, 1) // Value is either not an integer or otherwise illegal (<0)
+					|| (prerequisite.isDisabled?.({ ...c, Effects: ret }) ?? false) // Conflict with other crafting effects
+					|| (a && !validateProp(a)) // Conflict with some asset property
+					|| nEffects >= CraftingEffectsDefaultMaximumEffects // Too many effects
+				) {
+					continue;
+				}
+				// We can be a bit more lenient with values that are too large and just clamp them w.r.t. the max
+				ret[effect] = CommonClamp(effectValue, 1, prerequisite.max ?? CraftingEffectsDefaultMaximumStack);
+				nEffects++;
+			}
+			return ret;
+		},
+		StatusCode: CraftingStatusType.ERROR,
+		Partial: true,
+	},
+	ItemProperty: {
+		Validate: function (c, a) {
+			const property = c.ItemProperty;
+			if (property == null) {
+				return true;
+			} else if (!CommonIsObject(property)) {
+				return false;
+			} else if (!a) {
+				return true;
+			}
+
+			// TODO: Add a better way of validating subscreen properties rather than just unconditionally
+			// allowing `OverrideHeight`.
+			/** @type {ItemProperties} */
+			const baseline = {
+				OverrideHeight: undefined,
+			};
+			if (a.Archetype) {
+				const data = ExtendedItemGetData(a, a.Archetype);
+				if (data && data.baselineProperty) {
+					Object.assign(baseline, data.baselineProperty);
+				}
+			}
+
+			/** @satisfies {Set<keyof ItemProperties>} */
+			const layeringScalar = new Set(/** @type {const} */([
+				"TranslationX",
+				"TranslationY",
+				"ScaleX",
+				"ScaleY",
+				"Rotation",
+			]));
+			/** @satisfies {Set<keyof ItemProperties>} */
+			const layeringObject = new Set(/** @type {const} */([
+				"LayerTranslationX",
+				"LayerTranslationY",
+				"LayerScaleX",
+				"LayerScaleY",
+				"LayerRotation",
+			]));
+			/** @type {null | string[]} */
+			let layers = null;
+			for (const [key, value] of CommonEntries(property)) {
+				if (value == null) {
+					continue;
+				} else if (CraftingPropertyExclude.has(key)) {
+					return false;
+				} else if (key === "OverridePriority") {
+					if (Number.isInteger(value)) {
+						continue;
+					} else if (CommonIsObject(value)) {
+						layers ??= a.Layer.map(l => l.Name ?? a.Name);
+						for (const [layerName, priority] of Object.entries(value)) {
+							if (!(layers.includes(layerName) && Number.isInteger(priority))) {
+								return false;
+							}
+						}
+					} else {
+						return false;
+					}
+				} else if (layeringScalar.has(key)) {
+					if (!Number.isFinite(value)) {
+						return false;
+					}
+				} else if (layeringObject.has(key)) {
+					if (!CommonIsObject(value)) {
+						return false;
+					}
+					layers ??= a.Layer.map(l => l.Name ?? a.Name);
+					for (const [layerName, i] of Object.entries(value)) {
+						if (!layers.includes(layerName)) {
+							return false;
+						} else if (!(i === undefined || Number.isFinite(i))) {
+							return false;
+						}
+					}
+				} else if (typeof value !== typeof baseline[key]) {
+					return false;
+				}
+			}
+			return true;
+		},
+		GetDefault: function (c, a) {
+			const property = c.ItemProperty;
+			if (!CommonIsObject(property) || !a) {
+				return {};
+			}
+
+			/** @type {ItemProperties} */
+			const baseline = {
+				OverrideHeight: undefined,
+			};
+			if (a.Archetype) {
+				let data = ExtendedItemGetData(a, a.Archetype);
+				if (data && data.baselineProperty) {
+					Object.assign(baseline, data.baselineProperty);
+				}
+			}
+
+			/** @type {ItemProperties} */
+			const ret = {};
+			for (const [key, value] of CommonEntries(property)) {
+				if (value == null || CraftingPropertyExclude.has(key)) {
+					continue;
+				} else if (key === "OverridePriority" && Number.isInteger(value)) {
+					ret[key] = /** @type {any} */(value);
+				} else if (key === "OverridePriority" && CommonIsObject(value)) {
+					ret[key] = {};
+					const layers = a.Layer.map(l => l.Name);
+					for (const [layerName, priority] of Object.entries(value)) {
+						if (layers.includes(layerName) && Number.isInteger(priority)) {
+							ret[key][layerName] = priority;
+						}
+					}
+				} else if (typeof value === typeof baseline[key]) {
+					ret[key] = /** @type {never} */(value);
+				}
+			}
+			return ret;
+		},
+		StatusCode: CraftingStatusType.ERROR,
+	},
+	// NOTE: More thorough `TypeRecord` validation is performed by the extended item `...Init` functions
+	TypeRecord: {
+		Validate: function (c, a) {
+			const typeRecord = c.TypeRecord;
+			if (typeRecord == null) {
+				return true;
+			} else if (!CommonIsObject(typeRecord)) {
+				return false;
+			} else if (a == null) {
+				return true;
+			} else if (!a.Archetype) {
+				return typeRecord == null;
+			} else {
+				return true;
+			}
+		},
+		GetDefault: function (c, a) {
+			if (a == null || !a.Archetype) {
+				return null;
+			} else {
+				return {};
+			}
+		},
+		StatusCode: CraftingStatusType.ERROR,
+	},
+	/** @deprecated */
+	Type: {
+		Validate: function (c, a) {
+			return c.Type === undefined;
+		},
+		GetDefault: function (c, a) {
+			return undefined;
+		},
+		StatusCode: CraftingStatusType.ERROR,
+	}
+};
+
+
+function CraftingValidate(Craft, asset=null, Warn=true, checkPlayerInventory=false, partial=false) {
+	if (!CommonIsObject(Craft)) {
+		return CraftingStatusType.CRITICAL_ERROR;
+	}
+	/** @type {Map<string, CraftingStatusType>} */
+	const StatusMap = new Map();
+	const Name = Craft.Name;
+
+	// Manually search for the Asset if it has not been provided
+	/** @type {readonly Asset[]} */
+	let assets;
+	if (asset == null) {
+		assets = CraftingAssets[Craft.Item] ?? [];
+		if (assets.length === 0) {
+			StatusMap.set("Item", CraftingStatusType.CRITICAL_ERROR);
+		}
+	} else {
+		assets = [asset];
+	}
+
+	// Conversions of deprecated fields
+	if (asset != null && Craft.TypeRecord == null && typeof Craft.Type === "string" && !partial) {
+		Craft.TypeRecord = ExtendedItemTypeToRecord(asset, Craft.Type);
+	}
+	if (Craft.Property !== "Normal" && CommonHas(CraftingPropertyMap, Craft.Property) && !Craft.Effects?.[Craft.Property]) {
+		Craft.Effects ??= {};
+		Craft.Effects[Craft.Property] = 1;
+	}
+
+	/**
+	 * Check all legal attributes.
+	 * If `Asset == null` at this point then let all Asset-requiring checks pass, as we
+	 * can't properly validate them. Note that this will introduce the potential for false negatives.
+	 */
+	for (const [AttrName, { Validate, GetDefault, StatusCode, Partial: IsPartialProperty }] of CommonEntries(CraftingValidationRecord)) {
+		if (partial && !IsPartialProperty) {
+			// We only want to validate `CraftingPartialItem` here, rather than the full `CraftingItem`
+			continue;
+		} else if (!assets.some(a => Validate(Craft, a, checkPlayerInventory, partial))) {
+			const AttrValue = (typeof Craft[AttrName] === "string") ? `"${Craft[AttrName]}"` : Craft[AttrName];
+			if (Warn) {
+				console.error(`Invalid "Craft.${AttrName}" value for crafted item "${Name}":`, AttrValue);
+			}
+			Craft[AttrName] = /** @type {never} */(GetDefault(Craft, asset, checkPlayerInventory, partial));
+			StatusMap.set(AttrName, StatusCode);
+		} else {
+			StatusMap.set(AttrName, CraftingStatusType.OK);
+		}
+	}
+
+	// If the Asset has been explicitly passed then `Craft.Item` errors are fully recoverable,
+	// though the player should actually own the item
+	if (assets.length > 0 && StatusMap.get("Item") === CraftingStatusType.CRITICAL_ERROR) {
+		StatusMap.set("Item", CraftingStatusType.ERROR);
+		if (checkPlayerInventory && !InventoryAvailable(Player, assets[0].Name, assets[0].DynamicGroupName)) {
+			Craft.Disabled = true;
+		}
+	}
+
+	// Check for extra attributes
+	const LegalProperties = CommonKeys(CraftingValidationRecord);
+	// TODO: narrow the legal property set for `partial` once >= R132 is live
+	// const LegalAttributes = (
+	// partial
+	// ? CommonFilterMap(CommonEntries(CraftingValidationRecord), ([k, v]) => v.Partial ? k : undefined)
+	// : CommonKeys(CraftingValidationRecord)
+	// );
+	for (const AttrName of CommonKeys(Craft)) {
+		if (!LegalProperties.includes(AttrName)) {
+			if (Warn) {
+				console.error(`Invalid extra "Craft.${AttrName}" attribute for ${partial ? "partial " : ""}crafted item "${Name}"`);
+			}
+			delete Craft[AttrName];
+			StatusMap.set(AttrName, CraftingStatusType.ERROR);
+		}
+	}
+	return /** @type {CraftingStatusType} */(Math.min(...StatusMap.values()));
+}

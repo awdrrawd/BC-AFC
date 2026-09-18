@@ -96,5 +96,15 @@
   "dbMismatchDiff": "偵測到線上拓展戀人資料與本機備份不一致。請至「拓展戀人設定 → 復原」自行確認，系統不會自動覆蓋任何一方。",
   "becameLovers": "{0} (#{1}) 與 {2} (#{3}) 結為拓展戀人。",
   "upgradedEngaged": "{0} (#{1}) 與 {2} (#{3}) 升格為拓展 [訂婚]。",
-  "upgradedMarried": "{0} (#{1}) 與 {2} (#{3}) 升格為拓展 [結婚]。"
+  "upgradedMarried": "{0} (#{1}) 與 {2} (#{3}) 升格為拓展 [結婚]。",
+  "confirmLoverRecovery": "帳號 #{0} 有一份戀人備份。是否復原？\n\n{1}\n\n這次選擇會保存；取消後仍可在設定中手動復原。",
+  "daysCount": "{0}天",
+  "totalDays": "共{0}天",
+  "yearsCount": "{0}年",
+  "monthsCount": "{0}個月",
+  "relationshipDuration": "交往 {0}",
+  "profilePage": "{0}/{1}",
+  "loverLimit": "拓展戀人上限為 {0} 人（包含等待回覆的申請）。",
+  "targetLoverLimit": "{0} 的拓展戀人已達 {1} 人上限。",
+  "neverRecorded": "從未記錄"
 }

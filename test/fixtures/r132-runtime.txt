@@ -1,0 +1,221 @@
+// Native BC R132Beta3 excerpts for compatibility tests. Do not edit function bodies.
+// Source: https://gitgud.io/BondageProjects/Bondage-College (local R132Beta3 snapshot)
+// Test runtime dependencies are supplied by the harness.
+const ExtendedItemInitPropertyIgnore = new Set(/** @type {const} */([
+	"OverridePriority",
+	"DrawingTop",
+	"DrawingLeft",
+	"Opacity",
+	"LayerTranslationX",
+	"LayerTranslationY",
+	"LayerScaleX",
+	"LayerScaleY",
+	"LayerRotation",
+	"TranslationX",
+	"TranslationY",
+	"ScaleX",
+	"ScaleY",
+	"Rotation",
+]));
+// Scripts/Item.js :: ItemPropertiesCompress SHA256 2a5afbdf8f52a6667f5829c7a02ff3768781956271c1466eadf72678c9875879
+function ItemPropertiesCompress(item, options=null) {
+	options ??= {};
+	const allowLocks = options.allowLocks ?? true;
+	if (!item?.Property) {
+		return undefined;
+	}
+
+	// Initialize it with the known set of (legal) fully user-customizable properties
+	const allowedProperties = new Set(ExtendedItemInitPropertyIgnore);
+	// FIXME: Temporary backwards compatiblity.
+	// Either port these properties over to BC or switch them out for a pre-existing BC equivalent.
+	// @ts-expect-error
+	allowedProperties.add("LayerOverrides"); // LSCG as of v0.8.17
+	// @ts-expect-error
+	allowedProperties.add("wceOverrideHide"); // WCE as of v6.3.19
+
+	/** @type {ItemProperties} */
+	const baseline = {};
+	if (item.Asset.Extended) {
+		for (const option of ExtendedItemGatherOptions(item)) {
+			switch (option.OptionType) {
+				case "VariableHeightOption":
+					allowedProperties.add("OverrideHeight");
+					break;
+				case "TypedItemOption":
+				case "ModularItemOption":
+				case "VibratingItemOption":
+					allowedProperties.add("TypeRecord");
+					break;
+			}
+			Object.assign(baseline, option.Property ?? {}, option.ParentData.baselineProperty ?? {});
+			for (const key of CommonKeys(option.ParentData.baselineProperty ?? {})) {
+				allowedProperties.add(key);
+			}
+		}
+	}
+
+	if (item.Asset.AllowExpression) {
+		baseline.Expression = null;
+		allowedProperties.add("Expression");
+	}
+
+	lockedBy: if (allowLocks && item.Property.LockedBy) {
+		const lockData = NoArchItemDataLookup[`ItemMisc${item.Property.LockedBy}`];
+		if (!lockData) {
+			break lockedBy;
+		}
+
+		Object.assign(baseline, lockData.baselineProperty ?? {});
+		allowedProperties.add("LockedBy");
+		allowedProperties.add("LockMemberNumber");
+		allowedProperties.add("LockMemberName");
+		allowedProperties.add("LockMessage");
+		for (const key of CommonKeys(lockData.baselineProperty ?? {})) {
+			allowedProperties.add(key);
+		}
+	}
+
+	for (const prop of options.omit ?? []) {
+		allowedProperties.delete(prop);
+	}
+
+	// Basic property validation is conducted later on via CraftingValidate
+	/** @type {ItemPropertiesMinimized} */
+	const ret = {};
+	for (const key of allowedProperties) {
+		switch (key) {
+			case "TypeRecord": {
+				let allDefault = true;
+				/** @type {TypeRecord} */
+				const typeRecord = {};
+				for (const [k, v] of Object.entries(item.Property[key] ?? {})) {
+					if (v) {
+						allDefault = false;
+						typeRecord[k] = v;
+					} else {
+						// TODO: Remove this `else` branch once R132 is live and rely on absent values implictly being 0
+						// This is needed due to `ModularItemInit()` failing to handle partial typerecords prior to this commit (<= R131)
+						typeRecord[k] = v;
+					}
+				}
+				if (!allDefault) {
+					ret[key] = typeRecord;
+				}
+				break;
+			}
+			default:
+				if (item.Property[key] !== baseline[key]) {
+					// @ts-expect-error
+					ret[key] = item.Property[key];
+				}
+				break;
+		}
+	}
+	return Object.values(ret).every(i => i === undefined) ? undefined : ret;
+}
+
+// Scripts/Item.js :: ItemPropertiesDecompress SHA256 7f993368cc9f43341d0ac8917ffbf05c485bbe664879460ba4603b4e38462b96
+function ItemPropertiesDecompress(item, properties) {
+	// For the sake of potential backwards compatibility issues both minimized and maximized properties must be handled
+	/** @type {ItemPropertiesMinimized | ItemProperties} */
+	const propertiesUnsanitized = properties ?? {};
+
+	const C = ItemPropertiesDummy ??= CharacterLoadSimple("ItemBundleDummy");
+	Object.assign(item.Property, propertiesUnsanitized);
+
+	if (propertiesUnsanitized.LockedBy) {
+		CommonArrayConcatDedupe(item.Property.Effect ??= [], ["Lock"]);
+	}
+
+	if (item.Craft?.Effects?.Painful) {
+		CommonArrayConcatDedupe(item.Property.Fetish ??= [], ["Masochism"]);
+	}
+
+	if (item.Asset.Extended) {
+		if (propertiesUnsanitized.TypeRecord) {
+			ExtendedItemSetOptionByRecord(C, item, propertiesUnsanitized.TypeRecord, { push: false, refresh: false });
+		} else {
+			ExtendedItemInit(C, item, false, false);
+		}
+	}
+	return item.Property;
+}
+// Scripts/Inventory.js :: _InventoryRemoveDFS SHA256 384e8803c0d326a5a62e565c01287d307b82045dc077794020fad2ad66429ba0
+function _InventoryRemoveDFS(C, outputIndices, outputItems, superItem, removeItemOnRemove=null) {
+	removeItemOnRemove ??= superItem.Asset.RemoveItemOnRemove;
+	for (const { Name, Group, TypeRecord } of removeItemOnRemove) {
+		const subItem = CommonFindMap(
+			C.Appearance,
+			(item, index) => item.Asset.Group.Name === Group ? { item, index } : undefined,
+		);
+		if (!subItem || outputIndices.has(subItem.index)) {
+			// Item was not found or we've got some cyclic `Asset.RemoveItemOnRemove` logic going on
+			continue;
+		}
+
+		let isMatch = true;
+		if (Name) {
+			isMatch &&= Name === subItem.item.Asset.Name;
+		}
+		if (TypeRecord) {
+			isMatch &&= CommonObjectIsSubset(TypeRecord, subItem.item.Property?.TypeRecord ?? {});
+		}
+
+		if (isMatch) {
+			outputIndices.add(subItem.index);
+			outputItems.push(subItem.item);
+			_InventoryRemoveDFS(C, outputIndices, outputItems, subItem.item);
+		}
+	}
+}
+
+// Scripts/Inventory.js :: InventoryRemove SHA256 f8d1fcb8d8997ac6f2bf44cafde308a20d42e81bdc2e3651965df074d12a0ec5
+function InventoryRemove(C, AssetGroup, options=null) {
+	if (!CommonIsArray(AssetGroup)) {
+		AssetGroup = [AssetGroup];
+	}
+	const items = AssetGroup.map(group => InventoryGet(C, group)).filter(i => i != null);
+	const optionsObject = typeof options === "boolean" ? { refresh: options } : options;
+	return InventoryRemoveItems(C, items, optionsObject);
+}
+
+// Scripts/Inventory.js :: InventoryRemoveItems SHA256 6fda4ec624dfaf7624309128d51b3b9e9042f763c1027378f7dce5e928b1353a
+function InventoryRemoveItems(C, items, options=null) {
+	if (!CommonIsArray(items)) {
+		items = [items];
+	}
+
+	/** @type {Set<number>} */
+	const removalIndices = new Set;
+	/** @type {Item[]} */
+	const removalItems = [];
+	const itemEntries = items.map(item => /** @type {const} */([C.Appearance.indexOf(item), item]));
+
+	for (const [i, item] of itemEntries) {
+		if (i === -1 || removalIndices.has(i)) {
+			continue;
+		}
+		removalItems.push(item);
+		removalIndices.add(i);
+		_InventoryRemoveDFS(C, removalIndices, removalItems, item, options?.removeItemOnRemove);
+	}
+	if (!removalIndices.size) {
+		return [];
+	}
+
+	const removalsSorted = Array.from(removalIndices).sort((a, b) => b - a);
+	for (const index of removalsSorted) {
+		// NOTE: This is the _only_ place in the codebase where entries should be removed from the Appearance array
+		// TODO: Review `Appearance.filter` usage throughout the code base
+		C.Appearance.splice(index, 1);
+	}
+	if (C.IsPlayer()) {
+		BlindFlashQueue = true;
+	}
+
+	if (options?.refresh ?? true) {
+		CharacterRefresh(C);
+	}
+	return removalItems;
+}

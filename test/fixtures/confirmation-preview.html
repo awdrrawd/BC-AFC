@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-Hant">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AFC 登入復原視窗預覽</title>
+<body style="background:#eee5ec;font:16px/1.6 sans-serif;padding:24px">
+<h1>AFC 登入復原視窗預覽</h1>
+<button id="open">開啟復原提示</button>
+<p id="result" aria-live="polite">等待選擇</p>
+<script type="module">
+import { confirmInAFC } from '../../src/ui/confirmation.js';
+import { registerFallback } from '../../src/i18n/fallback.js';
+window.TranslationLanguage = 'TW';
+registerFallback();
+document.querySelector('#open').onclick = async () => {
+    const result = await confirmInAFC('帳號 #12345 有一份戀人備份。是否復原？\n\nAlice (#23456)\n\n這次選擇會保存；取消後仍可在設定中手動復原。');
+    document.querySelector('#result').textContent = result ? '已確認' : '已取消';
+};
+</script>
+</body>
+</html>

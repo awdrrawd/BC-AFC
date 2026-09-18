@@ -1,4 +1,5 @@
 // ════════════════════════════════════════
+import { t } from '../i18n/i18n.js';
 //  AFC module: util.js
 //  通用小工具
 // ════════════════════════════════════════
@@ -29,12 +30,12 @@ export function formatDuration(ms) {
     const years     = Math.floor(totalDays / 365);
     const months    = Math.floor((totalDays % 365) / 30);
     const remDays   = totalDays - years * 365 - months * 30;
-    let s = "交往";
-    if (years  > 0) s += `${years}年`;
-    if (months > 0) s += `${months}個月`;
-    if (years === 0 && months === 0) s += `${totalDays}天`;
-    else if (remDays > 0) s += `${remDays}天`;
-    return s;
+    const parts = [];
+    if (years > 0) parts.push(t('yearsCount', years));
+    if (months > 0) parts.push(t('monthsCount', months));
+    if (years === 0 && months === 0) parts.push(t('daysCount', totalDays));
+    else if (remDays > 0) parts.push(t('daysCount', remDays));
+    return t('relationshipDuration', parts.join(' '));
 }
 
 // 格式化起始日：「2025/03/23 (共395天)」
@@ -43,5 +44,5 @@ export function formatStartDate(ts) {
     const yy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
-    return `${yy}/${mm}/${dd} (共${daysSince(ts)}天)`;
+    return `${yy}/${mm}/${dd} (${t('totalDays', daysSince(ts))})`;
 }

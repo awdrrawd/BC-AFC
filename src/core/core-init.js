@@ -16,7 +16,8 @@ import { loadToastSystem, toast } from '../util/toast.js';
 import { waitFor } from '../util/util.js';
 import { t, detectLang, ensureAfcI18n } from '../i18n/i18n.js';
 import { registerFallback } from '../i18n/fallback.js';
-import { getSharedSettings, getPrivateSettings, syncLockPermsToShared } from './settings.js';
+import { getSharedSettings, initializeSharedSettings, getPrivateSettings, syncLockPermsToShared } from './settings.js';
+import { cancelAFCConfirmations } from '../ui/confirmation.js';
 import { setupHooks } from '../hooks/index.js';
 import { createHookRegistry } from '../hooks/registry.js';
 import { waitForLogin } from '../hooks/lifecycle.js';
@@ -32,8 +33,10 @@ import { unregisterAllSocketListeners } from './socket.js';
 import { _clearAck } from '../net/beep.js';
 import { initHeartLock, cleanupHeartLock } from '../heartlock/init.js';
 import { clearRequestStore } from '../relations/request-manager.js';
+import { r132InstallCraftDataHooks, r132RepairPlayerCrafts } from '../compat/r132-craft.js';
 
 let hookRegistry = null;
+let sessionGeneration = 0;
 
 export async function initialize() {
     console.log(`🐈‍⬛ [AFC] ✅ v${MOD_VERSION} loaded`);
@@ -56,6 +59,8 @@ export async function initialize() {
         repository: "https://github.com/awdrrawd/BC-AFC",
     }));
     hookRegistry = createHookRegistry(modApi);
+    r132InstallCraftDataHooks(hookRegistry);
+    if (typeof modApi.onUnload === 'function') modApi.onUnload(() => cleanup());
 
     // 2. 載入 Toast 系統
     await loadToastSystem();
@@ -75,7 +80,12 @@ export async function initialize() {
             cleanupHeartLock();
         }
         const result = next(args);
-        if (data?.Name && data?.AccountName && data?.ID) queueMicrotask(() => {
+        if (data?.Name && data?.AccountName && data?.ID) queueMicrotask(async () => {
+            const account = Player;
+            const generation = sessionGeneration;
+            r132RepairPlayerCrafts();
+            await initializeSharedSettings();
+            if (Player !== account || generation !== sessionGeneration || !hookRegistry) return;
             const priv = getPrivateSettings();
             if (priv) syncLockPermsToShared(priv);
             initHeartLock(modApi, hookRegistry).catch(console.error);
@@ -85,6 +95,10 @@ export async function initialize() {
     });
     await waitFor(() => Player?.OnlineSharedSettings !== undefined && Player?.ExtensionSettings !== undefined);
 
+    const generation = sessionGeneration;
+    r132RepairPlayerCrafts();
+    await initializeSharedSettings();
+    if (generation !== sessionGeneration || !hookRegistry) return;
     if (!completeInit()) return;
 
     // 啟動 Heart Lock（bundle 內模組，共用 AFC 的 modApi）
@@ -123,7 +137,6 @@ function completeInit() {
 
 
 
-        if (typeof modApi.onUnload === 'function') modApi.onUnload(() => cleanup());
 
         setInitialized(true);
         console.log(`🐈‍⬛ [AFC] ✅ v${MOD_VERSION} (${detectLang()}) 初始化完成`);
@@ -186,6 +199,8 @@ export function cleanup() {
 }
 
 function cleanupSession() {
+    sessionGeneration++;
+    cancelAFCConfirmations();
     cancelOnlineFetch();
     AFCSettingsUI.load();
     for (const k of Object.keys(_pendingAcks)) _clearAck(k);

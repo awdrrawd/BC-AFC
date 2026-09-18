@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import { URL } from 'node:url';
 import v8 from 'node:v8';
+import { normalizeLoverList } from '../src/relations/lover-model.js';
 const structuredClone = value => v8.deserialize(v8.serialize(value));
 
 function run(path, globals) {
@@ -23,15 +24,15 @@ test('legacy backup reads are account scoped and never use browser storage', () 
 
 function settings(Player, accept = true) {
     let questions = 0;
-    const c = run('../src/core/settings.js', { Player, MOD_VERSION: 'test',
-        normalizeLoverList: list => structuredClone(list), setLastKnownLoverCount() {}, readLegacyLocalLovers: () => null,
-        window: { confirm() { questions++; return accept; } },
+    const c = run('../src/core/settings.js', { Player, MOD_VERSION: 'test', MAX_AFC_LOVERS: 20,
+        normalizeLoverList, setLastKnownLoverCount() {}, readLegacyLocalLovers: () => null,
+        confirmInAFC: async () => { questions++; return accept; }, t: key => key,
         ServerPlayerExtensionSettingsSync() {}, ServerAccountUpdate: { QueueData() {} }, broadcastAFCData() {},
     });
     return { c, questions: () => questions };
 }
 
-test('ES is authoritative; public writes and account switching cannot change the private list', () => {
+test('ES is authoritative; public writes and account switching cannot change the private list', async () => {
     const Player = { MemberNumber: 1, ExtensionSettings: {}, OnlineSharedSettings: { AFC: { lovers: [{ memberNumber: 2 }] } } };
     const { c, questions } = settings(Player);
     const own = c.getSharedSettings();
@@ -40,7 +41,7 @@ test('ES is authoritative; public writes and account switching cannot change the
     Player.OnlineSharedSettings.AFC.lovers[0].memberNumber = 9;
     assert.equal(own.lovers[0].memberNumber, 2);
     Player.MemberNumber = 3;
-    assert.equal(c.getSharedSettings(), null);
+    assert.equal(await c.initializeSharedSettings(), null);
     c.saveSharedSettings();
     assert.equal(Player.ExtensionSettings.AFC_Data.memberNumber, 1);
     c.Player = { MemberNumber: 4, ExtensionSettings: {}, OnlineSharedSettings: {} };
@@ -55,22 +56,72 @@ test('online lovers migrate without prompting and win over the legacy backup', (
     assert.equal(questions(), 0);
 });
 
-test('canceling fallback recovery never writes empty data or repeats the prompt', () => {
+test('canceling fallback recovery never writes empty data or repeats the prompt', async () => {
     const Player = { MemberNumber: 1, ExtensionSettings: {}, OnlineSharedSettings: { AFC: { lovers: [] } } };
     const { c, questions } = settings(Player, false);
     c.readLegacyLocalLovers = () => ({ memberNumber: 1, lovers: [{ memberNumber: 2 }] });
-    assert.equal(c.getSharedSettings(), null);
+    assert.equal(await c.initializeSharedSettings(), null);
     c.saveSharedSettings();
     assert.equal(questions(), 1);
     assert.equal(Player.ExtensionSettings.AFC_Data, undefined);
     assert.equal(Player.OnlineSharedSettings.AFC.lovers.length, 0);
 });
 
-test('accepted local fallback migrates when public lovers are empty', () => {
+test('accepted local fallback migrates when public lovers are empty', async () => {
     const Player = { MemberNumber: 1, ExtensionSettings: {}, OnlineSharedSettings: { AFC: { lovers: [] } } };
     const { c } = settings(Player);
     c.readLegacyLocalLovers = () => ({ memberNumber: 1, lovers: [{ memberNumber: 2 }] });
-    assert.equal(c.getSharedSettings().lovers[0].memberNumber, 2);
+    assert.equal((await c.initializeSharedSettings()).lovers[0].memberNumber, 2);
+});
+
+test('legacy migration caps active lovers at 20 and preserves the complete source for manual recovery', () => {
+    const lovers = Array.from({ length: 23 }, (_, i) => ({ memberNumber: i + 2 }));
+    const player = { MemberNumber: 1, ExtensionSettings: {}, OnlineSharedSettings: { AFC: { lovers } } };
+    const { c } = settings(player);
+    assert.equal(c.getSharedSettings().lovers.length, 20);
+    assert.equal(player.ExtensionSettings.AFC_LegacyPublic.lovers.length, 23);
+});
+
+test('lover recovery choices survive a fresh login/runtime; changed backup can ask again', async () => {
+    for (const accept of [true, false]) {
+        const player = { MemberNumber: 1, ExtensionSettings: {}, OnlineSharedSettings: { AFC: { lovers: [] } } };
+        const first = settings(player, accept);
+        first.c.readLegacyLocalLovers = () => ({ lovers: [{ memberNumber: 2 }], memberNumber: 1 });
+        await first.c.initializeSharedSettings();
+        const second = settings(structuredClone(player), accept);
+        await second.c.initializeSharedSettings();
+        assert.equal(second.questions(), 0);
+        if (!accept) {
+            second.c.Player.ExtensionSettings.AFC_LoverBackup.lovers.push({ memberNumber: 3 });
+            await second.c.initializeSharedSettings();
+            assert.equal(second.questions(), 1);
+        }
+    }
+});
+
+test('pending lover dialog is deduplicated and cannot write after account changes', async () => {
+    const player = { MemberNumber: 1, ExtensionSettings: {}, OnlineSharedSettings: {} };
+    const { c } = settings(player);
+    let answer, calls = 0;
+    c.confirmInAFC = () => { calls++; return new Promise(resolve => { answer = resolve; }); };
+    c.readLegacyLocalLovers = () => ({ memberNumber: 1, lovers: [{ memberNumber: 2 }] });
+    const pending = c.initializeSharedSettings();
+    c.getSharedSettings(); c.saveSharedSettings(); assert.equal(calls, 1);
+    c.Player = { MemberNumber: 3, ExtensionSettings: {}, OnlineSharedSettings: {} };
+    answer(true); await pending;
+    assert.equal(player.ExtensionSettings.AFC_Data, undefined);
+    assert.equal(c.Player.ExtensionSettings.AFC_Data, undefined);
+});
+
+test('declining lover recovery preserves a usable manual recovery path', async () => {
+    const player = { MemberNumber: 1, ExtensionSettings: {}, OnlineSharedSettings: {} };
+    const { c } = settings(player, false);
+    c.readLegacyLocalLovers = () => ({ memberNumber: 1, lovers: [{ memberNumber: 2 }] });
+    await c.initializeSharedSettings();
+    assert.equal(player.ExtensionSettings.AFC_Data, undefined);
+    assert.equal(c.prepareManualLoverRecovery(), true);
+    assert.equal(c.getSharedSettings().lovers.length, 0);
+    assert.equal(player.ExtensionSettings.AFC_LoverBackup.lovers[0].memberNumber, 2);
 });
 
 test('legacy local fallback rejects foreign owners and never reads anonymous keys', () => {
@@ -89,7 +140,8 @@ function locks(current, backup, accept) {
     let questions = 0;
     const events = [];
     const c = run('../src/heartlock/storage.js', { Player,
-        window: { Player, confirm: () => { questions++; return accept; } },
+        window: { Player }, confirmInAFC: async () => { questions++; return accept; },
+        restoreHeartLockMarkers() {}, state: { operations: {} },
         DEFAULT_STORAGE: { padlocks: {}, updatedAt: 0 }, HSLOCK_NAME: 'HighSecurityPadlock', EXT_KEY: 'AFC_HeartLock',
         clone: structuredClone, T: key => key, emitHeartLockEvent: event => events.push(event),
         ServerPlayerExtensionSettingsSync() {}, ServerAccountUpdate: { QueueData() {} },
@@ -126,13 +178,41 @@ test('public state cannot overwrite a private note; existing real locks do not p
     assert.equal(r.questions(), 0);
 });
 
-test('foreign heartlock data and manual restore are rejected without overwriting source', () => {
+test('foreign heartlock data and manual restore are rejected without overwriting source', async () => {
     const current = { memberNumber: 9, padlocks: { ItemArms: { owner: 2, lockId: 'x' } } };
     const r = locks(current, null, true);
     assert.equal(r.c.ensureStorage(), false);
-    assert.equal(r.c.restoreStorageWithConsent(current), false);
+    assert.equal(await r.c.restoreStorageWithConsent(current), false);
     assert.equal(r.Player.ExtensionSettings.AFC_HeartLock.memberNumber, 9);
     assert.equal(r.questions(), 0);
+});
+
+test('same heartlock decision is retained across logins even when asset restoration is pending', async () => {
+    for (const accept of [true, false]) {
+        const r = locks({ padlocks: { ItemArms: { owner: 2, lockId: 'same', assetName: 'Cuffs' } } }, null, accept);
+        await r.c.reconcileHLStorage();
+        assert.equal(r.questions(), 1);
+        const next = locks(structuredClone(r.Player.ExtensionSettings.AFC_HeartLock), null, accept);
+        await next.c.reconcileHLStorage();
+        assert.equal(next.questions(), 0);
+        next.Player.HeartLock.padlocks.ItemLegs = { owner: 2, lockId: 'new', assetName: 'Rope' };
+        await next.c.reconcileHLStorage();
+        assert.equal(next.questions(), 1);
+    }
+});
+
+test('stale heartlock replies cannot overwrite an account or a changed active lock set', async () => {
+    for (const switchAccount of [true, false]) {
+        const r = locks({ padlocks: { ItemArms: { owner: 2, lockId: 'same' } } }, null, true);
+        let answer;
+        r.c.confirmInAFC = () => new Promise(resolve => { answer = resolve; });
+        const pending = r.c.reconcileHLStorage();
+        if (switchAccount) r.c.Player = { MemberNumber: 3, ExtensionSettings: {} };
+        else r.Player.HeartLock.padlocks = {};
+        answer(true); await pending;
+        assert.equal(r.events.includes('storage-recovery-approved'), false);
+        assert.equal(r.c.state.operations.recoveryPending, false);
+    }
 });
 
 test('profile follows BC selection and never falls back to the player', () => {
