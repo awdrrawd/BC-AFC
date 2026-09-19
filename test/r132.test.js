@@ -34,13 +34,13 @@ const property = () => ({ LockedBy: HSLOCK_NAME, LockMemberNumber: 2, Name: HEAR
 
 test('native R132 compression drops markers; AFC round-trips across separate runtimes', () => {
     const sender = nativeRuntime(), receiver = nativeRuntime();
-    const item = { Asset: { Extended: false }, Property: property() };
+    const item = { Asset: { Extended: false, Group: { HasExpression: () => false } }, Property: property() };
     assert.equal(sender.context.ItemPropertiesCompress(item).HeartLockId, undefined);
     installHeartLockPropertyHooks(sender.hook); installHeartLockPropertyHooks(receiver.hook);
     const packed = JSON.parse(JSON.stringify(sender.context.ItemPropertiesCompress(item)));
     assert.equal(packed.UnknownPluginField, undefined);
     for (const extended of [false, true]) {
-        const target = { Asset: { Extended: extended }, Property: {} };
+        const target = { Asset: { Extended: extended, Group: { HasExpression: () => false } }, Property: {} };
         const restored = receiver.context.ItemPropertiesDecompress(target, packed);
         assert.equal(restored, target.Property);
         for (const key of ['Name', 'HeartLockId', 'LockPickSeed', 'ExclusiveUnlock']) assert.equal(restored[key], item.Property[key]);
@@ -49,10 +49,11 @@ test('native R132 compression drops markers; AFC round-trips across separate run
 
 test('compression honors omissions, no-lock exports, and ordinary padlocks', () => {
     const { context, hook } = nativeRuntime(); installHeartLockPropertyHooks(hook);
-    const item = { Asset: { Extended: false }, Property: property() };
+    const item = { Asset: { Extended: false, Group: { HasExpression: () => false } }, Property: property() };
     assert.equal(context.ItemPropertiesCompress(item, { allowLocks: false }), undefined);
     assert.equal(context.ItemPropertiesCompress(item, { omit: ['HeartLockId'] }).HeartLockId, undefined);
     assert.equal(context.ItemPropertiesCompress(item, { omit: ['LockedBy'] }).Name, undefined);
+    assert.equal(context.ItemPropertiesCompress(item, { omit: new Set(['LockedBy']) }).Name, undefined);
     item.Property = { LockedBy: HSLOCK_NAME, UnknownPluginField: 42, LockPickSeed: 'ordinary' };
     const packed = context.ItemPropertiesCompress(item);
     assert.equal(packed.Name, undefined); assert.equal(packed.LockPickSeed, undefined);
@@ -78,6 +79,7 @@ function removalRuntime() {
     const notices = [], configs = new Map();
     Object.assign(context, { HEARTLOCK_NAME, Player: { MemberNumber: 1 },
         state: { operations: {} }, setTimeout: () => 1, sendLocalizedAction() {},
+        isAllowedToUnlock: (_c, cfg) => Number(cfg.owner) === 1,
         getPadlockConfig: (_c, group) => configs.get(group),
         notifyRemove: (_c, group) => notices.push(group),
         ChatRoomSafewordRelease: () => {

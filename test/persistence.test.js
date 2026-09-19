@@ -141,7 +141,7 @@ function locks(current, backup, accept) {
     const events = [];
     const c = run('../src/heartlock/storage.js', { Player,
         window: { Player }, confirmInAFC: async () => { questions++; return accept; },
-        restoreHeartLockMarkers() {}, state: { operations: {} },
+        restoreHeartLockMarkers() {}, _pendingRestore: new Set(), state: { operations: {} },
         DEFAULT_STORAGE: { padlocks: {}, updatedAt: 0 }, HSLOCK_NAME: 'HighSecurityPadlock', EXT_KEY: 'AFC_HeartLock',
         clone: structuredClone, T: key => key, emitHeartLockEvent: event => events.push(event),
         ServerPlayerExtensionSettingsSync() {}, ServerAccountUpdate: { QueueData() {} },

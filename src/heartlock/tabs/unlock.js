@@ -1,10 +1,7 @@
 import { CC, HEARTLOCK_NAME, HEARTKEY_IMAGE } from '../config.js';
-import { state } from '../state.js';
 import { th as T } from '../../i18n/i18n.js';
 import { hlEl, hlBtn } from '../util.js';
 import { isAllowedToUnlock } from '../permissions.js';
-import { notifyRemove } from '../net.js';
-import { cleanHeartLockProperty } from '../lock.js';
 import { sendLocalizedAction } from '../../i18n/l10n.js';
 import { emitHeartLockEvent } from '../events.js';
 
@@ -23,11 +20,14 @@ export function hlTabUnlock(el, ch, gn, cfg) {
     const confirmRow = hlEl('div', 'display:none;gap:.6em;');
     const yesBtn = hlBtn(T('unlockConfirm'),false,()=>{
         try {
-            notifyRemove(ch,gn); state.operations.unlocking=true; InventoryUnlock?.(ch,gn); state.operations.unlocking=false;
-            cleanHeartLockProperty(ch,gn); ChatRoomCharacterUpdate?.(ch);
+            const item = InventoryGet?.(ch, gn);
+            if (!isAllowedToUnlock(ch, cfg) || (cfg.lockId && item?.Property?.HeartLockId !== cfg.lockId)) return;
+            InventoryUnlock?.(ch, gn);
+            if (item?.Property?.LockedBy) return;
+            ChatRoomCharacterUpdate?.(ch);
             try { sendLocalizedAction('hl','unlockDone',[Player.Nickname||Player.Name, ch.Nickname||ch.Name, HEARTLOCK_NAME]); } catch {}
             emitHeartLockEvent('panel-close'); DialogFocusItem=null;
-        } catch { state.operations.unlocking=false; }
+        } catch {}
     },`background:${CC.danger};border-color:#FF4444;font-size:1.05em;padding:.5em 1.5em;`);
     const noBtn = hlBtn(T('unlockCancel'),false,()=>{ confirmRow.style.display='none'; unlockBtn.style.display=''; },'font-size:1.05em;padding:.5em 1.5em;');
     confirmRow.appendChild(yesBtn); confirmRow.appendChild(noBtn);

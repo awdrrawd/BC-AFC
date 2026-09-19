@@ -1,0 +1,10 @@
+// Native local R132 Scripts/Server.js :: ServerPlayerExtensionSettingsSync
+// SHA256 50dad89c4afca0ac6f88f2cdbd918a81914f5e129c56280736c87d95b60657d5
+function ServerPlayerExtensionSettingsSync(dataKeyName, _force = false) {
+	if (Player.ExtensionSettings[dataKeyName] === undefined) {
+		throw new Error(`Invalid key '${dataKeyName}' attempting to save 'undefined'`);
+	}
+	const obj = { [`ExtensionSettings.${dataKeyName}`]: Player.ExtensionSettings[dataKeyName] };
+
+	ServerSend("AccountUpdate", obj);
+}

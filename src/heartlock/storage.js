@@ -9,7 +9,7 @@ import { th as T } from '../i18n/i18n.js';
 import { emitHeartLockEvent } from './events.js';
 import { confirmInAFC } from '../ui/confirmation.js';
 import { restoreHeartLockMarkers } from './r132-properties.js';
-import { state } from './state.js';
+import { state, _pendingRestore } from './state.js';
 
 const reconciliations = new WeakMap();
 
@@ -55,10 +55,26 @@ export function getOrCreateConfig(groupName) {
     return p[groupName];
 }
 
-export function deleteConfig(groupName) {
-    if (!ensureStorage()) return;
-    delete Player.HeartLock.padlocks[groupName];
+export function isRemovedLock(groupName, lockId) {
+    return !!lockId && !!Player.HeartLock?.removedLocks?.[groupName]?.includes(lockId);
+}
+
+export function deleteConfig(groupName, expectedLockId) {
+    if (!ensureStorage()) return false;
+    const store = Player.HeartLock;
+    const cfg = store.padlocks[groupName] ?? store.declinedRecovery?.[groupName];
+    if (expectedLockId && cfg?.lockId !== expectedLockId) return false;
+    if (cfg?.lockId) {
+        store.removedLocks ??= {};
+        const ids = store.removedLocks[groupName] ??= [];
+        if (!ids.includes(cfg.lockId)) ids.push(cfg.lockId);
+    }
+    delete store.padlocks[groupName];
+    if (store.declinedRecovery) delete store.declinedRecovery[groupName];
+    if (store.recoveryDecisions) delete store.recoveryDecisions[groupName];
+    _pendingRestore.delete(groupName);
     saveAndSync();
+    return true;
 }
 
 export function saveAndSync() {

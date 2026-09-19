@@ -1,3 +1,5 @@
+import { isProtectionPaused, recordProtectionConflict } from './protection.js';
+import { isMemberAllowedByMe } from './permissions.js';
 // ════════════════════════════════════════
 //  HeartLock module: lock.js
 //  Asset 建立、上鎖轉換、外觀復原、防作弊 integrity、移除 / 清除
@@ -6,14 +8,13 @@
 import { HEARTLOCK_NAME, HSLOCK_NAME } from './config.js';
 import { restoreHeartLockMarkers } from './r132-properties.js';
 import { restoreSnapshotCraft } from './craft.js';
-import { snapshotItem, restoreSnapshotProperty } from './snapshot.js';
+import { snapshotItem, restoreSnapshotProperty, restoreSnapshotLock, upgradeSnapshotLock } from './snapshot.js';
 import { state, _pendingRestore } from './state.js';
 import { log, clone } from './util.js';
 import { sendLocalizedAction } from '../i18n/l10n.js';
 import {
-    ensureStorage, getOrCreateConfig, deleteConfig, saveAndSync,
+    ensureStorage, getOrCreateConfig, deleteConfig, saveAndSync, isRemovedLock,
 } from './storage.js';
-import { notifyRemove } from './net.js';
 import { rebaselineCurseIfNeeded } from './bcx-compat.js';
 import { onHeartLockEvent } from './events.js';
 
@@ -43,31 +44,36 @@ function _unlockSelfItem(gn, removeRestraint = false) {
 }
 
 /** 移除自己身上指定部位的心鎖並刪除其設定。
- *  正規移除順序：先清設定(ES+DB、bump ALL)，再移除身上物品，避免移除動作誤觸還原機制。 */
+ *  暫停復原，確認解鎖成功，再刪除持久資料並刷新外觀。 */
 export function removeLock(groupName, { removeRestraint = false } = {}) {
     if (!groupName || !ensureStorage()) return false;
     state.operations.unlocking = true;   // 抑制 integrity 還原（雙保險）
     try {
-        delete Player.HeartLock.padlocks[groupName];   // 1) 先清 ES 設定
-        saveAndSync();                                 //    寫入 ES+DB、bump ALL
-        _unlockSelfItem(groupName, removeRestraint);   // 2) 再移除身上物品
+        const cfg = Player.HeartLock.padlocks[groupName];
+        const item = InventoryGet?.(Player, groupName);
+        if (cfg?.lockId && item?.Property?.HeartLockId && item.Property.HeartLockId !== cfg.lockId) return false;
+        _unlockSelfItem(groupName, removeRestraint);
+        if (item?.Property?.LockedBy) return false;
+        deleteConfig(groupName, cfg?.lockId);
         try { CharacterRefresh?.(Player, false); ChatRoomCharacterUpdate?.(Player); } catch {}
     } finally { state.operations.unlocking = false; }
     return true;
 }
 
 /** 清除自己身上所有心鎖與其設定（防作弊 integrity 不會還原）。回傳清除數量。
- *  同樣先清設定再移除物品。 */
+ *  每個部位確認移除成功後才清理持久資料。 */
 export function clearAllLocks({ removeRestraints = false } = {}) {
     if (!ensureStorage()) return 0;
     state.operations.unlocking = true;
     let count = 0;
     try {
-        const groups = Object.keys(Player.HeartLock.padlocks ?? {});
-        Player.HeartLock.padlocks = {};   // 1) 先清全部設定
-        saveAndSync();
-        for (const gn of groups)          // 2) 再逐一移除身上物品
-            if (_unlockSelfItem(gn, removeRestraints)) count++;
+        const groups = new Set([...Object.keys(Player.HeartLock.padlocks ?? {}),
+            ...Object.keys(Player.HeartLock.declinedRecovery ?? {})]);
+        for (const gn of groups) {
+            const item = InventoryGet?.(Player, gn);
+            const unlocked = _unlockSelfItem(gn, removeRestraints);
+            if (!item?.Property?.LockedBy) { deleteConfig(gn); if (unlocked) count++; }
+        }
         try { CharacterRefresh?.(Player, false); ChatRoomCharacterUpdate?.(Player); } catch {}
     } finally { state.operations.unlocking = false; }
     log(`clearAllLocks: cleared ${count} lock(s)`);
@@ -97,13 +103,7 @@ export function createHeartLockAsset() {
 
 // ── 上鎖轉換 ──
 export function convertToHeartLock(character, item, groupName) {
-    if (!item?.Property) return;
-    if (character.IsPlayer()) {
-        const cfg = getOrCreateConfig(groupName);
-        if (cfg) {
-            cfg._fullSnapshot = snapshotItem(item, groupName);
-        }
-    }
+    if (!item?.Property || item.Property.LockedBy !== HSLOCK_NAME || !groupName) return;
     item.Property.Name = HEARTLOCK_NAME;
     item.Property.LockPickSeed = '8,3,5,10,4,2,6,7,1,9,0,11';
     if (character?.Ownership?.MemberNumber != null && item.Property.LockMemberNumber == null)
@@ -114,20 +114,21 @@ export function convertToHeartLock(character, item, groupName) {
     const now = new Date().toISOString();
     if (character.IsPlayer()) {
         const cfg = getOrCreateConfig(groupName);
-        if (cfg) { cfg.owner = Player.MemberNumber; cfg.ownerName = Player.Nickname || Player.Name; cfg.lockedAt = now; cfg.lockTs = Date.now(); cfg.assetName = assetName; cfg.lockId = lockId; saveAndSync(); }
+        if (cfg) { cfg.owner = Player.MemberNumber; cfg.ownerName = Player.Nickname || Player.Name; cfg.lockedAt = now; cfg.lockTs = Date.now(); cfg.assetName = assetName; cfg.lockId = lockId; cfg._fullSnapshot = snapshotItem(item, groupName); saveAndSync(); }
     } else {
         try {
-            ServerSend('ChatRoomChat', { Type: 'Hidden', Content: 'HeartLockApply', Dictionary: [{ Tag: 'HeartLockApply', Target: character.MemberNumber, Group: groupName, Owner: Player.MemberNumber, OwnerName: Player.Nickname || Player.Name, LockedAt: now, AssetName: assetName, LockId: lockId }] });
+            ServerSend('ChatRoomChat', { Type: 'Hidden', Content: 'HeartLockApply', Dictionary: [{ Tag: 'HeartLockApply', Target: character.MemberNumber, Group: groupName, Owner: Player.MemberNumber, OwnerName: Player.Nickname || Player.Name, LockedAt: now, AssetName: assetName, LockId: lockId, Snapshot: snapshotItem(item, groupName) }] });
         } catch {}
     }
     try { if (typeof ChatRoomCharacterItemUpdate === 'function' && groupName) ChatRoomCharacterItemUpdate(character, groupName); } catch {}
 }
 
 export function reapplyFromAppearance() {
-    if (state.operations.recoveryPending) return;
+    if (state.operations.recoveryPending || state.operations.unlocking || isProtectionPaused()) return;
     if (!ensureStorage()) return;
     restoreHeartLockMarkers(Player);
     const padlocks = Player.HeartLock.padlocks;
+    let changed = false;
     Player.Appearance?.forEach(item => {
         if (!item?.Property) return;
         if (item.Property.LockedBy !== HSLOCK_NAME) return;
@@ -135,11 +136,22 @@ export function reapplyFromAppearance() {
         const isHeartLock = item.Property.Name === HEARTLOCK_NAME || !!item.Property.HeartLockId;
         if (!isHeartLock) return;
         const gn = item.Asset?.Group?.Name;
-        if (!gn || padlocks[gn]) return;
+        if (!gn || isRemovedLock(gn, item.Property.HeartLockId)) return;
+        const existing = padlocks[gn];
+        if (existing) {
+            if (existing.awaitingSnapshot && existing.lockId === item.Property.HeartLockId
+                && existing.assetName === item.Asset.Name && Number(existing.owner) === Number(item.Property.LockMemberNumber)) {
+                existing._fullSnapshot = snapshotItem(item, gn);
+                delete existing.awaitingSnapshot;
+                changed = true;
+            }
+            return;
+        }
         // owner 一律取身上物品的 LockMemberNumber；缺失(極舊鎖)則跳過，
         // 絕不把自己預設成 owner（否則原戀人會被鎖在外、無法編輯）。
         const ownerNum = item.Property.LockMemberNumber;
         if (ownerNum == null) { log('reapply: skip', gn, '— missing LockMemberNumber, refuse to self-own'); return; }
+        changed = true;
         padlocks[gn] = {
             owner: ownerNum,
             ownerName: item.Property.LockMemberName ?? '',
@@ -151,9 +163,7 @@ export function reapplyFromAppearance() {
             _fullSnapshot: snapshotItem(item, gn),
         };
     });
-    for (const gn of Object.keys(padlocks)) {
-        try { const item = InventoryGet?.(Player, gn); if (!item) continue; if (!item?.Property?.LockedBy) deleteConfig(gn); } catch {}
-    }
+    if (changed) saveAndSync();
 }
 
 /** 舊鎖回填：身上有鎖物品但設定缺 _fullSnapshot/craft/assetName/lockId → 從當前物品補齊。
@@ -180,6 +190,7 @@ export function backfillSnapshots() {
             // Upgrade old snapshots in place: never erase saved Craft with damaged live data.
             if (item.Craft && !snap.craft) { snap.craft = clone(item.Craft); changed = true; }
             if (!snap.property) { snap.property = clone(item.Property); changed = true; }
+            if (upgradeSnapshotLock(snap, item)) changed = true;
         }
         if (cfg.assetName == null && item.Asset?.Name) { cfg.assetName = item.Asset.Name; changed = true; }
         if (cfg.lockId == null && item.Property.HeartLockId) { cfg.lockId = item.Property.HeartLockId; changed = true; }
@@ -203,15 +214,6 @@ onHeartLockEvent('storage-recovery-approved', () => {
 onHeartLockEvent('storage-restored', reapplyFromAppearance);
 onHeartLockEvent('storage-backfill', backfillSnapshots);
 
-export function watchForUnlock(character, groupName, item) {
-    let checks = 0;
-    const iv = setInterval(() => {
-        checks++;
-        if (!item?.Property?.LockedBy) { clearInterval(iv); notifyRemove(character, groupName); return; }
-        if (checks > 20) clearInterval(iv);
-    }, 500);
-}
-
 // 相依物件尚未載入而無法復原 → 暫掛該部位，發一次性提示，停止定時重試
 function _markPendingRestore(gn) {
     if (!_pendingRestore.has(gn)) {
@@ -226,7 +228,7 @@ function _markPendingRestore(gn) {
 
 // 回傳：'ok' 成功復原 / 'pending' 相依物件未載入暫掛 / 'skip' 不需處理
 export function restoreLockFromConfig(gn, cfg, updateUI = true) {
-    if (state.operations.recoveryPending) return 'skip';
+    if (state.operations.recoveryPending || cfg.awaitingSnapshot || isProtectionPaused()) return 'skip';
     let item = InventoryGet?.(Player, gn);
     const swapped = item && cfg.assetName && item.Asset?.Name !== cfg.assetName;
     const restoreEquipment = !item || swapped || item.Property?.LockedBy !== HSLOCK_NAME
@@ -275,6 +277,7 @@ export function restoreLockFromConfig(gn, cfg, updateUI = true) {
         if (hsAsset) InventoryLock?.(Player, item, { Asset: hsAsset }, cfg.owner, false);
     } catch {}
     if (item.Property?.LockedBy !== HSLOCK_NAME) { _markPendingRestore(gn); return 'pending'; }
+    if (restoreEquipment) restoreSnapshotLock(item, snapshot, cfg);
     if (!item.Property) item.Property = {};
     // R132 InventoryLock resolves numeric owners through the room character list;
     // the saved owner can be offline during login recovery.
@@ -301,7 +304,7 @@ export function cleanHeartLockProperty(C, itemOrGrp) {
         const item = (itemOrGrp && typeof itemOrGrp === 'object')
         ? itemOrGrp
         : InventoryGet?.(C, typeof itemOrGrp === 'string' ? itemOrGrp : null);
-        if (!item?.Property) return;
+        if (!item?.Property || item.Property.LockedBy) return;
         if (item.Property.Name === HEARTLOCK_NAME) delete item.Property.Name;
         if (item.Property.HeartLockId !== undefined) delete item.Property.HeartLockId;
         const keys = Object.keys(item.Property);
@@ -311,13 +314,21 @@ export function cleanHeartLockProperty(C, itemOrGrp) {
 }
 
 export function checkLockIntegrity() {
-    if (state.operations.recoveryPending) return;
+    if (state.operations.recoveryPending || isProtectionPaused()) return;
     if (!ensureStorage()) return;
     if (state.operations.unlocking) return;
     const padlocks = Player.HeartLock?.padlocks ?? {};
+    const hasConflict = Object.entries(padlocks).some(([gn, cfg]) => {
+        if (cfg.awaitingSnapshot || _pendingRestore.has(gn)) return false;
+        const item = InventoryGet?.(Player, gn);
+        return !item || (cfg.assetName && item.Asset?.Name !== cfg.assetName)
+            || item.Property?.LockedBy !== HSLOCK_NAME || item.Property?.Name !== HEARTLOCK_NAME
+            || (cfg.lockId && item.Property?.HeartLockId !== cfg.lockId);
+    });
+    if (hasConflict && !recordProtectionConflict()) return;
     for (const gn of Object.keys(padlocks)) {
         const cfg = padlocks[gn];
-        if (!cfg) continue;
+        if (!cfg || cfg.awaitingSnapshot) continue;
         const item = InventoryGet?.(Player, gn);
         if (!item) {
             if (!_pendingRestore.has(gn)) restoreLockFromConfig(gn, cfg);
@@ -346,7 +357,7 @@ export function checkLockIntegrity() {
  *  依使用者原則：有設定(該鎖) → 還原成真鎖；無設定(不該有鎖) → 抹掉假貼圖。 */
 export function cleanupFakeLocks() {
     if (!ensureStorage()) return;
-    if (state.operations.unlocking || state.operations.restoring) return;
+    if (state.operations.unlocking || state.operations.restoring || isProtectionPaused()) return;
     const padlocks = Player.HeartLock?.padlocks ?? {};
     let changed = false;
     (Player.Appearance ?? []).forEach(item => {
@@ -371,4 +382,29 @@ export function cleanupFakeLocks() {
         }
     });
     if (changed) { try { CharacterRefresh?.(Player, false); ChatRoomCharacterUpdate?.(Player); } catch {} }
+}
+
+// Full-character and individual-item events share one sliding conflict window.
+export function reconcileProtection(sourceMember, group) {
+    if (!ensureStorage() || state.operations.recoveryPending || state.operations.unlocking) return;
+    const broken = [];
+    for (const [gn, cfg] of Object.entries(Player.HeartLock.padlocks ?? {})) {
+        if ((group && gn !== group) || cfg.awaitingSnapshot || _pendingRestore.has(gn)) continue;
+        const item = InventoryGet?.(Player, gn);
+        const intact = item?.Property?.LockedBy === HSLOCK_NAME && item.Property.Name === HEARTLOCK_NAME
+            && (!cfg.assetName || item.Asset.Name === cfg.assetName)
+            && (!cfg.lockId || item.Property.HeartLockId === cfg.lockId);
+        if (intact) {
+            if (sourceMember != null && (Number(sourceMember) === Number(cfg.owner) || isMemberAllowedByMe(sourceMember))) {
+                cfg._fullSnapshot = snapshotItem(item, gn);
+                saveAndSync();
+            }
+            continue;
+        }
+        if (sourceMember != null && (Number(sourceMember) === Number(cfg.owner) || isMemberAllowedByMe(sourceMember))) {
+            deleteConfig(gn, cfg.lockId);
+        } else broken.push([gn, cfg]);
+    }
+    if (!broken.length || !recordProtectionConflict()) return;
+    for (const [gn, cfg] of broken) restoreLockFromConfig(gn, cfg, !(state.panel.noteEditing && gn === state.panel.groupName));
 }

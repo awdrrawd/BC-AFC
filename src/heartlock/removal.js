@@ -1,3 +1,4 @@
+import { isAllowedToUnlock } from './permissions.js';
 import { HEARTLOCK_NAME } from './config.js';
 import { state } from './state.js';
 import { getPadlockConfig } from './storage.js';
@@ -43,8 +44,8 @@ export function installHeartLockRemovalHook(hook) {
                 const group = candidate.Asset.Group.Name;
                 const cfg = getPadlockConfig(character, group);
                 if (!cfg) continue;
-                configs.set(candidate, group);
-                if (Number(cfg.owner) !== Number(Player.MemberNumber)
+                configs.set(candidate, { group, lockId: cfg.lockId });
+                if (!isAllowedToUnlock(character, cfg)
                     && !(state.operations.safewordRelease && character.IsPlayer?.())) permitted = false;
             }
             if (!permitted) blocked = true;
@@ -60,7 +61,7 @@ export function installHeartLockRemovalHook(hook) {
         if (!allowed.length) return [];
         const removed = next([character, allowed, options]);
         for (const item of new Set(removed)) {
-            if (configs.has(item)) notifyRemove(character, configs.get(item));
+            if (configs.has(item)) notifyRemove(character, configs.get(item).group, configs.get(item).lockId);
         }
         return removed;
     });

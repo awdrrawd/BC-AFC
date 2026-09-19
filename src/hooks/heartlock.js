@@ -4,16 +4,16 @@ import { installHeartLockPropertyHooks, restoreHeartLockMarkers } from '../heart
 //  HeartLock 的遊戲函式 hooks（由中央 registry 安裝）
 // ════════════════════════════════════════
 
-import { HEARTLOCK_NAME, HSLOCK_NAME, HL_PANEL_ID, GRAB_WINDOW_MS, GRAB_COOLDOWN_MS } from '../heartlock/config.js';
-import { state, grabStateChar, grabStateSingle, _pendingRestore } from '../heartlock/state.js';
+import { HEARTLOCK_NAME, HSLOCK_NAME, HL_PANEL_ID } from '../heartlock/config.js';
+import { state } from '../heartlock/state.js';
 import { th as T } from '../i18n/i18n.js';
-import { ensureStorage, getPadlockConfig, deleteConfig, getSetting } from '../heartlock/storage.js';
-import { restoreLockFromConfig, convertToHeartLock, watchForUnlock, reapplyFromAppearance, cleanHeartLockProperty } from '../heartlock/lock.js';
+import { ensureStorage, getPadlockConfig, getSetting } from '../heartlock/storage.js';
+import { convertToHeartLock, reapplyFromAppearance, reconcileProtection, cleanHeartLockProperty } from '../heartlock/lock.js';
 import { notifyRemove } from '../heartlock/net.js';
 import { isAllowedToLock, isAllowedToUnlock } from '../heartlock/permissions.js';
 import { removeHLPanel, _repositionHLPanel, panelLoad } from '../heartlock/panel.js';
 import { setupOrgasmHooks } from './orgasm.js';
-import { sendLocalizedAction } from '../i18n/l10n.js';
+import { isProtectionPaused } from '../heartlock/protection.js';
 
 export function installHeartLockHooks(registry) {
     const { hook } = registry;
@@ -56,9 +56,9 @@ export function installHeartLockHooks(registry) {
         const fg = ch?.FocusGroup?.Name, ori = cl.Asset;
         // 設旗標，供 ServerSend hook 識別此次是 HeartLock 上鎖
         state.operations.applyingLock = true;
-        cl.Asset = hsAsset; next(args); cl.Asset = ori;
-        state.operations.applyingLock = false;
-        if (item?.Property) { convertToHeartLock(ch, item, fg); if (fg) watchForUnlock(ch, fg, item); }
+        try { cl.Asset = hsAsset; next(args); }
+        finally { cl.Asset = ori; state.operations.applyingLock = false; }
+        if (item?.Property?.LockedBy === HSLOCK_NAME) convertToHeartLock(ch, item, fg);
     });
 
     // ── ServerSend：ActionAddLock 修正 ──
@@ -105,7 +105,10 @@ export function installHeartLockHooks(registry) {
         if (args[0]?.IsPlayer?.()) ensureStorage();
         restoreHeartLockMarkers(args[0]);
         const result = next(args);
-        if (args[0]?.IsPlayer?.()) setTimeout(() => { ensureStorage(); reapplyFromAppearance(); }, 300);
+        if (args[0]?.IsPlayer?.()) {
+            const account = Player;
+            registry.timeout(() => { if (Player === account) reapplyFromAppearance(); }, 300);
+        }
         return result;
     });
 
@@ -159,158 +162,50 @@ export function installHeartLockHooks(registry) {
         }
     });
 
-    // ── InventoryUnlock 攔截 ──
+    // Only discard recovery data after the native unlock actually succeeds.
     hook('InventoryUnlock', 10, (args, next) => {
-        if (state.operations.timerUnlocking || state.operations.unlocking) {
-            state.operations.unlocking = true; const r = next(args); state.operations.unlocking = false;
-            cleanHeartLockProperty(args[0], args[1]);
-            return r;
-        }
-        const C = args[0], itemOrGrp = args[1];
-        const item = (itemOrGrp && typeof itemOrGrp === 'object')
-        ? itemOrGrp
-        : InventoryGet?.(C, typeof itemOrGrp === 'string' ? itemOrGrp : null);
-        if (item?.Property?.Name !== HEARTLOCK_NAME) {
-            state.operations.unlocking = true; const r = next(args); state.operations.unlocking = false; return r;
-        }
-        const gn  = item.Asset?.Group?.Name;
-        const cfg = getPadlockConfig(C, gn);
-        if (cfg && !isAllowedToUnlock(C, cfg)) return;
-        // 先通知穿戴者清除 config（避免 ChatRoomSyncCharacter 觸發復原）
-        if (cfg) notifyRemove(C, gn);
-        state.operations.unlocking = true; const r = next(args); state.operations.unlocking = false;
-        cleanHeartLockProperty(C, itemOrGrp);
-        return r;
-    });
-
-    // ── ChatRoomSyncItem ──
-    hook('ChatRoomSyncItem', 0, (args, next) => {
-        state.operations.serverSync = true;
-        const data = args[0], grp = data?.Item?.Group, src = data?.Source;
-        if (grp && src && ensureStorage()) {
-            const cfg2 = Player.HeartLock?.padlocks?.[grp];
-            if (cfg2 && Number(src) === Number(cfg2.owner) && !data?.Item?.Name) { deleteConfig(grp); }
-        }
-        const result = next(args); state.operations.serverSync = false;
-        return result;
-    });
-
-    // 成員進出房間也需要保護，攔截 DialogLeaveFocusItem
-    for (const evt of ['ChatRoomSyncMemberJoin', 'ChatRoomSyncMemberLeave']) {
-        hook(evt, 1, (args, next) => {
-            state.operations.serverSync = true;
+        const [character, target] = args;
+        const item = typeof target === 'object' ? target : InventoryGet?.(character, target);
+        const group = item?.Asset?.Group?.Name;
+        const cfg = getPadlockConfig(character, group);
+        const lockId = item?.Property?.HeartLockId;
+        const heart = item?.Property?.Name === HEARTLOCK_NAME;
+        if (heart && cfg && !state.operations.timerUnlocking && !state.operations.unlocking
+            && !isAllowedToUnlock(character, cfg)) return;
+        const previous = state.operations.unlocking;
+        state.operations.unlocking = true;
+        try {
             const result = next(args);
-            state.operations.serverSync = false;
+            if (heart && !item?.Property?.LockedBy) {
+                cleanHeartLockProperty(character, item);
+                if (cfg) notifyRemove(character, group, lockId);
+            }
+            return result;
+        } finally { state.operations.unlocking = previous; }
+    });
+
+    for (const event of ['ChatRoomSyncCharacter', 'ChatRoomSyncSingle', 'ChatRoomSyncItem',
+        'ChatRoomSyncMemberJoin', 'ChatRoomSyncMemberLeave']) {
+        hook(event, 1, (args, next) => {
+            const previous = state.operations.serverSync;
+            state.operations.serverSync = true;
+            let result;
+            try { result = next(args); }
+            finally { state.operations.serverSync = previous; }
+            const data = args[0];
+            const target = event === 'ChatRoomSyncItem' ? data?.Item?.Target : data?.Character?.MemberNumber;
+            if (target === Player.MemberNumber) {
+                reapplyFromAppearance();
+                reconcileProtection(event === 'ChatRoomSyncItem' ? data?.Source : data?.SourceMemberNumber,
+                    event === 'ChatRoomSyncItem' ? data?.Item?.Group : undefined);
+            }
             return result;
         });
     }
 
-    // ── ChatRoomSyncCharacter ──
-    hook('ChatRoomSyncCharacter', 1, (args, next) => {
-        const data = args[0];
-        state.operations.serverSync = true; const result = next(args); state.operations.serverSync = false;
-        if (data?.Character?.MemberNumber !== Player.MemberNumber) return result;
-        if (!ensureStorage() || grabStateChar.state) return result;
-        const sourceMember = data?.SourceMemberNumber;
-        const padlocks = Player.HeartLock?.padlocks ?? {};
-        let anyRestored = false;
-        for (const gn of Object.keys(padlocks)) {
-            const cfg = padlocks[gn], item = InventoryGet?.(Player, gn);
-            const broken = !item || (cfg.assetName && item.Asset?.Name !== cfg.assetName)
-                || item.Property?.Name !== HEARTLOCK_NAME || item.Property?.LockedBy !== HSLOCK_NAME;
-            if (broken) {
-                // 相依物件未載入而暫掛的部位：不重試、不計入防作弊、不洗版
-                if (_pendingRestore.has(gn)) continue;
-                if (sourceMember != null && Number(sourceMember) === Number(cfg.owner)) { deleteConfig(gn); continue; }
-                if (sourceMember != null && Number(sourceMember) === Player.MemberNumber && Number(cfg.owner) === Player.MemberNumber) { deleteConfig(gn); continue; }
-                if (sourceMember != null) {
-                    const isELUnlocker = Player.OnlineSharedSettings?.AFC?.lovers
-                    ?.some(l => Number(l.memberNumber) === Number(sourceMember)) ?? false;
-                    const isBCUnlocker = Player.Lovership
-                    ?.some(l => Number(l.MemberNumber) === Number(sourceMember)) ?? false;
-                    if (isELUnlocker || isBCUnlocker) { deleteConfig(gn); continue; }
-                }
-                grabStateChar.count++;
-                if (grabStateChar.count === 1) grabStateChar.firstTriggerTime = Date.now();
-                if (grabStateChar.count > 3 && Date.now() - grabStateChar.firstTriggerTime < GRAB_WINDOW_MS) {
-                    grabStateChar.state = true; grabStateChar.count = 0;
-                    try { sendLocalizedAction('hl', 'protectDisabled', [Player.Nickname || Player.Name, HEARTLOCK_NAME]); } catch {}
-                    setTimeout(() => { grabStateChar.state = false; grabStateChar.count = 0; }, GRAB_COOLDOWN_MS);
-                    return result;
-                }
-                // 若正在編輯此物品的筆記，只修資料，不動 UI 狀態
-                const editingThis = state.panel.noteEditing && gn === state.panel.groupName;
-                if (restoreLockFromConfig(gn, cfg, !editingThis) === 'ok') anyRestored = true;
-            } else { grabStateChar.count = 0; }
-        }
-        if (anyRestored) {
-            setTimeout(() => {
-                try { ChatRoomCharacterUpdate?.(Player); } catch {}
-                const now = Date.now();
-                if (now - state.operations.lastRestoreMessage > 2000) {
-                    state.operations.lastRestoreMessage = now;
-                    try { sendLocalizedAction('hl', 'resistRestore', [Player.Nickname || Player.Name, HEARTLOCK_NAME]); } catch {}
-                }
-            }, 300);
-        }
-        return result;
-    });
-
-    // ── ChatRoomSyncSingle ──
-    hook('ChatRoomSyncSingle', 1, (args, next) => {
-        const data = args[0];
-        state.operations.serverSync = true;
-        const result = next(args);
-        state.operations.serverSync = false;
-        if (data?.Character?.MemberNumber !== Player.MemberNumber) return result;
-        if (!ensureStorage() || grabStateSingle.state) return result;
-        const sourceMember = data?.SourceMemberNumber;
-        const padlocks = Player.HeartLock?.padlocks ?? {};
-        let anyRestored = false;
-        for (const gn of Object.keys(padlocks)) {
-            const cfg = padlocks[gn], item = InventoryGet?.(Player, gn);
-            const broken = !item || (cfg.assetName && item.Asset?.Name !== cfg.assetName)
-                || item.Property?.Name !== HEARTLOCK_NAME || item.Property?.LockedBy !== HSLOCK_NAME;
-            if (broken) {
-                if (_pendingRestore.has(gn)) continue;
-                if (sourceMember != null && Number(sourceMember) === Number(cfg.owner)) { deleteConfig(gn); continue; }
-                if (sourceMember != null && Number(sourceMember) === Player.MemberNumber && Number(cfg.owner) === Player.MemberNumber) { deleteConfig(gn); continue; }
-                // 授權解鎖者（EL 戀人 / BC 戀人）
-                if (sourceMember != null) {
-                    const isELUnlocker = Player.OnlineSharedSettings?.AFC?.lovers
-                    ?.some(l => Number(l.memberNumber) === Number(sourceMember)) ?? false;
-                    const isBCUnlocker = Player.Lovership
-                    ?.some(l => Number(l.MemberNumber) === Number(sourceMember)) ?? false;
-                    if (isELUnlocker || isBCUnlocker) { deleteConfig(gn); continue; }
-                }
-                grabStateSingle.count++;
-                if (grabStateSingle.count === 1) grabStateSingle.firstTriggerTime = Date.now();
-                if (grabStateSingle.count > 3 && Date.now() - grabStateSingle.firstTriggerTime < GRAB_WINDOW_MS) {
-                    grabStateSingle.state = true; grabStateSingle.count = 0;
-                    try { sendLocalizedAction('hl', 'protectDisabled', [Player.Nickname || Player.Name, HEARTLOCK_NAME]); } catch {}
-                    setTimeout(() => { grabStateSingle.state = false; grabStateSingle.count = 0; }, GRAB_COOLDOWN_MS);
-                    return result;
-                }
-                const editingThis2 = state.panel.noteEditing && gn === state.panel.groupName;
-                if (restoreLockFromConfig(gn, cfg, !editingThis2) === 'ok') anyRestored = true;
-            } else { grabStateSingle.count = 0; }
-        }
-        if (anyRestored) {
-            setTimeout(() => {
-                try { ChatRoomCharacterUpdate?.(Player); } catch {}
-                const now = Date.now();
-                if (now - state.operations.lastRestoreMessage > 2000) {
-                    state.operations.lastRestoreMessage = now;
-                    try { sendLocalizedAction('hl', 'resistRestore', [Player.Nickname || Player.Name, HEARTLOCK_NAME]); } catch {}
-                }
-            }, 300);
-        }
-        return result;
-    });
-
     // ── CharacterReleaseTotal 攔截 ──
     hook('CharacterReleaseTotal', 10, (args, next) => {
-        if (state.operations.safewordRelease) return next(args);
+        if (state.operations.safewordRelease || isProtectionPaused()) return next(args);
         const C = args[0];
         if (!C?.Appearance) return next(args);
         const snapshots = [];

@@ -26,8 +26,6 @@ export const state = {
     },
 };
 
-export const grabStateChar   = { count: 0, firstTriggerTime: Date.now(), state: false };
-export const grabStateSingle = { count: 0, firstTriggerTime: Date.now(), state: false };
 
 // 因相依物件（如 Echo 拘束）尚未載入而無法復原的部位 → 暫掛，下次登入/刷新再試
 export const _pendingRestore = new Set();
