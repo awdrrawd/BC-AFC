@@ -1,3 +1,4 @@
+import { resetProtection } from './protection.js';
 import { isHeartLock, isProtected, sanitizeOutfitItem } from './outfit-api.js';
 // ════════════════════════════════════════
 //  HeartLock module: init.js
@@ -107,6 +108,7 @@ export function cleanupHeartLock() {
     state.timers.integrity = null;
     state.vibe.cycle = 0;
     _pendingRestore.clear();
+    resetProtection();
     removeHLPanel();
     state.lifecycle.initialized = false;
 }

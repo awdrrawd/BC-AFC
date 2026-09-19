@@ -76,3 +76,14 @@ R132 的 `ItemPropertiesCompress` 會丟棄 AFC 的 `Name`、`HeartLockId`、`Lo
 4. 未安裝 AFC／舊版 AFC 的對端可能再次丟棄自訂資料；不能用 VM 測試取代伺服器與混合版本驗收。
 
 本分支沒有推送或部署正式版本。FCM／HSC 的盤點屬跨專案摘要，不放入 AEE 文件。
+
+
+## 2026-09-19：冷卻、完整保存與移除清理
+
+- 完整角色、單一角色、單件物品同步與定時完整性檢查共用滑動視窗：14 秒內第 4 次衝突暫停自動復原 120 秒。同批多個部位只算一次；正常部位不會清掉其他部位的紀錄，登出與換帳號會重設。既有解鎖權限仍有效；冷卻期間合法移除仍會清理資料。
+- 解鎖 hook、解鎖面板與計時到期都在確認解除成功後才刪除設定。刪除包括 active snapshot、declinedRecovery、recoveryDecisions 與待復原狀態；只保留已移除 lockId，阻止延遲的舊外觀或 Apply 訊息再次認領。舊 lockId 的刪除通知不能刪掉新鎖。
+- 修正外觀重讀與震動計時器在物品短暫消失時擅自刪除設定。移除輪詢不再觀察過期的 item 參照。
+- `_fullSnapshot` 使用 `version: 2, format: "runtime"`，保存 asset/group/family、完整 Property、Craft、Color、Difficulty。必須在完成心鎖標記後擷取；還原同一 lockId/owner 時保留原生鑰匙名單及鎖選項。可確認的舊快照會從目前同一把鎖補齊鎖資料；已經遺失且未保存的歷史欄位無法憑空復原。
+- 新版遠端 Apply 隨附完成上鎖的快照，避免 Hidden 與外觀事件順序不同而保存了舊物品。舊版 Apply 沒有快照時等待匹配的實體鎖，不從未上鎖的替代品建立備份。
+- 已檢查本機 R132 `ServerPlayerExtensionSettingsSync`：直接傳送指定 ExtensionSettings 值，不呼叫 `ItemPropertiesCompress`。因此私人備份維持完整普通 JSON，不能改存會省略預設值與自訂欄位的 appearance bundle。房內設定廣播不再包含完整快照與復原歷史；R132 `omit` 支援 Set 等 Iterable。
+- 測試更新本機 R132 壓縮／解壓縮函式摘錄與 SHA256，新增原生 ExtensionSettings 同步摘錄及生命週期回歸案例。VM 測試不代表已完成實際伺服器登入、斷線與雙客戶端驗收。

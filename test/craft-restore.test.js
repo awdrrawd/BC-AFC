@@ -7,7 +7,7 @@ import { r132CompleteCraft } from '../src/compat/r132-craft.js';
 
 function runtime() {
     const c = vm.createContext({
-        r132CompleteCraft,
+        r132CompleteCraft, isProtectionPaused: () => false, isRemovedLock: () => false, recordProtectionConflict: () => true,
         CommonIsObject: v => v !== null && typeof v === 'object' && !Array.isArray(v),
         CommonEntries: Object.entries, CommonKeys: Object.keys,
         CommonHas: (map, key) => map.has(key),

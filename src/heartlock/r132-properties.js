@@ -16,7 +16,7 @@ export function installHeartLockPropertyHooks(hook) {
     hook('ItemPropertiesCompress', 10, (args, next) => {
         const result = next(args);
         const [item, options] = args;
-        if (options?.allowLocks === false || options?.omit?.includes('LockedBy')) return result;
+        if (options?.allowLocks === false || new Set(options?.omit ?? []).has('LockedBy')) return result;
         const extra = markers(item?.Property);
         if (!extra || result?.LockedBy !== HSLOCK_NAME) return result;
         for (const key of options?.omit ?? []) delete extra[key];

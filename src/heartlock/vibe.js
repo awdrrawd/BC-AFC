@@ -24,7 +24,8 @@ export function vibeStep() {
         const cfg = padlocks[gn];
         if (!cfg?.vibe || cfg.vibe === 'off') continue;
         const item = InventoryGet?.(Player, gn);
-        if (!item?.Property || item.Property.Name !== HEARTLOCK_NAME) { delete padlocks[gn]; continue; }
+        if (!item?.Property || item.Property.Name !== HEARTLOCK_NAME
+            || (cfg.lockId && item.Property.HeartLockId !== cfg.lockId)) continue;
         any = true;
         totalDelta += order[cfg.vibe] ?? 0;                          // 多鎖疊加（維持原本行為）
         if ((order[cfg.vibe] ?? 0) > (order[maxStr] ?? 0)) maxStr = cfg.vibe;

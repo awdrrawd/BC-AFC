@@ -17,7 +17,7 @@ const ExtendedItemInitPropertyIgnore = new Set(/** @type {const} */([
 	"ScaleY",
 	"Rotation",
 ]));
-// Scripts/Item.js :: ItemPropertiesCompress SHA256 2a5afbdf8f52a6667f5829c7a02ff3768781956271c1466eadf72678c9875879
+// Scripts/Item.js :: ItemPropertiesCompress SHA256 398d482762d21e70fed3b76781f4416fa78334a975efd167d4abcc3844e90cd0
 function ItemPropertiesCompress(item, options=null) {
 	options ??= {};
 	const allowLocks = options.allowLocks ?? true;
@@ -55,9 +55,18 @@ function ItemPropertiesCompress(item, options=null) {
 		}
 	}
 
-	if (item.Asset.AllowExpression) {
+	if (item.Asset.Group.HasExpression()) {
 		baseline.Expression = null;
 		allowedProperties.add("Expression");
+	}
+
+	/** @type {EffectName[]} */
+	const allowedEffects = ["IsLeashed"];
+	for (const effect of allowedEffects) {
+		if (item.Asset.AllowEffect?.includes(effect)) {
+			allowedProperties.add("Effect");
+			break;
+		}
 	}
 
 	lockedBy: if (allowLocks && item.Property.LockedBy) {
@@ -104,18 +113,34 @@ function ItemPropertiesCompress(item, options=null) {
 				}
 				break;
 			}
-			default:
-				if (item.Property[key] !== baseline[key]) {
-					// @ts-expect-error
-					ret[key] = item.Property[key];
+			case "Effect":
+				if (item.Asset.AllowEffect?.includes("IsLeashed") && item.Property.Effect?.includes("IsLeashed")) {
+					ret.IsLeashed = true;
 				}
 				break;
+			default: {
+				const propertyValue = item.Property[key];
+				const baselineValue = baseline[key];
+				if (CommonIsArray(baselineValue) && CommonIsArray(propertyValue)) {
+					// We're expecting (or demanding) that item property arrays behave like logical sets (i.e. unordered)
+					if (!CommonArraysEqual(baselineValue, propertyValue, true)) {
+						ret[key] = propertyValue;
+					}
+				} else {
+					// TODO: Better handle objects here (e.g. the variable height `OverrideHeight` property; variable height in general could use a review)
+					if (baselineValue !== propertyValue) {
+						// @ts-expect-error
+						ret[key] = propertyValue;
+					}
+				}
+				break;
+			}
 		}
 	}
 	return Object.values(ret).every(i => i === undefined) ? undefined : ret;
 }
 
-// Scripts/Item.js :: ItemPropertiesDecompress SHA256 7f993368cc9f43341d0ac8917ffbf05c485bbe664879460ba4603b4e38462b96
+// Scripts/Item.js :: ItemPropertiesDecompress SHA256 58721cfa0cdf081437569b309cab9aeb3f77292844f2dd36bfe17ed15412b607
 function ItemPropertiesDecompress(item, properties) {
 	// For the sake of potential backwards compatibility issues both minimized and maximized properties must be handled
 	/** @type {ItemPropertiesMinimized | ItemProperties} */
@@ -124,8 +149,12 @@ function ItemPropertiesDecompress(item, properties) {
 	const C = ItemPropertiesDummy ??= CharacterLoadSimple("ItemBundleDummy");
 	Object.assign(item.Property, propertiesUnsanitized);
 
+	// Unpack effect-related properties
 	if (propertiesUnsanitized.LockedBy) {
 		CommonArrayConcatDedupe(item.Property.Effect ??= [], ["Lock"]);
+	}
+	if ("IsLeashed" in propertiesUnsanitized && propertiesUnsanitized.IsLeashed) {
+		CommonArrayConcatDedupe(item.Property.Effect ??= [], ["IsLeashed"]);
 	}
 
 	if (item.Craft?.Effects?.Painful) {
@@ -133,11 +162,8 @@ function ItemPropertiesDecompress(item, properties) {
 	}
 
 	if (item.Asset.Extended) {
-		if (propertiesUnsanitized.TypeRecord) {
-			ExtendedItemSetOptionByRecord(C, item, propertiesUnsanitized.TypeRecord, { push: false, refresh: false });
-		} else {
-			ExtendedItemInit(C, item, false, false);
-		}
+		// Init will respect the `TypeRecord` values assigned further up above
+		ExtendedItemInit(C, item, false, false);
 	}
 	return item.Property;
 }
