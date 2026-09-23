@@ -1,3 +1,4 @@
+import { createLockDraft, getLockDraft } from '../src/features/heartlock/crafting/draft-config.js';
 import { URL } from 'node:url';
 import console from 'node:console';
 import test from 'node:test';
@@ -9,6 +10,7 @@ function runtime() {
     let now = 1000;
     const hooks = {};
     const c = vm.createContext({
+        getLockDraft, repairHeartLockDuplicates() {},
         Date: class extends Date { static now() { return now; } },
         GRAB_WINDOW_MS: 14000, GRAB_COOLDOWN_MS: 120000,
         HEARTLOCK_NAME: 'HeartLock', HSLOCK_NAME: 'HighSecurityPadlock', EXT_KEY: 'AFC_HeartLock',
@@ -36,10 +38,10 @@ function runtime() {
     c.sent = [];
     c.ServerSend = (...args) => c.sent.push(args);
     for (const file of ['protection', 'storage', 'snapshot', 'lock', 'net', 'timer', 'vibe']) {
-        vm.runInContext(fs.readFileSync(new URL(`../src/heartlock/${file}.js`, import.meta.url), 'utf8')
+        vm.runInContext(fs.readFileSync(new URL(file === 'net' ? '../src/net/heartlock.js' : `../src/features/heartlock/${file}.js`, import.meta.url), 'utf8')
             .replace(/^import [\s\S]*?;\r?\n/gm, '').replace(/export /g, ''), c);
     }
-    vm.runInContext(fs.readFileSync(new URL('../src/hooks/heartlock.js', import.meta.url), 'utf8')
+    vm.runInContext(fs.readFileSync(new URL('../src/hooks/heartlock/index.js', import.meta.url), 'utf8')
         .replace(/^import [\s\S]*?;\r?\n/gm, '').replace(/export /g, ''), c);
     c.installHeartLockHooks({ hook: (name, priority, fn) => { hooks[name] = fn; }, timeout() {} });
     vm.runInContext(fs.readFileSync(new URL('./fixtures/r132-extension-settings.txt', import.meta.url), 'utf8'), c);
@@ -182,4 +184,42 @@ test('vibration never deletes temporarily missing protection; timer removes pers
     c.checkTimers(); assert.equal(c.Player.HeartLock.padlocks.ItemArms, cfg);
     c.ValidationDeleteLock = p => { delete p.LockedBy; };
     c.checkTimers(); assert.equal(c.Player.ExtensionSettings.AFC_HeartLock.padlocks.ItemArms, undefined);
+});
+
+
+test('remote crafted lock receives its settings together with the complete snapshot', () => {
+    const { c } = runtime();
+    const snapshot = c.Player.HeartLock.padlocks.ItemArms._fullSnapshot;
+    c.handleHidden({ Type: 'Hidden', Content: 'HeartLockApply', Sender: 2, Dictionary: [{ Tag: 'HeartLockApply',
+        Target: 1, Group: 'ItemArms', Owner: 2, AssetName: 'Cuffs', LockId: 'lock1', Snapshot: snapshot,
+        Settings: { note: 'Craft note', vibe: 'high', orgasmMode: 'edge', removeRestraints: true,
+            unlockTime: '2030-01-01T00:00:00.000Z', owner: 999, lockId: 'injected' } }] });
+    const cfg = c.Player.ExtensionSettings.AFC_HeartLock.padlocks.ItemArms;
+    assert.equal(cfg.note, 'Craft note'); assert.equal(cfg.vibe, 'high'); assert.equal(cfg.orgasmMode, 'edge');
+    assert.equal(cfg.removeRestraints, true); assert.equal(cfg.unlockTime, '2030-01-01T00:00:00.000Z');
+    assert.equal(cfg.owner, 2); assert.equal(cfg.lockId, 'lock1');
+    assert.equal(cfg._fullSnapshot.property.MemberNumberListKeys, '2,3');
+});
+
+
+test('shared panel routes draft edits locally, never through worn-lock storage or room messages', () => {
+    const { c } = runtime();
+    const original = JSON.stringify(c.Player.ExtensionSettings);
+    let active = true, settings;
+    const draft = createLockDraft({ durationMinutes: 60 }, {
+        owner: 1, ownerName: 'Self', group: 'ItemArms', isActive: () => active,
+        onChange: value => { settings = value; },
+    });
+    assert.equal(c.getPadlockConfig(draft.character, 'ItemArms').owner, 1);
+    c.pushConfig(draft.character, 'ItemArms', { note: 'Draft', vibe: 'high' });
+    c.sendSettingsChange(draft.character, 'ItemArms'); c.requestHeartLockData(draft.character);
+    c.notifyRemove(draft.character, 'ItemArms');
+    assert.equal(settings.note, 'Draft'); assert.equal(settings.vibe, 'high'); assert.equal(settings.durationMinutes, 60);
+    c.pushConfig(draft.character, 'ItemArms', { unlockTime: new Date(Date.now() + 7200000).toISOString() });
+    assert.equal(settings.durationMinutes, 120);
+    c.pushConfig(draft.character, 'ItemArms', { unlockTime: null }); assert.equal(settings.durationMinutes, 0);
+    active = false;
+    c.pushConfig(draft.character, 'ItemArms', { note: 'Stale callback' });
+    assert.equal(settings.note, 'Draft'); assert.equal(c.getPadlockConfig(draft.character, 'ItemArms'), null);
+    assert.equal(c.sent.length, 0); assert.equal(JSON.stringify(c.Player.ExtensionSettings), original);
 });

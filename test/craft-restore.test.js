@@ -25,7 +25,7 @@ function runtime() {
     });
     vm.runInContext(fs.readFileSync(new URL('./fixtures/r132-crafting.txt', import.meta.url), 'utf8'), c);
     for (const file of ['craft', 'snapshot', 'lock']) {
-        const source = fs.readFileSync(new URL(`../src/heartlock/${file}.js`, import.meta.url), 'utf8')
+        const source = fs.readFileSync(new URL(`../src/features/heartlock/${file}.js`, import.meta.url), 'utf8')
             .replace(/^import [\s\S]*?;\r?\n/gm, '').replace(/export /g, '');
         vm.runInContext(source, c);
     }

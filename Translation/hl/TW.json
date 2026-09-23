@@ -59,5 +59,11 @@
   "timerExpired": "{0}身上的{1}隨約定時刻到來，化作點點微光悄然消散。",
   "unlockDone": "{0}解開了{1}身上的{2}。",
   "dbRestoreAnomaly": "⚠ {0}的心鎖線上資料異常遺失，已由本機後備還原以下部位：{1}。若非你本人操作，請與鎖主確認。",
-  "confirmLockRecovery": "發現缺失或不同的心鎖：{0}。恢復後可能無法自行解鎖。是否恢復？"
+  "confirmLockRecovery": "發現缺失或不同的心鎖：{0}。恢復後可能無法自行解鎖。是否恢復？",
+  "craftLockTitle": "檢查製作品心鎖",
+  "craftLockDuration": "上鎖時間（分鐘，0 表示不計時）",
+  "craftLockRemove": "到期時一併移除道具",
+  "craftLockHint": "在心鎖分頁保存設定，再按製作畫面的確認按鈕保存製作品。計時表示使用後的鎖定時長，從實際上鎖開始。",
+  "craftLockSave": "套用鎖設定",
+  "craftLockCancel": "取消"
 }

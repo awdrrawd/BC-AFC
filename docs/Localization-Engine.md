@@ -105,6 +105,12 @@ const deLabel = I18N.t('myplugin', 'title', null, 'DE'); // 指定德文
 
 ---
 
+## AFC 字庫維護
+
+字串來源位於 `Translation/afc/` 與 `Translation/hl/`，各含 TW、CN、EN、DE、FR、RU、UA 七語系 JSON；`src/i18n/fallback.js` 提供離線後備。共用引擎、UI 封裝與聊天封裝位於 `src/i18n/`。
+
+新增文字時同步各語系與適用的後備文字，避免在 UI 硬編碼「共」「天」等片段。`npm run build` 複製字庫至發布目錄，`npm run check:assets` 檢查翻譯與建置資源。
+
 ## 外部字庫
 
 翻譯量大時可把字串放獨立檔、runtime 載入（避免塞在 bundle 內）：

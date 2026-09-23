@@ -5,7 +5,7 @@ import { sendBeep } from '../net/beep.js';
 import { t } from '../i18n/i18n.js';
 import { toast } from '../util/toast.js';
 import { chatLocalNotice } from '../util/util.js';
-import { clearAllLocks } from '../heartlock/lock.js';
+import { clearAllLocks } from '../features/heartlock/lock.js';
 
 // 初廠設定：解除所有戀人關係、破壞所有戀人鎖、重置設定。不可逆，僅由 UI 確認後呼叫。
 export function factoryReset() {

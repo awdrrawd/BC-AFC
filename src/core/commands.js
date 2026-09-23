@@ -7,9 +7,9 @@ import { isInitialized, AFCLockAccessOn } from './state.js';
 import { getSharedSettings } from './settings.js';
 import { t } from '../i18n/i18n.js';
 import { waitFor, daysSince, formatDuration, chatLocalNotice } from '../util/util.js';
-import { isAFCLover } from '../relations/lovers.js';
-import { initiateBreakup } from '../relations/breakup.js';
-import { proposeToCharacter } from '../relations/propose.js';
+import { isAFCLover } from '../features/relationships/lovers.js';
+import { initiateBreakup } from '../features/relationships/breakup.js';
+import { proposeToCharacter } from '../features/relationships/propose.js';
 import { subscribeChatRoomMessage } from '../hooks/chat-message-channel.js';
 
 export async function setupCommands(registry) {

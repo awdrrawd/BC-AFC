@@ -25,14 +25,14 @@ import { clearChatRoomMessageSubscribers } from '../hooks/chat-message-channel.j
 import { setupCommands } from './commands.js';
 import { registerSettingsUI, AFCSettingsUI } from '../ui/settings-page.js';
 import { syncWithOnlineLovers, cancelOnlineFetch } from '../net/online.js';
-import { isAFCLover, getLoverEntry } from '../relations/lovers.js';
-import { getLoverRegions, isPanelOpen, getPanelRect } from '../ui/profile.js';
+import { isAFCLover, getLoverEntry } from '../features/relationships/lovers.js';
+import { getLoverRegions, isPanelOpen, getPanelRect } from '../ui/relationships/profile.js';
 import { getLoverRoom } from '../net/roomname.js';
 import { installRoomSync } from '../hooks/room-sync.js';
 import { unregisterAllSocketListeners } from './socket.js';
 import { _clearAck } from '../net/beep.js';
-import { initHeartLock, cleanupHeartLock } from '../heartlock/init.js';
-import { clearRequestStore } from '../relations/request-manager.js';
+import { initHeartLock, cleanupHeartLock } from '../features/heartlock/init.js';
+import { clearRequestStore } from '../features/relationships/request-manager.js';
 import { r132InstallCraftDataHooks, r132RepairPlayerCrafts } from '../compat/r132-craft.js';
 
 let hookRegistry = null;

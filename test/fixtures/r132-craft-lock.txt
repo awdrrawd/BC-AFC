@@ -1,0 +1,109 @@
+// Native local R132 Crafting.js excerpts; bodies are unchanged.
+const CraftingSerializeFieldSep = "¶";
+const CraftingSerializeSanitize = /§|¶/;
+// CraftingSerialize SHA256 0a4b1455eeb6d698b214db4bc36bab2362b37baf2254fcb7082cc417e865df72
+function CraftingSerialize(craft) {
+	/** @type {string[]} */
+	const stringData = [
+		craft.Item,
+		"", // Old field as used by the deprecated `Property` crafted craft property, DO NOT REMOVE!
+		(craft.Lock == null) ? "" : craft.Lock,
+		(craft.Name == null) ? "" : craft.Name.substring(0, 30),
+		(craft.Description == null) ? "" : craft.Description.substring(0, 200),
+		(craft.Color == null) ? "" : craft.Color,
+		(craft.Private) ? "T" : "",
+		"", // Old field as used by the deprecated `Type` crafted craft property, DO NOT REMOVE!
+		"", // Old field as used by the deprecated `OverridePriority` crafted craft property, DO NOT REMOVE!
+		(craft.ItemProperty == null) ? "" : JSON.stringify(craft.ItemProperty),
+		(craft.TypeRecord == null) ? "" : JSON.stringify(craft.TypeRecord),
+		(!craft.DifficultyFactor) ? "" : craft.DifficultyFactor.toString(),
+		(craft.Effects == null) ? "" : JSON.stringify(craft.Effects),
+	];
+	return stringData.map(i => i.replace(CraftingSerializeSanitize, "")).join(CraftingSerializeFieldSep);
+}
+// CraftingDeserialize SHA256 414e998bf87a6b129cd4935e1bcde797f418afd2ac16e6493217dbb81f3f52d0
+function CraftingDeserialize(craftString) {
+	const [
+		Item,
+		Property,
+		Lock,
+		Name,
+		Description,
+		Color,
+		Private,
+		Type,
+		OverridePriority,
+		ItemProperty,
+		TypeRecord,
+		DifficultyFactor,
+		Effects,
+	] = craftString.split(CraftingSerializeFieldSep);
+
+	/** @type {CraftingItem & { ItemProperty: ItemPropertiesMinimized }} */
+	const craft = {
+		Item,
+		Name,
+		Description,
+		Color,
+		Property: /** @type {CraftingPropertyType} */(Property) || undefined,
+		Lock: /** @type {AssetLockType} */(Lock),
+		Private: Private === "T",
+		ItemProperty: ItemProperty ? /** @type {ItemPropertiesMinimized} */(CommonJSONParse(ItemProperty) ?? {}) : {},
+		Type: Type || undefined,
+		TypeRecord: TypeRecord ? /** @type {TypeRecord} */ (CommonJSONParse(TypeRecord)) : null,
+		DifficultyFactor: DifficultyFactor ? Number.parseInt(DifficultyFactor, 10) : undefined,
+		Effects: Effects ? /** @type {Partial<Record<CraftingPropertyType, number>>} */(CommonJSONParse(Effects) ?? {}) : {},
+		Partial: false,
+	};
+
+	const priority = Number.parseInt(OverridePriority, 10);
+	if (!Number.isNaN(priority)) {
+		craft.ItemProperty.OverridePriority = priority;
+	}
+
+	return (craft.Item && craft.Name) ? craft : null;
+}
+// CraftingConvertSelectedToItem SHA256 574305cb61fe5d64f5ad918c6c6829b371fc788bb493cf50ddd776a9d6096af5
+function CraftingConvertSelectedToItem(item) {
+	return {
+		Item: (item.Asset == null) ? "" : item.Asset.Name,
+		Lock: (item.Lock == null) ? "" : /**@type {AssetLockType}*/(item.Lock.Name),
+		Name: item.Name,
+		Description: item.Description,
+		Color: item.Color,
+		Private: item.Private,
+		TypeRecord: item.TypeRecord || null,
+		DifficultyFactor: item.DifficultyFactor || undefined,
+		ItemProperty: item.ItemProperty,
+		Effects: item.Effects,
+		Partial: false,
+	};
+}
+// CraftingConvertItemToSelected SHA256 aed0d8bbb3351354c0e4a227314370888e38065ba7c7f6f1f0e720e1e6b25918
+function CraftingConvertItemToSelected(Craft) {
+	return {
+		Name: Craft.Name,
+		Description: Craft.Description,
+		DifficultyFactor: Craft.DifficultyFactor ?? 0,
+		Color: Craft.Color,
+		Private: Craft.Private,
+		TypeRecord: Craft.TypeRecord ? { ...Craft.TypeRecord } : null,
+		Assets: CraftingAssets[Craft.Item] ?? [],
+		Effects: { ...Craft.Effects },
+		get Asset() {
+			return this.Assets[0];
+		},
+		Lock: Craft.Lock && InventoryAvailable(Player, Craft.Lock, "ItemMisc") ? AssetGet(Player.AssetFamily, "ItemMisc", Craft.Lock) : null,
+		ItemProperty: Craft.ItemProperty ? CommonCloneDeep(Craft.ItemProperty) : {},
+		get OverridePriority() {
+			return this.ItemProperty.OverridePriority;
+		},
+		set OverridePriority(value) {
+			if (value == null) {
+				delete this.ItemProperty.OverridePriority;
+			} else {
+				this.ItemProperty.OverridePriority = value;
+			}
+		},
+	};
+}

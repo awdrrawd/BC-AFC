@@ -6,9 +6,10 @@
 //    i18n/       — i18n
 //    util/       — util, toast
 //    net/        — beep, beep-router, roomname, online, sync-data
-//    relations/  — lovers, propose, stage, restore, reconcile, breakup, dialog
+//    features/   — relationship workflows and HeartLock behavior
 //    ui/         — proposal-ui, profile, settings-page
-//    heartlock/  — 心形鎖（原獨立插件，現為 bundle 內模組，隨 AFC 一起啟動）
+//    hooks/      — BC integration hooks
+//    compat/     — R132 and BCX interoperability
 // ════════════════════════════════════════
 
 import { MOD_VERSION } from './core/config.js';

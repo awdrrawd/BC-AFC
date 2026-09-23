@@ -28,7 +28,7 @@
       <div class="node"><strong>1. Bundle 入口</strong><code>src/main.js</code><br>建立 <code>window.Liko.AFC</code></div><div class="arrow">→</div>
       <div class="node"><strong>2. 核心初始化</strong><code>core/core-init.js</code><br>等待 SDK、登入與設定資料</div><div class="arrow">→</div>
       <div class="node"><strong>3. 統一 Hooks</strong><code>hooks/index.js</code><br>安裝 AFC 與通道入口</div><div class="arrow">→</div>
-      <div class="node"><strong>4. HeartLock</strong><code>heartlock/init.js</code><br>以獨立 registry scope 啟動</div>
+      <div class="node"><strong>4. HeartLock</strong><code>features/heartlock/init.js</code><br>以獨立 registry scope 啟動</div>
     </div></section>
 
     <section class="section" id="hooks" data-keywords="hook registry socket channel dispatcher message sync listener"><h2>Hook 與通道</h2><p class="lead">所有 bcModSdk Hook 集中在 <code>src/hooks/</code>。相同遊戲函式只掛一次，再由內部處理器派送。</p><div class="grid">
@@ -36,53 +36,53 @@
       <article class="card" style="--accent:var(--violet)"><h3>生命週期</h3><p>統一登記 hook、interval、timeout；scope 支援功能級回滾。</p><code>hooks/registry.js</code></article>
       <article class="card" style="--accent:var(--cyan)"><h3>ChatRoomMessage</h3><p>唯一 Hook 依序處理 L10N、HeartLock、AFC Beep／Sync 與診斷訂閱。</p><code>hooks/chat-message-channel.js</code></article>
       <article class="card" style="--accent:var(--gold)"><h3>ServerSocket</h3><p>每個 event 只註冊一個底層 dispatcher，內部可有多個訂閱者。</p><code>core/socket.js</code></article>
-      <article class="card"><h3>HeartLock Hooks</h3><p>鎖具、同步、圖示、面板與防拆行為。</p><code>hooks/heartlock.js</code></article>
-      <article class="card"><h3>其他 Hook 群組</h3><p>關係顯示、登入階段及高潮控制。</p><code>hooks/relationship-visual.js</code> <code>hooks/lifecycle.js</code> <code>hooks/orgasm.js</code></article>
+      <article class="card"><h3>HeartLock Hooks</h3><p>鎖具、同步、圖示、面板與防拆行為。</p><code>hooks/heartlock/index.js</code></article>
+      <article class="card"><h3>其他 Hook 群組</h3><p>關係顯示、登入階段及高潮控制。</p><code>hooks/relationship-visual.js</code> <code>hooks/lifecycle.js</code> <code>hooks/heartlock/orgasm.js</code></article>
     </div></section>
 
     <section class="section" id="relations" data-keywords="戀人 關係 propose stage restore breakup lover request"><h2>關係系統</h2><p class="lead">資料正規化與寫入集中在 service；申請、升格、恢復共享同一套 request manager。</p><div class="flow">
-      <div class="node"><strong>輸入驗證</strong><code>relations/lover-model.js</code><br>MemberNumber、日期與清單正規化</div><div class="arrow">→</div>
-      <div class="node"><strong>唯一寫入入口</strong><code>relations/lovers.js</code><br>新增、更新、移除、替換戀人</div><div class="arrow">→</div>
-      <div class="node"><strong>互動流程</strong><code>relations/propose.js</code><br><code>stage.js</code>／<code>restore.js</code>／<code>breakup.js</code></div>
+      <div class="node"><strong>輸入驗證</strong><code>features/relationships/lover-model.js</code><br>MemberNumber、日期與清單正規化</div><div class="arrow">→</div>
+      <div class="node"><strong>唯一寫入入口</strong><code>features/relationships/lovers.js</code><br>新增、更新、移除、替換戀人</div><div class="arrow">→</div>
+      <div class="node"><strong>互動流程</strong><code>features/relationships/propose.js</code><br><code>stage.js</code>／<code>restore.js</code>／<code>breakup.js</code></div>
     </div><div class="grid">
-      <article class="card"><h3>請求生命週期</h3><p>送出、收到、倒數、接受、拒絕與過期清理。</p><code>relations/request-manager.js</code></article>
-      <article class="card"><h3>備份還原</h3><p>備份 repository 與還原策略分離。</p><code>core/lover-backup.js</code> <code>relations/backup-restore.js</code></article>
-      <article class="card"><h3>房內對帳</h3><p>房間角色資料載入後補齊不對稱關係。</p><code>relations/reconcile.js</code></article>
+      <article class="card"><h3>請求生命週期</h3><p>送出、收到、倒數、接受、拒絕與過期清理。</p><code>features/relationships/request-manager.js</code></article>
+      <article class="card"><h3>備份還原</h3><p>備份 repository 與還原策略分離。</p><code>core/lover-backup.js</code> <code>features/relationships/backup-restore.js</code></article>
+      <article class="card"><h3>房內對帳</h3><p>房間角色資料載入後補齊不對稱關係。</p><code>features/relationships/reconcile.js</code></article>
     </div></section>
 
-    <section class="section" id="data" data-keywords="資料 state runtime storage settings backup tree"><h2>資料樹與持久化</h2><p class="lead">Runtime 狀態按功能分組；共享設定、私人設定及本機備份維持各自責任。</p><div class="grid">
+    <section class="section" id="data" data-keywords="資料 state runtime storage settings backup tree"><h2>資料樹與持久化</h2><p class="lead">Runtime 狀態按功能分組；ExtensionSettings 保存主資料，OnlineSharedSettings 只發布副本。舊本機戀人備份僅讀取。</p><div class="grid">
       <article class="card" style="--accent:var(--pink)"><h3>relationRuntime</h3><p><b>requests</b>：lover／stage／restore<br><b>lockAccess</b>、<b>privateRooms</b><br><b>recentBeeps</b>、<b>proposalCooldowns</b>、<b>pendingAcks</b></p><code>core/state.js</code></article>
-      <article class="card" style="--accent:var(--violet)"><h3>HeartLock state</h3><p><b>lifecycle</b>、<b>timers</b>、<b>vibe</b>、<b>operations</b>、<b>panel</b></p><code>heartlock/state.js</code></article>
+      <article class="card" style="--accent:var(--violet)"><h3>HeartLock state</h3><p><b>lifecycle</b>、<b>timers</b>、<b>vibe</b>、<b>operations</b>、<b>panel</b></p><code>features/heartlock/state.js</code></article>
       <article class="card"><h3>OnlineSharedSettings</h3><p>戀人清單、心鎖權限、震動訊息設定；房內其他玩家可讀。</p><code>Player.OnlineSharedSettings.AFC</code></article>
       <article class="card"><h3>ExtensionSettings</h3><p>AFC 私人設定及 HeartLock 鎖具狀態。</p><code>Player.ExtensionSettings</code></article>
-      <article class="card"><h3>本機備份</h3><p>戀人與 HeartLock 的獨立保險資料。</p><code>AFC_DB::&lt;帳號&gt;</code> <code>HL_DB::&lt;帳號&gt;</code></article>
+      <article class="card"><h3>私人持久資料</h3><p>ExtensionSettings 保存私人快照與 Craft 範本；公開資料不覆蓋私人資料。</p><code>AFC_HeartLock.craftLocks</code></article>
     </div></section>
 
     <section class="section" id="network" data-keywords="網路 beep sync account room private roomname hidden ack"><h2>網路與房間事件</h2><p class="lead">AFC 不控制 BC 連線；只在既有事件上同步關係、房名與 HeartLock 資料。</p><div class="grid">
       <article class="card"><h3>AFC::Beep</h3><p>同房關係操作；關鍵訊息重送至 ACK，接收端去重。</p><code>net/beep.js</code> <code>net/beep-router.js</code></article>
       <article class="card"><h3>AFC::Sync</h3><p>廣播自己的戀人資料，供房內對帳。</p><code>net/sync-data.js</code></article>
       <article class="card"><h3>AccountBeep</h3><p>跨房分享私人房名，供戀人從好友列表加入。</p><code>net/roomname.js</code></article>
-      <article class="card"><h3>HeartLock Hidden</h3><p>套用、設定、同步、移除與遠端解鎖。</p><code>heartlock/net.js</code></article>
+      <article class="card"><h3>HeartLock Hidden</h3><p>套用、設定、同步、移除與遠端解鎖。</p><code>net/heartlock.js</code></article>
     </div></section>
 
     <section class="section" id="heartlock" data-keywords="heartlock 心鎖 timer vibe note panel lock orgasm"><h2>HeartLock</h2><p class="lead">HeartLock 是 AFC bundle 內的功能模組，共用中央 I18N、Hook registry 與訊息入口。</p><div class="tree">
-      <div class="folder"><h3>核心</h3><ul><li><b>lock.js</b> 鎖具套用與完整性</li><li><b>permissions.js</b> 關係權限</li><li><b>storage.js</b> 保存與對帳</li><li><b>net.js</b> 遠端同步</li></ul></div>
-      <div class="folder"><h3>互動</h3><ul><li><b>panel.js</b> DOM 面板</li><li><b>tabs/</b> 總覽、筆記、計時、控制、解鎖</li><li><b>datepicker.js</b> 日期選擇</li></ul></div>
-      <div class="folder"><h3>運行功能</h3><ul><li><b>timer.js</b> 到期解鎖</li><li><b>vibe.js</b> 震動循環</li><li><b>hooks/orgasm.js</b> 高潮模式</li><li><b>events.js</b> 模組內事件</li></ul></div>
+      <div class="folder"><h3>核心</h3><ul><li><b>lock.js</b> 鎖具套用與完整性</li><li><b>permissions.js</b> 關係權限</li><li><b>storage.js</b> 保存與對帳</li><li><b>net/heartlock.js</b> 遠端同步</li></ul></div>
+      <div class="folder"><h3>互動</h3><ul><li><b>ui/heartlock/panel.js</b> DOM 面板</li><li><b>ui/heartlock/tabs/</b> 總覽、筆記、計時、控制、解鎖</li><li><b>ui/heartlock/datepicker.js</b> 日期選擇</li></ul></div>
+      <div class="folder"><h3>運行功能</h3><ul><li><b>timer.js</b> 到期解鎖</li><li><b>vibe.js</b> 震動循環</li><li><b>hooks/heartlock/orgasm.js</b> 高潮模式</li><li><b>events.js</b> 模組內事件</li></ul></div>
     </div></section>
 
     <section class="section" id="i18n" data-keywords="i18n l10n translation 翻譯 heartlock namespace"><h2>翻譯系統</h2><p class="lead">AFC 與 HeartLock 共用一套引擎。HeartLock 使用 <code>hl</code> namespace，沒有第二份 I18N。</p><div class="grid">
       <article class="card"><h3>UI 翻譯</h3><p>設定頁、面板與本地提示。</p><code>i18n/i18n.js</code></article>
       <article class="card"><h3>聊天 L10N</h3><p>中央 ChatRoomMessage hook 呼叫 localize，再以接收者語言改寫。</p><code>i18n/l10n.js</code></article>
-      <article class="card"><h3>字串資料</h3><p>AFC 與 HeartLock 文本集中存放。</p><code>i18n/strings/</code> <code>Translation/</code></article>
+      <article class="card"><h3>字串資料</h3><p>AFC 與 HeartLock 文本集中存放。</p><code>i18n/fallback.js</code> <code>Translation/</code></article>
     </div></section>
 
-    <section class="section" id="folders" data-keywords="目錄 folders files module structure"><h2>目錄責任</h2><div class="tree">
+    <section class="section" id="folders" data-keywords="目錄 folders files module structure"><h2>目錄責任</h2><p><a href="source-layout.md">完整目錄與維護分工</a></p><div class="tree">
       <div class="folder"><h3>core/</h3><ul><li>初始化、設定、狀態、儲存</li><li>Socket dispatcher、聊天指令</li></ul></div>
       <div class="folder"><h3>hooks/</h3><ul><li>所有 bcModSdk Hook</li><li>通道派送與生命週期</li></ul></div>
-      <div class="folder"><h3>relations/</h3><ul><li>關係 model、service 與流程</li><li>請求及備份還原</li></ul></div>
+      <div class="folder"><h3>features/relationships/</h3><ul><li>關係 model、service 與流程</li><li>請求及備份還原</li></ul></div>
       <div class="folder"><h3>net/</h3><ul><li>Beep、Sync、房名及在線查詢</li></ul></div>
-      <div class="folder"><h3>heartlock/</h3><ul><li>心鎖領域邏輯、狀態及 UI</li></ul></div>
+      <div class="folder"><h3>features/heartlock/</h3><ul><li>心鎖邏輯、狀態、快照與 Craft 範本</li></ul></div>
       <div class="folder"><h3>ui/ · i18n/ · util/</h3><ul><li>共用 UI、翻譯及通用工具</li></ul></div>
     </div><p class="note">建置入口為 <code>src/main.js</code>，Vite 輸出 <code>dist/assets/main.js</code> 與 <code>dist/assets/app.js</code>。</p></section>
   </main>
