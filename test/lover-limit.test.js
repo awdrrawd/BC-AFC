@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import { URL } from 'node:url';
 import * as config from '../src/core/config.js';
-import * as model from '../src/relations/lover-model.js';
+import * as model from '../src/features/relationships/lover-model.js';
 
 function runtime(count) {
     const settings = { lovers: Array.from({ length: count }, (_, i) => ({ memberNumber: i + 10, name: `L${i}`, startDate: 1 })) };
@@ -23,7 +23,7 @@ function runtime(count) {
     c.sendBeep = (...args) => c.messages.push(args);
     c.showIncoming = options => c.prompts.push(options);
     for (const name of ['lovers', 'propose', 'restore']) {
-        const source = fs.readFileSync(new URL(`../src/relations/${name}.js`, import.meta.url), 'utf8')
+        const source = fs.readFileSync(new URL(`../src/features/relationships/${name}.js`, import.meta.url), 'utf8')
             .replace(/^import[\s\S]*?;\r?\n/gm, '').replace(/export /g, '');
         vm.runInContext(source, c);
     }

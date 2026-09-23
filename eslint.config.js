@@ -26,6 +26,8 @@ const bcGlobals = [
   // Heart Lock 用到的 BC runtime 函式
   'AssetFemale3DCG', 'AssetAdd', 'AssetGet', 'ChatRoomCharacterUpdate', 'ChatRoomCharacterItemUpdate',
   'InventoryAdd', 'InventoryWear', 'InventoryLock', 'InventoryUnlock', 'InventoryRemove', 'CraftingValidate',
+  'ElementButton', 'InventoryRemoveItems', 'AssetGetRemoveOnItemRemoveDiff',
+  'CraftingSerialize', 'CraftingLockList', 'CraftingSelectedItem',
   'CraftingAssets', 'ExtendedItemTypeToRecord', 'ServerPlayerAppearanceSync', 'ServerPlayerIsInChatRoom',
   'InventoryBlockedOrLimited', 'ValidationDeleteLock', 'ValidationSanitizeProperties',
   'ValidationSanitizeLock', 'AudioPlaySoundEffect', 'CharacterGetCurrent',

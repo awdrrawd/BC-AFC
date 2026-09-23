@@ -3,14 +3,16 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import { URL } from 'node:url';
-import { HEARTLOCK_NAME, HSLOCK_NAME } from '../src/heartlock/config.js';
-import { installHeartLockPropertyHooks, restoreHeartLockMarkers } from '../src/heartlock/r132-properties.js';
+import { HEARTLOCK_NAME, HSLOCK_NAME } from '../src/features/heartlock/config.js';
+import { installHeartLockPropertyHooks, restoreHeartLockMarkers } from '../src/compat/r132-heartlock.js';
 
 function nativeRuntime() {
     const context = vm.createContext({
         CommonKeys: Object.keys, CommonIsArray: Array.isArray,
         CommonFindMap: (list, callback) => list.map(callback).find(x => x !== undefined),
         CommonObjectIsSubset: (a, b) => Object.entries(a).every(([k, v]) => b[k] === v),
+        AssetGetRemoveOnItemRemoveDiff: () => [], ItemColorIsDefault: () => true,
+        AppearanceItem: { fromAsset: (Asset, options) => ({ Asset, Color: options.color, Difficulty: options.difficulty }) },
         CharacterRefresh() {}, BlindFlashQueue: false,
         InventoryGet: (c, group) => c.Appearance.find(i => i.Asset.Group.Name === group),
         NoArchItemDataLookup: { ItemMiscHighSecurityPadlock: { baselineProperty: { MemberNumberListKeys: '' } } },
@@ -18,7 +20,7 @@ function nativeRuntime() {
         ItemPropertiesDummy: {},
         CommonArrayConcatDedupe: (a, b) => a.push(...b.filter(x => !a.includes(x))),
         // Model an extended initializer replacing state; the hook must restore markers afterwards.
-        ExtendedItemInit: (_c, item) => { item.Property = { LockedBy: item.Property.LockedBy }; },
+        ExtendedItemInit: (_c, item) => { item.Property = { LockedBy: item.Property?.LockedBy }; },
     });
     vm.runInContext(fs.readFileSync(new URL('./fixtures/r132-runtime.txt', import.meta.url), 'utf8'), context);
     const hook = (name, _priority, callback) => {
@@ -87,7 +89,7 @@ function removalRuntime() {
             return context.InventoryRemoveItems(context.Player, [...context.Player.Appearance]);
         },
     });
-    const source = fs.readFileSync(new URL('../src/heartlock/removal.js', import.meta.url), 'utf8')
+    const source = fs.readFileSync(new URL('../src/hooks/heartlock/removal.js', import.meta.url), 'utf8')
         .replace(/^import .*;\r?\n/gm, '').replace(/export /g, '');
     vm.runInContext(source, context); context.installHeartLockRemovalHook(hook);
     const item = (group, owner) => {
@@ -138,4 +140,49 @@ test('native safeword release removes protected locks and restores guard after e
     c.Player.Appearance = [locked]; c.failSafety = true;
     assert.throws(() => c.ChatRoomSafewordRelease(), /native failure/);
     assert.deepEqual(Array.from(c.InventoryRemoveItems(c.Player, locked)), []);
+});
+
+
+test('native replacement reproduces duplicate-slot graph failure; protected local and server paths stay unique', () => {
+    const graph = fs.readFileSync(new URL('./fixtures/r132-graph.txt', import.meta.url), 'utf8');
+    const old = nativeRuntime().context;
+    vm.runInContext(graph, old);
+    const asset = { Name: 'BallGag', Difficulty: 0, Group: { Name: 'ItemMouth' }, RemoveItemOnRemove: [] };
+    old.C = { Appearance: [{ Asset: asset }], IsPlayer: () => true };
+    // Exactly the old AFC behavior: refuse removal but native code still appends.
+    old.InventoryRemoveItems = () => [];
+    old.CharacterAppearanceSetItem(old.C, 'ItemMouth', asset);
+    assert.equal(old.C.Appearance.length, 2);
+    assert.throws(() => vm.runInContext('new DirectedGraph(C.Appearance.map(i => i.Asset.Group.Name), []).findCycles()', old),
+        /componentGraph.adjacencyList\[v\] is not iterable/);
+
+    const { context: c, notices, item } = removalRuntime();
+    vm.runInContext(graph, c);
+    const protectedItem = item('ItemMouth', 2);
+    c.C = { Appearance: [protectedItem], IsPlayer: () => true };
+    assert.equal(c.CharacterAppearanceSetItem(c.C, 'ItemMouth', asset), null);
+    assert.equal(c.C.Appearance.length, 1);
+    for (let i = 0; i < 3; i++) {
+        c.state.operations.serverSync = true;
+        const replacement = c.CharacterAppearanceSetItem(c.C, 'ItemMouth', asset);
+        replacement.Property = { Name: HEARTLOCK_NAME, LockedBy: HSLOCK_NAME, HeartLockId: 'same', LockMemberNumber: 2 };
+        c.state.operations.serverSync = false;
+        assert.equal(c.C.Appearance.length, 1);
+        assert.equal(vm.runInContext('new DirectedGraph(C.Appearance.map(i => i.Asset.Group.Name), []).findCycles().length', c), 0);
+    }
+    assert.deepEqual(notices, []); // Native reconstruction is not a legitimate unlock.
+});
+
+test('old AFC duplicates are repaired only when the saved identity identifies the surviving lock', () => {
+    const { context: c, notices, item } = removalRuntime();
+    const keep = item('ItemMouth', 2); Object.assign(keep.Property, { HeartLockId: 'saved', LockMemberNumber: 2 });
+    const stale = item('ItemMouth'); const other = item('ItemArms');
+    const character = { Appearance: [stale, keep, other, { ...other }], IsPlayer: () => true,
+        HeartLock: { padlocks: { ItemMouth: { owner: 2, assetName: 'ItemMouth', lockId: 'saved' } } } };
+    c.repairHeartLockDuplicates(character); assert.equal(character.Appearance.length, 4);
+    c.state.operations.serverSync = true; c.repairHeartLockDuplicates(character);
+    assert.equal(character.Appearance.filter(i => i.Asset.Group.Name === 'ItemMouth').length, 1);
+    assert.ok(character.Appearance.includes(keep));
+    assert.equal(character.Appearance.filter(i => i.Asset.Group.Name === 'ItemArms').length, 2);
+    assert.deepEqual(notices, []);
 });

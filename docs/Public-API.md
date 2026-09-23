@@ -24,7 +24,7 @@ if (AFC?.isLover) { /* 已就緒 */ }
 
 | 方法 | 回傳 | 說明 |
 |---|---|---|
-| `version` | `string` | AFC 版本，如 `"0.7.1"` |
+| `version` | `string` | AFC 版本，由 `package.json` 注入 |
 | `isLover(memberNumber)` | `boolean` | 對方是否為**我**的拓展戀人 |
 | `getLoverStage(memberNumber)` | `0 \| 1 \| 2 \| null` | 戀人階段（見 [Stage](#stage-階段)）；非戀人為 `null` |
 | `getLoverRoom(memberNumber)` | `LoverRoom \| null` | 該戀人目前分享的**私人房間**（見 [跨房私人房](#跨房私人房)）；未分享／非戀人為 `null` |
@@ -134,7 +134,7 @@ modApi.hookFunction('InformationSheetClick', 8, (args, next) => {
 | `getPadlocks()` | `object` | `padlocks` map 的複本：`{ [groupName]: PadlockConfig }` |
 | `removeLock(groupName, { removeRestraint? })` | `boolean` | 解除自己身上指定部位的心形鎖（防作弊 integrity 不會還原） |
 | `clearAllLocks({ removeRestraints? })` | `number` | 清除自己**所有**心形鎖，回傳清除數量 |
-| `restoreStorage(data)` | `boolean` | 以外部資料還原心形鎖儲存（進階／備份用） |
+| `restoreStorage(data)` | `Promise<boolean>` | 還原含本人 `memberNumber` 的完整心鎖資料；缺失鎖須經 AFC 確認視窗同意 |
 
 ```js
 window.Liko?.AFC?.heartLock?.clearAllLocks();          // 清掉自己所有心鎖
@@ -221,7 +221,6 @@ const isLoverOfC = (C, memberNumber) =>
 | isHeartLock(itemOrBundle) | boolean | 辨識 Property.Name / HeartLockId，包括舊套裝殘留標記 |
 | isProtected(character, groupName) | boolean | 該角色的指定部位是否有心鎖標記，服裝工具應跳過覆寫與移除 |
 | sanitizeOutfitItem(bundleEntry) | object | 回傳去除心鎖資料的深複本；保留道具和其他設定，不修改穿戴中的物品 |
-| restoreStorage(data) | boolean | 匯入私人心鎖儲存；補回缺失或不同的鎖時詢問使用者，取消回傳 false |
 
 AEE 已整合以上 API，未安裝 AFC 時也保留標記辨識後備。BCX 匯出、衣櫃保存/匯入/匯出均不攜帶心鎖；「包含鎖」開啟也不例外。套裝與 BCX 預覽/提交/取消保留現在受保護的部位。一般鎖仍依 AEE 原有設定處理。
 

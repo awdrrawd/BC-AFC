@@ -8,10 +8,10 @@ import { _recentBeepKeys, AFCLockAccessOn } from '../core/state.js';
 import { _sendHidden, _clearAck, sendBeep } from './beep.js';
 import { t } from '../i18n/i18n.js';
 import { chatLocalNotice } from '../util/util.js';
-import { handleIncomingProposal, handleAccepted } from '../relations/propose.js';
-import { handleIncomingRestore, handleRestoreAccepted } from '../relations/restore.js';
-import { handleIncomingStageProposal, handleAcceptedStage } from '../relations/stage.js';
-import { isAFCLover, updateLastSeen, removeLover } from '../relations/lovers.js';
+import { handleIncomingProposal, handleAccepted } from '../features/relationships/propose.js';
+import { handleIncomingRestore, handleRestoreAccepted } from '../features/relationships/restore.js';
+import { handleIncomingStageProposal, handleAcceptedStage } from '../features/relationships/stage.js';
+import { isAFCLover, updateLastSeen, removeLover } from '../features/relationships/lovers.js';
 
 export function parseBeep(data) {
     if (!data) return;

@@ -1,64 +1,20 @@
 # Architecture & Data
 
-## 專案結構
+## 執行流程與責任
 
-原始碼模組化於 `src/`，由 **vite** 打包成單一 ES-module bundle `dist/assets/main.js`，推送到 `main` 後 GitHub Actions 自動部署到 Pages。薄 loader 以動態 `import()` 載入 bundle。
+`src/main.js` 先建立命名空間與重複載入守衛，再動態載入 `src/app.js`。核心初始化負責登入、設定與 API；Hook registry 管理掛鉤與計時器，心鎖使用獨立 scope 管理生命週期。
 
-```
-src/
-├─ main.js                進入點：建立 window.Liko.AFC，呼叫 initialize()
-├─ core/
-│  ├─ config.js           常數：版本、Beep 通道、階段、顏色、Profile 座標、圖片 URL
-│  ├─ state.js            關係流程的統一 runtime data tree
-│  ├─ socket.js           每個 ServerSocket event 的唯一 dispatcher
-│  ├─ settings.js         OnlineSharedSettings.AFC（共享）+ ExtensionSettings.AFC（私人）
-│  ├─ lover-backup.js     戀人資料本機備份 repository（不依賴共享設定）
-│  ├─ storage.js          localStorage「DB」保險箱 + factoryReset
-│  ├─ commands.js         /afc-* 聊天指令
-│  └─ core-init.js        初始化（載入期/登入後兩階段）+ 對外 API + 啟動 Heart Lock
-├─ hooks/                 所有 bcModSdk hook 的唯一存放處
-│  ├─ registry.js         hook / interval / timeout 的註冊與卸載生命週期
-│  ├─ index.js            AFC hook 與共用通道 dispatcher
-│  ├─ chat-message-channel.js  ChatRoomMessage 內部訂閱派送
-│  ├─ relationship-visual.js  戀人圖示、好友列表與對話 UI
-│  ├─ heartlock.js        HeartLock 遊戲函式 hook
-│  ├─ orgasm.js           HeartLock 高潮控制 hook
-│  └─ lifecycle.js        登入階段的一次性 hook
-├─ i18n/
-│  ├─ engine.js           canonical BC_i18n.js 的部署副本（→ window.Liko.__Sys_i18n__/__Sys_L10N__）
-│  ├─ i18n.js             AFC 本地 UI 翻譯（薄封裝）
-│  ├─ l10n.js             聊天在地化（薄封裝共用引擎）
-│  └─ strings/            文本資料（非引擎）：afc-ui / afc-actions / heartlock-ui / heartlock-actions
-├─ util/                  util（通用）、toast
-├─ net/                   beep（可靠傳輸）、beep-router、roomname、online、sync-data
-├─ relations/             戀人 model/service、共用 request manager、提案/升格/恢復流程
-├─ ui/                    proposal-ui、profile（面板/燈號/regions）、settings-page（偏好設定頁）
-└─ heartlock/             心形鎖（原獨立插件，現為 bundle 內模組）：
-                          config/state/util/datepicker/storage/permissions/lock/
-                          events/net/vibe/timer/note/panel/init；tabs/ 每頁一個模組
-```
+完整目錄見[原始碼目錄](source-layout.md)，功能索引見[架構圖](afc-architecture.html)。新增功能規則放 `features/`、遊戲接點放 `hooks/`、畫面放 `ui/`、訊息放 `net/`、版本補丁放 `compat/`。
 
-**引擎 vs 文本分離**：`i18n/engine.js`、`l10n.js`、`i18n.js` 是工具；所有翻譯字串在 `i18n/strings/`。HeartLock 透過中央 `i18n.js` 的 `hl` namespace 取字串，不另設一套 I18N。維護翻譯只改 `strings/`。
+關係流程狀態集中於 `core/state.js` 的 `relationRuntime`；心鎖狀態集中於 `features/heartlock/state.js`，依 `lifecycle`、`timers`、`vibe`、`operations`、`panel` 分組。這些是執行期狀態，不是第二份持久資料。
 
-**Hook 與通道**：所有 bcModSdk hook 實作集中於 `src/hooks/`，並共用同一個 registry。相同遊戲函式只有一個 AFC hook，再由內部呼叫各功能處理器；目前已合併 `ChatRoomMessage`、`ChatRoomSync`、`InformationSheetExit`、`FriendListLoadFriendList` 與 `ElementButton.Create`。L10N 不再自行安裝 `ChatRoomMessage` hook，而由中央入口呼叫。`ServerSocket` 也以每個 event 一個 dispatcher 管理所有訂閱者。
+`ChatRoomMessage` 由中央通道派送；`ServerSocket` 每個 event 使用同一個 dispatcher 管理訂閱者。Hook 與清理函式應透過 registry 註冊。
 
-**Runtime data tree**：關係請求、冷卻、ACK、房間狀態集中於 `core/state.js` 的 `relationRuntime`；HeartLock 則依 `lifecycle`、`timers`、`vibe`、`operations`、`panel` 分組。具名 export 僅是指向同一份資料的引用，供既有模組逐步採用，沒有建立第二份狀態。
+## 資料模型
 
----
+`ExtensionSettings.AFC_Data` 保存本人戀人主資料，`ExtensionSettings.AFC` 保存私人偏好，`ExtensionSettings.AFC_HeartLock` 保存心鎖與 Craft 範本。`OnlineSharedSettings` 只發布副本，舊本機戀人備份僅作遷移讀取來源。
 
-## 資料模型 / 持久化
-
-AFC 的資料刻意分散在多處以抗伺服器端清空：
-
-| 位置 | 內容 | 說明 |
-|---|---|---|
-| `Player.OnlineSharedSettings.AFC` | `lovers` / `lockPerms` / `vibeMsgMode` / `enableVibeSound` | **公開**共享資料（房內其他玩家/插件讀得到）。戀人清單的「活本」 |
-| `Player.ExtensionSettings.AFC` | 私人設定（緊湊格式 `{v, cfg[]}`） | 只有自己，顯示模式/開關等 |
-| `localStorage["AFC_DB::<帳號>"]` | 戀人清單備份 | 保險箱：偵測丟失/提供還原來源，抗 ExtensionSettings 被清空 |
-| `Player.ExtensionSettings.AFC_HeartLock` | 心形鎖 `padlocks` map | 心形鎖上鎖狀態 |
-| `localStorage["HL_DB::<帳號>"]` | 心形鎖備份 + 時間戳 | 對帳：伺服器被初始化時從 DB 還原 |
-
-型別細節見 **[Public API → 資料型別](Public-API.md#資料型別)**。
+完整保存、恢復與刪除規則統一見[資料保存](Storage.md)；對外回傳型別見[公開 API](Public-API.md#資料型別)。
 
 ---
 
@@ -105,7 +61,7 @@ AFC 的資料刻意分散在多處以抗伺服器端清空：
 
 ```bash
 npm install
-npm run build       # 打包到 dist/（prebuild 會由 copy-assets 把 Images/ → public/）
+npm run build       # 打包到 dist/，並複製圖片與 Translation 字庫
 npm run lint        # eslint
 npm run dev         # vite build --watch + preview :5175（配 loader.local.user.js 本地開發）
 ```
@@ -121,7 +77,7 @@ npm run dev         # vite build --watch + preview :5175（配 loader.local.user
 | `loader.user.js` | `awdrrawd.github.io/BC-AFC/assets/main.js` | 正式：Tampermonkey/FUSAM/PCM |
 | `loader.local.user.js` | `http://localhost:5175/assets/main.js` | 本地開發（配 `npm run dev`） |
 
-兩者都以 `window.Liko.AFC` 作重複載入守衛（先設 `'loading'`），並 `@require` bcModSdk。
+執行入口以 `window.Liko.AFC` 作重複載入守衛。Vite 輸出 `dist/assets/main.js` 載入入口及 `dist/assets/app.js` 應用程式；兩個檔案必須一起發布。
 
 ---
 
@@ -129,4 +85,4 @@ npm run dev         # vite build --watch + preview :5175（配 loader.local.user
 
 - [bcModSdk](https://github.com/Jomshir98/bondage-club-mod-sdk) — loader 已 `@require`，其他插件自行 `registerMod` 即可（AFC **不**對外公開自己的 modApi；bcModSdk 本身即共用模組體系）。
 - 座標系：BC **2000×1000** 虛擬畫布。
-- BC R100+（DOM 面板 / ElementButton）。
+- 目前 R132 適配與驗收範圍見 [R132 相容性](r132-compatibility.md)。

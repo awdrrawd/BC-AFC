@@ -59,5 +59,11 @@
   "timerExpired": "{1} {0} розчиняється у м'якому світлі, коли настає обумовлений момент.",
   "unlockDone": "{0} відкрив(ла) {2} на {1}.",
   "dbRestoreAnomaly": "⚠ Онлайн-дані HeartLock у {0} аномально втрачено та відновлено з локальної резервної копії для: {1}. Якщо це були не ви, зверніться до власника замка.",
-  "confirmLockRecovery": "Restore missing or different Heart Locks on {0}? You may not be able to unlock them yourself."
+  "confirmLockRecovery": "Restore missing or different Heart Locks on {0}? You may not be able to unlock them yourself.",
+  "craftLockTitle": "Налаштування сердечного замка виробу",
+  "craftLockDuration": "Тривалість (хвилини; 0 — без таймера)",
+  "craftLockRemove": "Зняти предмет після завершення таймера",
+  "craftLockHint": "Збережіть налаштування на вкладках замка та підтвердьте створення. Відлік тривалості починається під час фактичного замикання.",
+  "craftLockSave": "Застосувати налаштування",
+  "craftLockCancel": "Скасувати"
 }

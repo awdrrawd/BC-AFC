@@ -48,7 +48,7 @@
 
 R132 的 `ItemPropertiesCompress` 會丟棄 AFC 的 `Name`、`HeartLockId`、`LockPickSeed`、`ExclusiveUnlock`。心鎖實際使用 `HighSecurityPadlock`，僅登記獨立 HeartLock 資產不能解決此問題。
 
-`src/heartlock/r132-properties.js` 對壓縮／解壓縮加上限定於心鎖的適配：僅保留以上四個型別正確的欄位，不放寬一般物品或其他插件屬性的白名單。遵守 `allowLocks: false` 與 `omit`，不將心鎖資料帶入排除鎖的匯出。原生鎖本身仍交給 BC 處理。
+`src/compat/r132-heartlock.js` 對壓縮／解壓縮加上限定於心鎖的適配：僅保留以上四個型別正確的欄位，不放寬一般物品或其他插件屬性的白名單。遵守 `allowLocks: false` 與 `omit`，不將心鎖資料帶入排除鎖的匯出。原生鎖本身仍交給 BC 處理。
 
 針對已經遺失識別欄位的舊存檔，角色刷新、既有外觀對帳與 Hidden 心鎖資料到達後，可從既有設定補回標記；必須符合帳號、物品、掛鎖者與 lockId 檢查。沒有設定、物品已解鎖、資產／掛鎖者不符或已有不同 lockId 時不補回，不穿戴、不重新上鎖、不覆蓋不同物品。此程序只還原可確認的識別資料，不猜測已遺失的自訂值。
 
@@ -56,7 +56,7 @@ R132 的 `ItemPropertiesCompress` 會丟棄 AFC 的 `Name`、`HeartLockId`、`Lo
 
 舊 hook 只處理 `InventoryRemove(C, group)`，未涵蓋 R132 的槽位陣列、直接 `InventoryRemoveItems` 與 `Item[]` 回傳契約。
 
-`src/heartlock/removal.js` 改在共同入口 `InventoryRemoveItems` 檢查，原生 `InventoryRemove` 仍負責轉換單一／多個槽位。混合批次保留可移除項目，阻擋時回傳空陣列；涵蓋 `RemoveItemOnRemove` 相依項目、型別條件及呼叫端覆寫。設定清理／通知只針對實際移除項目執行一次。計時到期與既有復原流程維持原來的放行語意。
+`src/hooks/heartlock/removal.js` 改在共同入口 `InventoryRemoveItems` 檢查，原生 `InventoryRemove` 仍負責轉換單一／多個槽位。混合批次保留可移除項目，阻擋時回傳空陣列；涵蓋 `RemoveItemOnRemove` 相依項目、型別條件及呼叫端覆寫。設定清理／通知只針對實際移除項目執行一次。計時到期與既有復原流程維持原來的放行語意。
 
 原生 `ChatRoomSafewordRelease` 呼叫期間另有受限的放行旗標，`CharacterReleaseTotal` 不會復原心鎖；移除後仍清理設定，呼叫失敗也會解除旗標，避免新的共同入口攔截擋住原生釋放。
 
@@ -87,3 +87,29 @@ R132 的 `ItemPropertiesCompress` 會丟棄 AFC 的 `Name`、`HeartLockId`、`Lo
 - 新版遠端 Apply 隨附完成上鎖的快照，避免 Hidden 與外觀事件順序不同而保存了舊物品。舊版 Apply 沒有快照時等待匹配的實體鎖，不從未上鎖的替代品建立備份。
 - 已檢查本機 R132 `ServerPlayerExtensionSettingsSync`：直接傳送指定 ExtensionSettings 值，不呼叫 `ItemPropertiesCompress`。因此私人備份維持完整普通 JSON，不能改存會省略預設值與自訂欄位的 appearance bundle。房內設定廣播不再包含完整快照與復原歷史；R132 `omit` 支援 Set 等 Iterable。
 - 測試更新本機 R132 壓縮／解壓縮函式摘錄與 SHA256，新增原生 ExtensionSettings 同步摘錄及生命週期回歸案例。VM 測試不代表已完成實際伺服器登入、斷線與雙客戶端驗收。
+
+
+## 2026-09-23：Craft 心鎖範本
+
+- Craft 鎖清單加入 AFC 心鎖。選取時在 `crafting-screen-header` 的選單新增 `Icons/InspectLock.png` 按鈕，開啟共用心鎖面板的本地草稿，可調整筆記、震動、高潮模式、上鎖分鐘數及到期移除道具。分鐘數 0 表示無計時；真正使用時才產生到期時間。
+- 共用面板先修改本地草稿；按原生製作確認後才同步到 `ExtensionSettings.AFC_HeartLock.craftLocks`。資料使用版本 1、槽位、原生序列化配方識別與白名單設定，排序維持綁定，刪除配方或改成普通鎖會清理。相同配方可在不同槽位保存不同設定；完全相同且失去槽位身分的外部複本若對應多種設定，不猜測其心鎖設定。
+- 原生 Craft 的 `Lock` 存空字串，拓展鎖種類與設定由私人 ExtensionSettings 持有。這避免未安裝插件、登入驗證或未購買原生 HighSecurityPadlock 時，白名單清掉自訂鎖名稱。普通 Craft 匯出不包含這份私人設定；在另一帳號匯入時需要重新選擇／設定心鎖。
+- 製作品使用經過原本上鎖權限檢查；成功套用 Craft 後，才以 HighSecurityPadlock 建立實體心鎖並傳送設定及完整快照。已有鎖不覆蓋，預覽及 `PreConfigureItem=false` 不產生真鎖。`InventoryWear` 的原生複製與最終顏色處理完成後才保存快照。
+- 七語系及離線 TW/EN 後備文字已同步。新增原生 Craft 序列化／轉換函式摘錄與回歸測試，涵蓋 UI 草稿、重新載入、排序／刪除、權限、失敗驗證、遠端設定與原生穿戴複製。
+- 尚未在實際 R132 伺服器完成雙客戶端 UI／穿戴驗收。
+
+
+### 後續實機回報修正
+
+- 檢查鎖按鈕改用 `ElementButton.Create`、`role=menuitem` 與原生 `--menu-button-size`（BC 座標 90×90），沿用原生邊框、hover、圖示、tooltip 及鍵盤互動。
+- 刪除獨立 Craft 表單，改用現有 `openHLPanel` 與概覽／筆記／計時／控制分頁。本地草稿介面攔截設定讀寫，不建立角色、不加入房間、不傳送設定訊息或修改身上鎖。計時分頁設定的時間換成相對時長；無實體鎖故不顯示解鎖分頁。
+- 實機 `componentGraph.adjacencyList[v] is not iterable` 可以用原生 `CharacterAppearanceSetItem` + `DirectedGraph` 重現：舊 AFC 阻擋原生替換的移除步驟，但原生函式仍 append 新物品，導致同一 group 重複。伺服器同步現在讓 BC 完成原生替換，再交由 AFC 對帳；本地未授權替換在進入原生替換前直接拒絕，避免半套替換。同步重建不當成合法解鎖，不刪除已保存的 config。
+- 下次同步前可清理此舊錯誤留下的重複部位，但僅限保存的 AFC asset/owner/lockId 能明確識別保留項目時；不清理其他插件的無關物品，不修改或略過 Graph 循環檢查。
+- 附件的 Craft.Name 是 `213`，另一條空字串 Craft.Name 警告沒有足夠堆疊可定位；HCR／服裝拓展保存訊息不是錯誤，`煎包.png` 404 是另一個資產路徑，非 AFC 心鎖圖示。瀏覽器訊息通道關閉的報錯亦不足以歸因 AFC。
+
+
+### 文件與範本清理補充
+
+- Craft 狀態圖示與清單可見性已接入原生流程；心鎖範本另依目標角色的戀人／主人權限顯示，使用時再次驗證。
+- 刪除 Craft 僅清除對應範本參數，空的 `craftLocks` 容器仍保留；同一槽位重用不能繼承舊參數，其他槽位與穿戴鎖不受影響。
+- 目前目錄見[原始碼目錄](source-layout.md)，完整持久化規則見[資料保存](Storage.md)。本文件各日期的測試數及部署狀態屬當時紀錄。

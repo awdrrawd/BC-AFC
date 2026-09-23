@@ -59,5 +59,11 @@
   "timerExpired": "{0}身上的{1}随约定时刻到来，化作点点微光悄然消散。",
   "unlockDone": "{0}解开了{1}身上的{2}。",
   "dbRestoreAnomaly": "⚠ {0}的心锁在线数据异常丢失，已由本机备份还原以下部位：{1}。若非你本人操作，请与锁主确认。",
-  "confirmLockRecovery": "发现缺失或不同的心锁：{0}。恢复后可能无法自行解锁。是否恢复？"
+  "confirmLockRecovery": "发现缺失或不同的心锁：{0}。恢复后可能无法自行解锁。是否恢复？",
+  "craftLockTitle": "检查制作物心锁",
+  "craftLockDuration": "上锁时间（分钟，0 表示不计时）",
+  "craftLockRemove": "到期时一并移除道具",
+  "craftLockHint": "在心锁分页保存设置，再按制作画面的确认按钮保存制作品。计时表示使用后的锁定时长，从实际上锁开始。",
+  "craftLockSave": "应用锁设置",
+  "craftLockCancel": "取消"
 }

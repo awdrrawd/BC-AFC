@@ -245,3 +245,32 @@ function InventoryRemoveItems(C, items, options=null) {
 	}
 	return removalItems;
 }
+
+// Native CharacterAppearanceSetItem SHA256 dbc8239bb5de5be7ad60ad305aac5eaf20561ad416fc967c8add90b8439ed00a
+function CharacterAppearanceSetItem(C, Group, ItemAsset, NewColor=null, DifficultyFactor=null, ItemMemberNumber=null) {
+
+	// Sets the difficulty factor
+	DifficultyFactor ??= 0;
+
+	// Removes the previous if we need to
+	const prevItem = InventoryGet(C, Group);
+	if (prevItem) {
+		// Do not remove any sub items if the new asset also supports them (e.g. don't remove bed-specific restraints when swapping the bed for the medical bed)
+		const removeItemOnRemove = AssetGetRemoveOnItemRemoveDiff(prevItem.Asset.RemoveItemOnRemove, ItemAsset?.RemoveItemOnRemove ?? []);
+		InventoryRemoveItems(C, prevItem, { removeItemOnRemove, refresh: false });
+	}
+
+	if (!ItemAsset) {
+		return null;
+	}
+
+	if (prevItem && !ItemColorIsDefault(prevItem)) {
+		NewColor ??= prevItem.Color;
+	}
+
+	// Add the new item to the character appearance
+	const NA = AppearanceItem.fromAsset(ItemAsset, { color: NewColor ?? undefined, difficulty: ItemAsset.Difficulty + DifficultyFactor });
+	ExtendedItemInit(C, NA, false, false);
+	C.Appearance.push(NA);
+	return NA;
+}

@@ -59,5 +59,11 @@
   "timerExpired": "Das {1} von {0} löst sich in sanftes Licht auf, als der vereinbarte Moment kommt.",
   "unlockDone": "{0} hat {2} von {1} entsperrt.",
   "dbRestoreAnomaly": "⚠ {0}s HeartLock-Onlinedaten gingen unerwartet verloren und wurden aus der lokalen Sicherung wiederhergestellt für: {1}. Falls du das nicht warst, wende dich bitte an den Schlossbesitzer.",
-  "confirmLockRecovery": "Restore missing or different Heart Locks on {0}? You may not be able to unlock them yourself."
+  "confirmLockRecovery": "Restore missing or different Heart Locks on {0}? You may not be able to unlock them yourself.",
+  "craftLockTitle": "Herzschloss des gefertigten Gegenstands prüfen",
+  "craftLockDuration": "Sperrdauer (Minuten; 0 ohne Timer)",
+  "craftLockRemove": "Gegenstand nach Ablauf entfernen",
+  "craftLockHint": "Einstellungen in den Schlossreitern speichern, dann das Rezept bestätigen. Die Sperrdauer beginnt erst beim tatsächlichen Abschließen.",
+  "craftLockSave": "Schlosseinstellungen übernehmen",
+  "craftLockCancel": "Abbrechen"
 }

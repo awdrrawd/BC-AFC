@@ -1,10 +1,11 @@
+import { getLockDraft } from '../src/features/heartlock/crafting/draft-config.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import { URL } from 'node:url';
 import v8 from 'node:v8';
-import { normalizeLoverList } from '../src/relations/lover-model.js';
+import { normalizeLoverList } from '../src/features/relationships/lover-model.js';
 const structuredClone = value => v8.deserialize(v8.serialize(value));
 
 function run(path, globals) {
@@ -139,9 +140,9 @@ function locks(current, backup, accept) {
         ExtensionSettings: { AFC_HeartLock: current }, OnlineSharedSettings: { AFC_HeartLock: backup } };
     let questions = 0;
     const events = [];
-    const c = run('../src/heartlock/storage.js', { Player,
+    const c = run('../src/features/heartlock/storage.js', { Player,
         window: { Player }, confirmInAFC: async () => { questions++; return accept; },
-        restoreHeartLockMarkers() {}, _pendingRestore: new Set(), state: { operations: {} },
+        getLockDraft, restoreHeartLockMarkers() {}, _pendingRestore: new Set(), state: { operations: {} },
         DEFAULT_STORAGE: { padlocks: {}, updatedAt: 0 }, HSLOCK_NAME: 'HighSecurityPadlock', EXT_KEY: 'AFC_HeartLock',
         clone: structuredClone, T: key => key, emitHeartLockEvent: event => events.push(event),
         ServerPlayerExtensionSettingsSync() {}, ServerAccountUpdate: { QueueData() {} },
@@ -216,7 +217,7 @@ test('stale heartlock replies cannot overwrite an account or a changed active lo
 });
 
 test('profile follows BC selection and never falls back to the player', () => {
-    let source = fs.readFileSync(new URL('../src/ui/profile.js', import.meta.url), 'utf8');
+    let source = fs.readFileSync(new URL('../src/ui/relationships/profile.js', import.meta.url), 'utf8');
     source = source.slice(source.indexOf('export function getCurrentViewingCharacter()'), source.indexOf('export function drawProfileButton'))
         .replace(/export /g, '');
     const Player = { MemberNumber: 1 };
@@ -250,7 +251,7 @@ test('late online query from a previous account cannot update the new account ca
 
 test('backup recovery adds missing lovers without deleting others or resetting dates', () => {
     const lovers = [{ memberNumber: 2, startDate: 100 }, { memberNumber: 3, startDate: 200 }];
-    const c = run('../src/relations/backup-restore.js', {
+    const c = run('../src/features/relationships/backup-restore.js', {
         getSharedSettings: () => ({ lovers }),
         readBackupLovers: () => [{ memberNumber: 2, startDate: 999 }, { memberNumber: 4, startDate: 300 }],
         getLoverEntry: num => lovers.find(l => l.memberNumber === num),

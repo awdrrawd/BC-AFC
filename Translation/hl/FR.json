@@ -59,5 +59,11 @@
   "timerExpired": "Le {1} de {0} se dissout en une douce lueur à l'heure convenue.",
   "unlockDone": "{0} a déverrouillé le {2} de {1}.",
   "dbRestoreAnomaly": "⚠ Les données en ligne du HeartLock de {0} ont été anormalement perdues et restaurées depuis la sauvegarde locale pour : {1}. Si ce n'était pas vous, veuillez vérifier avec le propriétaire du verrou.",
-  "confirmLockRecovery": "Restore missing or different Heart Locks on {0}? You may not be able to unlock them yourself."
+  "confirmLockRecovery": "Restore missing or different Heart Locks on {0}? You may not be able to unlock them yourself.",
+  "craftLockTitle": "Inspecter le cadenas cœur fabriqué",
+  "craftLockDuration": "Durée (minutes ; 0 désactive le minuteur)",
+  "craftLockRemove": "Retirer l’objet à l’expiration",
+  "craftLockHint": "Enregistrez les réglages dans les onglets du cadenas, puis confirmez la création. La durée commence au verrouillage effectif.",
+  "craftLockSave": "Appliquer les réglages",
+  "craftLockCancel": "Annuler"
 }

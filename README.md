@@ -169,8 +169,8 @@ npm run dev         # vite build --watch + preview :5175，配 loader.local.user
 
 - **本地開發**：安裝 `loader.local.user.js`（改讀 `http://localhost:5175/assets/main.js`），跑 `npm run dev` 後重整 BC 即可即時看到改動。  
   **Local dev:** install `loader.local.user.js` (reads from `http://localhost:5175/assets/main.js`), run `npm run dev`, reload BC.
-- 心形鎖（Heart Lock）已是 `src/heartlock/` 內的模組，與 AFC 一起打包，**不再是獨立 URL 腳本**。  
-  Heart Lock is now a module under `src/heartlock/`, bundled together with AFC — no longer a separate URL script.
+- 心形鎖邏輯位於 `src/features/heartlock/`，介面位於 `src/ui/heartlock/`，與 AFC 一起打包。完整目錄見 [架構說明](docs/architecture.md)。
+  Heart Lock is bundled with AFC; see the architecture document for module responsibilities.
 
 ---
 

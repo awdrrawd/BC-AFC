@@ -5,7 +5,7 @@
 
 import { MOD_VERSION, MAX_AFC_LOVERS } from './config.js';
 import { setLastKnownLoverCount } from './state.js';
-import { normalizeLoverList } from '../relations/lover-model.js';
+import { normalizeLoverList } from '../features/relationships/lover-model.js';
 import { readLegacyLocalLovers } from './lover-backup.js';
 import { broadcastAFCData } from '../net/sync-data.js';
 import { confirmInAFC } from '../ui/confirmation.js';

@@ -10,8 +10,8 @@ import {
 } from '../core/settings.js';
 import { factoryReset } from '../core/storage.js';
 import { readBackupLovers } from '../core/lover-backup.js';
-import { initiateBreakup } from '../relations/breakup.js';
-import { restoreAllLovers, restoreLover } from '../relations/backup-restore.js';
+import { initiateBreakup } from '../features/relationships/breakup.js';
+import { restoreAllLovers, restoreLover } from '../features/relationships/backup-restore.js';
 import { t, stageLabel } from '../i18n/i18n.js';
 import { daysSince, chatLocalNotice } from '../util/util.js';
 

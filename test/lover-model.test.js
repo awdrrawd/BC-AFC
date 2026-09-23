@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
     normalizeLover, normalizeLoverList, normalizeMemberNumber, sameMemberNumber,
-} from '../src/relations/lover-model.js';
+} from '../src/features/relationships/lover-model.js';
 
 test('normalizes valid member numbers and rejects invalid identifiers', () => {
     assert.equal(normalizeMemberNumber('42'), 42);
