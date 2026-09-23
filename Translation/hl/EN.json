@@ -59,5 +59,11 @@
   "timerExpired": "The {1} on {0} dissolves into a gentle shimmer as the promised moment arrives.",
   "unlockDone": "{0} unlocked the {2} on {1}.",
   "dbRestoreAnomaly": "⚠ {0}'s HeartLock online data was abnormally lost and has been restored from the local backup for: {1}. If this was not you, please check with the lock owner.",
-  "confirmLockRecovery": "Restore missing or different Heart Locks on {0}? You may not be able to unlock them yourself."
+  "confirmLockRecovery": "Restore missing or different Heart Locks on {0}? You may not be able to unlock them yourself.",
+  "craftLockTitle": "Inspect crafted Heart Lock",
+  "craftLockDuration": "Lock duration (minutes; 0 disables the timer)",
+  "craftLockRemove": "Remove the item when the timer expires",
+  "craftLockHint": "Save settings in the lock tabs, then confirm the recipe. The timer represents the duration after use and starts when the item is locked.",
+  "craftLockSave": "Apply lock settings",
+  "craftLockCancel": "Cancel"
 }

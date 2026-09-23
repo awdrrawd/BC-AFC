@@ -411,6 +411,13 @@ const AFC_FALLBACK = {
     }
 };
 const HL_FALLBACK = {
+    "craftLockTitle": {"TW": "檢查製作品心鎖", "EN": "Inspect crafted Heart Lock"},
+    "craftLockDuration": {"TW": "上鎖時間（分鐘，0 表示不計時）", "EN": "Lock duration (minutes; 0 disables the timer)"},
+    "craftLockRemove": {"TW": "到期時一併移除道具", "EN": "Remove the item when the timer expires"},
+    "craftLockHint": {"TW": "在心鎖分頁保存設定，再按製作畫面的確認按鈕保存製作品。計時表示使用後的鎖定時長，從實際上鎖開始。", "EN": "Save settings in the lock tabs, then confirm the recipe. The timer represents the duration after use and starts when the item is locked."},
+    "craftLockSave": {"TW": "套用鎖設定", "EN": "Apply lock settings"},
+    "craftLockCancel": {"TW": "取消", "EN": "Cancel"},
+
     "confirmLockRecovery": {"TW":"發現缺失或不同的心鎖：{0}。恢復後可能無法自行解鎖。是否恢復？","EN":"Restore missing or different Heart Locks on {0}? You may not be able to unlock them yourself."},
     "tabOverview": {
         "TW": "總覽",

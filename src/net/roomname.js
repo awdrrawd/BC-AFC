@@ -9,7 +9,7 @@ import { getSharedSettings } from '../core/settings.js';
 import { refreshOnlineFriends, isOnline } from './online.js';
 import { sendAccountBeep } from './beep.js';
 import { sleep } from '../util/util.js';
-import { isAFCLover } from '../relations/lovers.js';
+import { isAFCLover } from '../features/relationships/lovers.js';
 
 // 進房 / 改房 / 建房後：把房名廣播給所有在線戀人
 export async function broadcastRoomNameToLovers() {

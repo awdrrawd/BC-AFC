@@ -1,8 +1,8 @@
 import { STAGE_COLOR } from '../core/config.js';
 import { getSharedSettings } from '../core/settings.js';
 import { stageLabel } from '../i18n/i18n.js';
-import { injectAFCDialogs } from '../relations/dialog.js';
-import { isAFCLover } from '../relations/lovers.js';
+import { injectAFCDialogs } from '../features/relationships/dialog.js';
+import { isAFCLover } from '../features/relationships/lovers.js';
 
 export function installRelationshipVisualHooks(registry) {
     const { hook } = registry;

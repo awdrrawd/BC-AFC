@@ -18,7 +18,7 @@ function runtime(count) {
     });
     c.DrawImageResize = (...args) => c.images.push(args);
     c.setProfilePanelOpen = value => { c.profilePanelOpen = value; };
-    vm.runInContext(fs.readFileSync(new URL('../src/ui/profile.js', import.meta.url), 'utf8')
+    vm.runInContext(fs.readFileSync(new URL('../src/ui/relationships/profile.js', import.meta.url), 'utf8')
         .replace(/^import[\s\S]*?;\r?\n/gm, '').replace(/export /g, ''), c);
     return { c, lovers };
 }

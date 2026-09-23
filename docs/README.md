@@ -1,39 +1,37 @@
-# BC-AFC Documentation
+# AFC 技術文件
 
-**Abundantia Florum ─Chromatica─ (AFC)** — 拓展戀人系統，內含 **Heart Lock（心形鎖）**，兩者打包為單一 bundle。
+文件供維護者與其他插件作者使用；安裝與功能介紹見[專案 README](../README.md)。
 
-> 這些頁面是給**其他插件作者**與**維護者**看的技術文件。一般使用者請看 [README](https://github.com/awdrrawd/BC-AFC)。
+## 閱讀入口
 
-## 頁面
+| 文件 | 用途 |
+|---|---|
+| [架構總覽](architecture.md) | 模組邊界與閱讀順序 |
+| [原始碼目錄](source-layout.md) | 目前資料夾、檔案責任與 Craft 心鎖分工 |
+| [架構圖](afc-architecture.html) | 可搜尋的功能與模組索引 |
+| [執行流程與通訊](Architecture-and-Data.md) | 初始化、通道、Hook、建置與部署 |
+| [資料保存](Storage.md) | 主資料、公開副本、恢復、快照與 Craft 範本清理 |
+| [公開 API](Public-API.md) | `window.Liko.AFC`、Profile 整合與心鎖 API |
+| [翻譯引擎](Localization-Engine.md) | 字庫維護、介面與聊天在地化 |
+| [R132 相容性](r132-compatibility.md) | 版本修補紀錄、回歸案例與遊戲內驗收項目 |
+| [GitHub 自動化](GitHub-Automation.md) | CI、Pages 與儲存庫設定 |
 
-- **[Interactive Architecture Map](afc-architecture.html)** — 左側功能索引與右側束狀檔案關聯圖。
-- **[Architecture Guide](architecture.md)** — 功能分支圖入口與模組責任邊界。
-- **[Public API](Public-API.md)** — `window.Liko.AFC`：戀人查詢、Profile 面板整合（在戀人條目上疊按鈕）、心形鎖 API。
-- **[Localization Engine](Localization-Engine.md)** — 跨插件共用的翻譯引擎 `window.Liko.__Sys_i18n__` / `__Sys_L10N__`：介面字串 + 聊天訊息在地化（送英文底本、接收端各看各語言）。
-- **[Architecture & Data](Architecture-and-Data.md)** — 模組結構、資料模型（OnlineSharedSettings / ExtensionSettings / localStorage）、建置與部署、Loader、聊天指令。
-
-## 一分鐘速覽
+## 快速查詢
 
 ```js
-const AFC = window.Liko?.AFC;              // 對外唯一入口（含 .heartLock 子節點）
-AFC?.version;                              // "0.7.1"
-AFC?.isLover(123456);                      // 對方是否為我的拓展戀人
-AFC?.getLovers();                          // 我的戀人清單（唯讀複本）
-AFC?.isProfilePanelOpen();                 // 「更多戀人」面板是否展開中
-AFC?.getProfileLoverRegions();             // 面板中各戀人條目的螢幕矩形＋資料
-
-const L10N = window.Liko?.__Sys_L10N__;    // 共用聊天在地化引擎
-L10N?.register('myplugin', { hi: { EN:'Hi {0}', ZH:'嗨 {0}' } });
-L10N?.send('myplugin', 'hi', playerName);  // 發一條在地化 Action
+const AFC = window.Liko?.AFC;
+AFC?.version;                 // 建置版本由 package.json 注入
+AFC?.isLover(123456);
+AFC?.getLovers();             // 本人戀人主資料的複本
+AFC?.isProfilePanelOpen();
+AFC?.getProfileLoverRegions(); // 目前頁面可見條目的矩形與資料
 ```
 
-## 座標系與相容性
+畫面座標使用 BC 2000×1000 虛擬畫布。戀人上限為 20 人，Profile 每頁顯示 10 人；下一頁右向三角在第二頁再按會回第一頁，方向不變。
 
-- 所有畫面座標為 **BC 2000×1000 虛擬畫布**（與 `DrawButton` / `MouseIn` 同一套）。
-- 相依：[bcModSdk](https://github.com/Jomshir98/bondage-club-mod-sdk)（loader 已 `@require`）。
-- 相容 BC R100+（DOM 面板 / ElementButton）。
+## 維護原則
 
-## 版本與來源
-
-- 原始碼：<https://github.com/awdrrawd/BC-AFC>（`src/` 模組化，vite 打包成 `dist/assets/main.js`，CI 部署 GitHub Pages）。
-- Bundle：`https://awdrrawd.github.io/BC-AFC/assets/main.js`
+- 目錄與責任以 `source-layout.md` 為準；持久化規則集中於 `Storage.md`。
+- 版本修補及當時驗證結果放在 R132 紀錄，不當成所有版本的相容保證。
+- 保留既有文件檔名與連結，避免外部引用失效。
+- 修改程式後按影響範圍執行 `npm test`、`npm run lint`、`npm run build`、`npm run check:assets`。

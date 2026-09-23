@@ -16,21 +16,21 @@ import { registerSocketListener } from '../core/socket.js';
 import {
     getCurrentViewingCharacter, drawProfileButton, drawProfilePanel,
     drawBCRelationDots, handleProfileClick,
-} from '../ui/profile.js';
+} from '../ui/relationships/profile.js';
 import { refreshOnlineFriends, syncWithOnlineLovers } from '../net/online.js';
 import { sendBeep } from '../net/beep.js';
 import { parseBeep } from '../net/beep-router.js';
 import { parseAccountBeep, broadcastRoomNameToLovers, clearSharedRoomName } from '../net/roomname.js';
 import { broadcastAFCData, handleAFCSyncData } from '../net/sync-data.js';
-import { handleBCLoverProposal } from '../relations/breakup.js';
-import { reconcileWithRoom } from '../relations/reconcile.js';
+import { handleBCLoverProposal } from '../features/relationships/breakup.js';
+import { reconcileWithRoom } from '../features/relationships/reconcile.js';
 import { installRelationshipVisualHooks, installRelationshipDialogHooks, decorateFriendList } from './relationship-visual.js';
-import { handleHidden } from '../heartlock/net.js';
-import { state as heartLockState } from '../heartlock/state.js';
+import { handleHidden } from '../net/heartlock.js';
+import { state as heartLockState } from '../features/heartlock/state.js';
 import { localizeChatRoomMessage } from '../i18n/l10n.js';
-import { HL_PANEL_ID } from '../heartlock/config.js';
-import { removeHLPanel } from '../heartlock/panel.js';
-import { ensureStorage as ensureHeartLockStorage } from '../heartlock/storage.js';
+import { HL_PANEL_ID } from '../features/heartlock/config.js';
+import { removeHLPanel } from '../ui/heartlock/panel.js';
+import { ensureStorage as ensureHeartLockStorage } from '../features/heartlock/storage.js';
 import { dispatchChatRoomMessage } from './chat-message-channel.js';
 import { getSharedSettings } from '../core/settings.js';
 
