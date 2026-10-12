@@ -22,6 +22,10 @@ export function setupOrgasmHooks(hook) {
     };
     hook('ActivityOrgasmPrepare', 11, (args, next) => {
         if (!args[0]?.IsPlayer?.()) return next(args);
+        // 高潮讀條／高潮已在進行：忽略重複的 Prepare。原生 Prepare 會把 OrgasmTimer 重設為 now+5s 並把
+        // OrgasmStage 打回 0，任何外力（震動、其他插件）重複觸發都會讓讀條永遠走不完。
+        const running = Player.ArousalSettings?.OrgasmTimer;
+        if (typeof running === 'number' && running > 0) return;
         const mode = getMode();
         // edge：對齊 BC 原生 IsEdged()，封頂 95、永不高潮
         if (mode === 'edge') { if (Player.ArousalSettings?.Progress != null) Player.ArousalSettings.Progress = 95; return; }

@@ -223,3 +223,54 @@ test('shared panel routes draft edits locally, never through worn-lock storage o
     assert.equal(settings.note, 'Draft'); assert.equal(c.getPadlockConfig(draft.character, 'ItemArms'), null);
     assert.equal(c.sent.length, 0); assert.equal(JSON.stringify(c.Player.ExtensionSettings), original);
 });
+
+test('vibration never advances arousal while an orgasm timer is running (no endless orgasm bar)', () => {
+    const { c } = runtime();
+    const progress = [];
+    c.ActivityTimerProgress = (_player, delta) => progress.push(delta);
+    c.ActivityChatRoomArousalSync = () => {};
+    c.getSharedSettings = () => ({ enableVibeSound: false, vibeMsgMode: 'off' });
+    c.VIBE_MSG_CYCLE = 12; c.VIBE_INTERVAL_MS = 5000;
+    c.state.vibe = { cycle: 0, animationUntil: 0, animationLevel: 0 };
+    c.state.timers = { vibe: null, vibeAnimation: null };
+    c.setInterval = () => 1;
+    c.clearInterval = () => {};
+    c.Player.HeartLock.padlocks.ItemArms.vibe = 'high';
+    c.Player.Appearance[0].Property.HeartLockId = 'lock1';
+    c.Player.ArousalSettings = { Progress: 100, OrgasmTimer: 0, OrgasmStage: 0 };
+
+    c.vibeStep();                                   // no orgasm yet → vibration still builds arousal
+    assert.deepEqual(progress, [3]);
+
+    c.Player.ArousalSettings.OrgasmTimer = 6000;    // orgasm bar running (stage 0/1) or orgasm in progress (stage 2)
+    c.vibeStep(); c.vibeStep();
+    assert.deepEqual(progress, [3], 'vibeStep must not re-trigger ActivityOrgasmPrepare and reset the bar');
+
+    c.Player.ArousalSettings.OrgasmTimer = 1;       // expired but not yet processed by BC Timer.js → still hands-off
+    c.vibeStep();
+    assert.deepEqual(progress, [3]);
+
+    c.Player.ArousalSettings.OrgasmTimer = 0;       // BC finished the orgasm → vibration resumes
+    c.vibeStep();
+    assert.deepEqual(progress, [3, 3]);
+});
+
+test('orgasm hook ignores a repeated ActivityOrgasmPrepare while the orgasm bar is running', () => {
+    const hooks = {};
+    const c = vm.createContext({ HEARTLOCK_NAME: 'HeartLock', ensureStorage: () => true, InventoryGet: () => null });
+    vm.runInContext(fs.readFileSync(new URL('../src/hooks/heartlock/orgasm.js', import.meta.url), 'utf8')
+        .replace(/^import [\s\S]*?;\r?\n/gm, '').replace(/export /g, ''), c);
+    c.setupOrgasmHooks((name, _priority, fn) => { hooks[name] = fn; });
+    const player = c.Player = { IsPlayer: () => true, Effect: [], HeartLock: { padlocks: {} },
+        ArousalSettings: { Progress: 100, OrgasmTimer: 9000, OrgasmStage: 1 } };
+    let natives = 0;
+    const next = () => { natives++; };
+
+    hooks.ActivityOrgasmPrepare([player], next);
+    assert.equal(natives, 0, 'native Prepare would reset OrgasmTimer to now+5s and OrgasmStage to 0');
+    assert.equal(player.ArousalSettings.OrgasmStage, 1);
+
+    player.ArousalSettings.OrgasmTimer = 0;
+    hooks.ActivityOrgasmPrepare([player], next);
+    assert.equal(natives, 1, 'a fresh orgasm still goes through the native flow');
+});
