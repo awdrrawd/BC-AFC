@@ -15,6 +15,12 @@ export function startVibeTimer() {
     state.timers.vibe = setInterval(vibeStep, VIBE_INTERVAL_MS);
 }
 
+// 高潮讀條／高潮進行中：BC 原生 Timer.js 在 OrgasmTimer > 0 時完全不推進興奮值（只等計時器走完）。
+// 這裡必須對齊，否則興奮值已是 100 時，每次 ActivityTimerProgress 都會再呼叫 ActivityOrgasmPrepare，
+// 把 OrgasmTimer 重設成 now+5s、OrgasmStage 打回 0。震動週期 VIBE_INTERVAL_MS 剛好也是 5s，
+// 讀條永遠在走完前被重設 → 不抵抗也不會高潮的「無限讀條」。
+export const isOrgasmInProgress = (arousal) => typeof arousal?.OrgasmTimer === 'number' && arousal.OrgasmTimer > 0;
+
 export function vibeStep() {
     if (!window.Player?.ArousalSettings || !ensureStorage()) return;
     const padlocks = Player.HeartLock?.padlocks ?? {};
@@ -37,7 +43,8 @@ export function vibeStep() {
         const vlvl = { off:0, low:2, mid:3, high:4 }[maxStr] ?? 0;
         // 每個 5 秒週期內的抖動時間：弱 1s、中 3s、強 = 整個週期(+1s 讓下次驅動前不中斷)＝連續
         const animMs = { low:1000, mid:3000, high:VIBE_INTERVAL_MS + 1000 }[maxStr] ?? 0;
-        ActivityTimerProgress(Player, totalDelta);              // 興奮成長（驗證/表情/到100觸發）
+        // 興奮成長（驗證/表情/到100觸發）；高潮讀條／高潮進行中不推進，交還給 BC 原生計時器走完
+        if (!isOrgasmInProgress(Player.ArousalSettings)) ActivityTimerProgress(Player, totalDelta);
         if (vlvl > 0 && animMs > 0) startVibeAnim(vlvl, animMs); // 抖動動畫（HSC 手法，見下）
         ActivityChatRoomArousalSync(Player);                   // 同步給房間（其他玩家依其可見度設定看到）
     } catch {}
