@@ -7,6 +7,28 @@ export function craftLockKey(craft) {
     return CraftingSerialize({ ...craft, Lock: '' });
 }
 
+// Position of the ItemProperty field in CraftingSerialize()'s output
+// (Item, "", Lock, Name, Description, Color, Private, "", "", ItemProperty, ...).
+const ITEM_PROPERTY_FIELD = 9;
+
+function blankItemProperty(key) {
+    const separator = typeof CraftingSerializeFieldSep === 'string' ? CraftingSerializeFieldSep : '¶';
+    const fields = key.split(separator);
+    if (fields.length > ITEM_PROPERTY_FIELD) fields[ITEM_PROPERTY_FIELD] = '';
+    return fields.join(separator);
+}
+
+// BC R133 compresses the ItemProperty field (R132 wrote it verbatim, so an empty
+// `{}` became "{}" and is now ""). Keys that AFC stored under one BC version
+// therefore differ from the other's in that single field. Ignoring it keeps
+// saved templates bound across an upgrade or downgrade; unmatched templates
+// would otherwise be dropped on the next craft save. Every other field still
+// has to be identical, so an unrelated recipe never inherits a lock.
+export function craftLockKeysMatch(stored, current) {
+    if (typeof stored !== 'string' || !stored || !current) return false;
+    return stored === current || blankItemProperty(stored) === blankItemProperty(current);
+}
+
 export function createCraftRecipeStore() {
     const recipes = new WeakMap();
     const bindRecipes = () => {
@@ -15,7 +37,7 @@ export function createCraftRecipeStore() {
         for (const [index, craft] of (Player.Crafting ?? []).entries()) {
             if (!craft || recipes.has(craft)) continue;
             const entry = slots[index];
-            recipes.set(craft, craft.Lock === '' && entry?.key === craftLockKey(craft)
+            recipes.set(craft, craft.Lock === '' && craftLockKeysMatch(entry?.key, craftLockKey(craft))
                 ? normalizeCraftLockSettings(entry.settings) : null);
         }
     };
