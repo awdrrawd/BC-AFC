@@ -27,7 +27,7 @@ const bcGlobals = [
   'AssetFemale3DCG', 'AssetAdd', 'AssetGet', 'ChatRoomCharacterUpdate', 'ChatRoomCharacterItemUpdate',
   'InventoryAdd', 'InventoryWear', 'InventoryLock', 'InventoryUnlock', 'InventoryRemove', 'CraftingValidate',
   'ElementButton', 'InventoryRemoveItems', 'AssetGetRemoveOnItemRemoveDiff',
-  'CraftingSerialize', 'CraftingLockList', 'CraftingSelectedItem',
+  'CraftingSerialize', 'CraftingSerializeFieldSep', 'CraftingLockList', 'CraftingSelectedItem',
   'CraftingAssets', 'ExtendedItemTypeToRecord', 'ServerPlayerAppearanceSync', 'ServerPlayerIsInChatRoom',
   'InventoryBlockedOrLimited', 'ValidationDeleteLock', 'ValidationSanitizeProperties',
   'ValidationSanitizeLock', 'AudioPlaySoundEffect', 'CharacterGetCurrent',
