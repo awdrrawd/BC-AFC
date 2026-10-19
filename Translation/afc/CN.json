@@ -105,6 +105,5 @@
   "profilePage": "{0}/{1}",
   "loverLimit": "拓展恋人上限为 {0} 人（包含等待回复的申请）。",
   "targetLoverLimit": "{0} 的拓展恋人已达 {1} 人上限。",
-  "neverRecorded": "从未记录",
-  "confirmLoverRecovery": "账号 #{0} 有一份恋人备份。是否恢复？\n\n{1}\n\n这次选择会保存；取消后仍可在设置中手动恢复。"
+  "neverRecorded": "从未记录"
 }
