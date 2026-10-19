@@ -7,7 +7,6 @@ import { MOD_VERSION, MAX_AFC_LOVERS } from './config.js';
 import { setLastKnownLoverCount } from './state.js';
 import { normalizeLoverList } from '../features/relationships/lover-model.js';
 import { readLegacyLocalLovers } from './lover-backup.js';
-import { broadcastAFCData } from '../net/sync-data.js';
 import { confirmInAFC } from '../ui/confirmation.js';
 import { t } from '../i18n/i18n.js';
 
@@ -188,7 +187,6 @@ export function saveSharedSettings() {
         Player.OnlineSharedSettings.AFC = structuredClone(afc);
         ServerAccountUpdate?.QueueData?.({ OnlineSharedSettings: Player.OnlineSharedSettings });
     }
-    broadcastAFCData();
 }
 
 // 將鎖的權限從私人設定同步到共享設定（讓對方插件讀取）

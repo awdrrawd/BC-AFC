@@ -28,7 +28,7 @@ function settings(Player, accept = true) {
     const c = run('../src/core/settings.js', { Player, MOD_VERSION: 'test', MAX_AFC_LOVERS: 20,
         normalizeLoverList, setLastKnownLoverCount() {}, readLegacyLocalLovers: () => null,
         confirmInAFC: async () => { questions++; return accept; }, t: key => key,
-        ServerPlayerExtensionSettingsSync() {}, ServerAccountUpdate: { QueueData() {} }, broadcastAFCData() {},
+        ServerPlayerExtensionSettingsSync() {}, ServerAccountUpdate: { QueueData() {} },
     });
     return { c, questions: () => questions };
 }

@@ -21,6 +21,7 @@ export function _sendHidden(target, msgType, extra = {}) {
         ServerSend("ChatRoomChat", {
             Type:    "Hidden",
             Content: "AFC::Beep",
+            Target:  target,   // 頂層 Target：伺服器只投遞給對象，不廣播給全房（BC 自身的 1 對 1 Hidden 訊息同此作法）
             Dictionary: [{ Tag: "AFC::Beep", MsgType: msgType, TargetMember: target, ...extra }],
         });
     } catch {}

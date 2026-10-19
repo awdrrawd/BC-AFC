@@ -60,7 +60,7 @@
 
     <section class="section" id="network" data-keywords="網路 beep sync account room private roomname hidden ack"><h2>網路與房間事件</h2><p class="lead">AFC 不控制 BC 連線；只在既有事件上同步關係、房名與 HeartLock 資料。</p><div class="grid">
       <article class="card"><h3>AFC::Beep</h3><p>同房關係操作；關鍵訊息重送至 ACK，接收端去重。</p><code>net/beep.js</code> <code>net/beep-router.js</code></article>
-      <article class="card"><h3>AFC::Sync</h3><p>廣播自己的戀人資料，供房內對帳。</p><code>net/sync-data.js</code></article>
+      <article class="card"><h3>OnlineSharedSettings</h3><p>戀人清單與鎖摘要由伺服器同步，供房內對帳；無需廣播。</p><code>core/settings.js</code></article>
       <article class="card"><h3>AccountBeep</h3><p>跨房分享私人房名，供戀人從好友列表加入。</p><code>net/roomname.js</code></article>
       <article class="card"><h3>HeartLock Hidden</h3><p>套用、設定、同步、移除與遠端解鎖。</p><code>net/heartlock.js</code></article>
     </div></section>

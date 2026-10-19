@@ -126,7 +126,7 @@ test('JSON ExtensionSettings roundtrip restores full item and matching lock key 
     assert.equal(restored.Property.TypeRecord.a, 2);
     assert.equal(restored.Color[0], '#123456'); assert.equal(restored.Difficulty, 12);
     assert.equal(c.Player.HeartLock.padlocks.ItemArms._fullSnapshot.craft.Name, 'Craft');
-    c.broadcastStorage();
+    c.sendLockConfig(2, 'ItemArms');
     assert.equal(c.sent.at(-1)[1].Dictionary[0].Data.padlocks.ItemArms._fullSnapshot, undefined);
 });
 
@@ -321,4 +321,76 @@ test('remote Update/Apply/Remove validate group and values; only the owner may c
     assert.equal(Object.prototype.vibe, undefined);
     assert.equal(c.Player.HeartLock.padlocks.ItemArms, cfg);
     assert.equal(Object.keys(c.Player.HeartLock.padlocks).length, 1);
+});
+
+test('lock details are sent 1:1, per group, and only to the owner or an authorized relation', () => {
+    const { c } = runtime();
+    const cfg = c.Player.HeartLock.padlocks.ItemArms;
+    cfg.note = 'private note';
+    c.sent.length = 0;
+    const request = (sender, group = 'ItemArms') => c.handleHidden({ Type: 'Hidden', Content: 'HeartLockRequest', Sender: sender,
+        Dictionary: [{ Tag: 'HeartLockRequest', Target: 1, Group: group }] });
+
+    request(2);                                   // 掛鎖者
+    assert.equal(c.sent.length, 1);
+    const [event, message] = c.sent[0];
+    assert.equal(event, 'ChatRoomChat');
+    assert.equal(message.Target, 2, 'top-level Target: server delivers to the requester only');
+    assert.equal(message.Content, 'HeartLock::Sync');
+    assert.deepEqual(Object.keys(message.Dictionary[0].Data.padlocks), ['ItemArms']);
+    assert.equal(message.Dictionary[0].Data.padlocks.ItemArms.note, 'private note');
+    assert.equal(message.Dictionary[0].Data.padlocks.ItemArms._fullSnapshot, undefined);
+
+    c.sent.length = 0;
+    request(3);                                   // 無權限的路人
+    request(2, '__proto__'); request(2, 'ItemLegs');   // 非法／不存在的部位
+    assert.equal(c.sent.length, 0);
+});
+
+test('saving lock storage never broadcasts the lock configuration to the room', () => {
+    const { c } = runtime();
+    c.sent.length = 0;
+    c.saveAndSync();
+    assert.equal(c.sent.filter(([, m]) => m?.Content === 'HeartLock::Sync').length, 0);
+});
+
+test('requests and remote edits are addressed to the wearer only', () => {
+    const { c } = runtime();
+    const wearer = { MemberNumber: 7, IsPlayer: () => false };
+    c.sent.length = 0;
+    c.requestHeartLockData(wearer, 'ItemArms');
+    c.pushConfig(wearer, 'ItemArms', { vibe: 'low' });
+    c.notifyRemove(wearer, 'ItemArms', 'lock1');
+    assert.equal(c.sent.length, 3);
+    for (const [, m] of c.sent) assert.equal(m.Target, 7);
+    c.sent.length = 0;
+    c.requestHeartLockData(wearer, '__proto__');
+    assert.equal(c.sent.length, 0);
+});
+
+test('received lock details merge per group and only for the requester-visible character', () => {
+    const { c } = runtime();
+    const other = { MemberNumber: 5, IsPlayer: () => false, HeartLock: { padlocks: { ItemLegs: { owner: 1, lockId: 'a' } } } };
+    c.ChatRoomCharacter.push(other);
+    c.handleHidden({ Type: 'Hidden', Content: 'HeartLock::Sync', Sender: 5, Dictionary: [{ Tag: 'HeartLock::Data',
+        Data: { padlocks: { ItemArms: { owner: 1, lockId: 'b', note: 'n' }, __proto__x: 1, constructor: { owner: 9 }, ItemFeet: 'bad' } } }] });
+    assert.deepEqual(Object.keys(other.HeartLock.padlocks).sort(), ['ItemArms', 'ItemLegs']);
+    assert.equal(other.HeartLock.padlocks.ItemArms.note, 'n');
+    assert.equal(other.HeartLock.memberNumber, 5);
+});
+
+test('for other characters the published OnlineSharedSettings summary is authoritative', () => {
+    const { c } = runtime();
+    const other = { MemberNumber: 5, IsPlayer: () => false,
+        OnlineSharedSettings: { AFC_HeartLock: { padlocks: { ItemArms: { owner: 2, assetName: 'Cuffs', lockId: 'b' } } } },
+        HeartLock: { padlocks: { ItemArms: { owner: 2, lockId: 'b', note: 'detail' }, ItemLegs: { owner: 2, lockId: 'z', note: 'stale' } } } };
+    assert.equal(c.getPadlockConfig(other, 'ItemArms').note, 'detail');           // 摘要與細節 lockId 相符
+    assert.equal(c.getPadlockConfig(other, 'ItemLegs'), null);                    // 摘要已無此鎖 → 已解開
+    other.OnlineSharedSettings.AFC_HeartLock.padlocks.ItemArms.lockId = 'new';
+    const summary = c.getPadlockConfig(other, 'ItemArms');
+    assert.equal(summary.owner, 2); assert.equal(summary.note, undefined);         // 細節過期 → 只用摘要
+    summary.owner = 99;
+    assert.equal(other.OnlineSharedSettings.AFC_HeartLock.padlocks.ItemArms.owner, 2, 'summary is a copy');
+    delete other.OnlineSharedSettings.AFC_HeartLock;                               // 舊版對方沿用舊行為
+    assert.equal(c.getPadlockConfig(other, 'ItemLegs').note, 'stale');
 });

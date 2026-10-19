@@ -12,7 +12,7 @@ function runtime(count) {
         Player: { MemberNumber: 1, Name: 'Self', FriendList: [99, 100], Lovership: [] },
         getSharedSettings: () => settings, saveSharedSettings() {}, setLastKnownLoverCount() {},
         pendingOutgoing: {}, pendingRestoreOut: {}, pendingIncoming: {}, pendingRestoreInc: {},
-        _lastProposalSent: {}, AFCLockAccessOn: new Set(), loversPrivateRoom: {},
+        _lastProposalSent: {}, loversPrivateRoom: {},
         getPrivateSettings: () => ({}), savePrivateSettings() {}, console: { log() {} },
         t: (key, ...args) => `${key}:${args}`, notices: [], messages: [], prompts: [],
         daysSince: () => 10, broadcastEvent() {},
@@ -49,19 +49,17 @@ test('outgoing requests reserve the last slot and final acceptance consumes it o
     assert.equal(c.addLover(100, 'Incoming'), false);
     c.handleAccepted(99, 'Target');
     assert.equal(c.settings.lovers.length, 20);
-    assert.equal(c.AFCLockAccessOn.has(99), true);
     c.handleAccepted(100, 'Unsolicited');
     assert.equal(c.settings.lovers.length, 20);
 });
 
-test('receiver rechecks capacity on click and does not grant lock access or send false success', () => {
+test('receiver rechecks capacity on click and does not send false success', () => {
     const c = runtime(19);
     c.handleIncomingProposal(99, 'First'); c.handleIncomingProposal(100, 'Second');
     assert.equal(c.prompts.length, 2);
     c.prompts[0].onAccept(() => {}); c.prompts[1].onAccept(() => {});
     assert.equal(c.settings.lovers.length, 20);
     assert.equal(c.messages.filter(m => m[1] === config.BEEP.ACCEPT).length, 1);
-    assert.equal(c.AFCLockAccessOn.has(100), false);
     c.handleIncomingProposal(101, 'Full'); assert.equal(c.prompts.length, 2);
 });
 
@@ -71,7 +69,7 @@ test('sender checks target capacity; restore cannot bypass the local cap', () =>
     c.handleIncomingRestore(99, 'Target', 0, 1, 1);
     c.pendingRestoreOut[99] = {};
     c.handleRestoreAccepted(99, 'Target', 0, 1, 1);
-    assert.equal(c.settings.lovers.length, 20); assert.equal(c.AFCLockAccessOn.has(99), false);
+    assert.equal(c.settings.lovers.length, 20);
     assert.equal(c.messages.length, 0); assert.equal(c.prompts.length, 0);
     const d = runtime(0);
     d.proposeToCharacter({ MemberNumber: 99, Name: 'Full target', OnlineSharedSettings: { AFC: {

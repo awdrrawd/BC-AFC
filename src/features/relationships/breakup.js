@@ -4,7 +4,6 @@
 // ════════════════════════════════════════
 
 import { BEEP, STAGE } from '../../core/config.js';
-import { AFCLockAccessOn } from '../../core/state.js';
 import { chatLocalNotice } from '../../util/util.js';
 import { t } from '../../i18n/i18n.js';
 import { sendBeep } from '../../net/beep.js';
@@ -23,10 +22,8 @@ export function broadcastEvent(kind, otherNum, otherName, stage) {
 
 export function initiateBreakup(num, name) {
     if (!isAFCLover(num)) return;
-    sendBeep(num, BEEP.LOCK_ACCESS_OFF);
     sendBeep(num, BEEP.BREAKUP);
     removeLover(num);
-    AFCLockAccessOn.delete(num);
     chatLocalNotice(t('breakupSelf', name ?? `#${num}`));
 }
 

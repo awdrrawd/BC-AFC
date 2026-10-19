@@ -5,7 +5,7 @@
 //    core/       — config, state, socket, settings, storage, commands, hooks, core-init
 //    i18n/       — i18n
 //    util/       — util, toast
-//    net/        — beep, beep-router, roomname, online, sync-data
+//    net/        — beep, beep-router, roomname, online, hidden-beep
 //    features/   — relationship workflows and HeartLock behavior
 //    ui/         — proposal-ui, profile, settings-page
 //    hooks/      — BC integration hooks

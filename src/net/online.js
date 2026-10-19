@@ -1,16 +1,12 @@
 // ════════════════════════════════════════
 //  AFC module: online.js
-//  線上狀態查詢 + 上線同步握手
+//  線上狀態查詢（OnlineFriends 快取）
 // ════════════════════════════════════════
 
-import { BEEP } from '../core/config.js';
 import {
     onlineFriendsCache, setOnlineFriendsCache,
     lastOnlineFetch, setLastOnlineFetch,
 } from '../core/state.js';
-import { getSharedSettings } from '../core/settings.js';
-import { sleep } from '../util/util.js';
-import { sendBeep } from './beep.js';
 import { registerSocketListener } from '../core/socket.js';
 
 let onlineFetch = null;
@@ -60,28 +56,7 @@ export function refreshOnlineFriends(force = false) {
 
 // 判斷某個 MemberNumber 是否在線
 // 僅用兩個可靠來源：同房間角色 + OnlineFriends 查詢快取
-// AFCLockAccessOn 是鎖定授權，不代表對方目前在線，不納入判斷
 export function isOnline(memberNumber) {
     if (ChatRoomCharacter?.some(c => c.MemberNumber === memberNumber)) return true;
     return onlineFriendsCache.has(memberNumber);
-}
-
-export async function syncWithOnlineLovers() {
-    const account = Player;
-    const memberNumber = Player?.MemberNumber;
-    const active = () => Player === account && Player?.MemberNumber === memberNumber;
-    const shared = getSharedSettings();
-    if (!shared?.lovers.length) return;
-
-    if (!await refreshOnlineFriends() || !active()) return;
-    const onlineFriends = onlineFriendsCache;
-
-    let i = 1;
-    for (const lover of shared.lovers) {
-        if (onlineFriends.has(lover.memberNumber)) {
-            await sleep(200 * i++);
-            if (!active()) return;
-            sendBeep(lover.memberNumber, BEEP.SYNC_REQUEST, { SenderName: Player.Name });
-        }
-    }
 }

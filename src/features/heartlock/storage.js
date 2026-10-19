@@ -41,8 +41,17 @@ export function getPadlockConfig(character, groupName) {
     if (!character || !groupName) return null;
     const draft = getLockDraft(character);
     if (draft) return draft.group === groupName ? draft.read() : null;
-    const store = character.IsPlayer() ? (Player.HeartLock?.padlocks ?? {}) : (character.HeartLock?.padlocks ?? {});
-    return store[groupName] ?? null;
+    if (character.IsPlayer()) return Player.HeartLock?.padlocks?.[groupName] ?? null;
+    // 他人身上的鎖：OnlineSharedSettings 的公開摘要（owner / assetName / lockId）由伺服器同步，
+    // 是「鎖是否存在、是哪一把」的權威；私密細節（note、計時…）只有在開啟面板、
+    // 對方回覆後才會出現在 character.HeartLock，且必須與摘要的 lockId 相符。
+    const detail = character.HeartLock?.padlocks?.[groupName] ?? null;
+    const published = character.OnlineSharedSettings?.AFC_HeartLock;
+    if (!published || typeof published !== 'object') return detail;   // 對方是舊版：沿用舊行為
+    const summary = published.padlocks?.[groupName];
+    if (!summary) return null;
+    if (detail && detail.lockId === summary.lockId) return detail;
+    return { ...summary };
 }
 
 export function getOrCreateConfig(groupName) {
