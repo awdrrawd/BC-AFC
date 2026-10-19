@@ -105,6 +105,5 @@
   "profilePage": "{0}/{1}",
   "loverLimit": "Das Limit beträgt {0} erweiterte Partner, einschließlich ausstehender gesendeter Anfragen.",
   "targetLoverLimit": "{0} hat das Limit von {1} erweiterten Partnern erreicht.",
-  "neverRecorded": "Nie erfasst",
-  "confirmLoverRecovery": "Partner-Sicherung für Konto #{0} wiederherstellen?\n\n{1}\n\nDeine Auswahl wird gespeichert. Nach dem Abbrechen kannst du die Daten weiterhin in den Einstellungen wiederherstellen."
+  "neverRecorded": "Nie erfasst"
 }

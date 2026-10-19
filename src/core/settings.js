@@ -3,107 +3,56 @@
 //  設定讀寫：OnlineSharedSettings.AFC（共享）+ ExtensionSettings.AFC（私人）
 // ════════════════════════════════════════
 
-import { MOD_VERSION, MAX_AFC_LOVERS } from './config.js';
+import { MOD_VERSION } from './config.js';
 import { setLastKnownLoverCount } from './state.js';
-import { normalizeLoverList } from '../features/relationships/lover-model.js';
-import { readLegacyLocalLovers } from './lover-backup.js';
-import { confirmInAFC } from '../ui/confirmation.js';
-import { t } from '../i18n/i18n.js';
 
-const pendingMigrations = new WeakMap();
+const warnedOwnership = new WeakSet();     // 同一份壞資料只警告一次（getter 會被頻繁呼叫）
 
-export async function initializeSharedSettings() {
-    const es = Player?.ExtensionSettings;
-    const settings = getSharedSettings();
-    await pendingMigrations.get(es);
-    if (Player?.ExtensionSettings !== es) return null;
-    return es?.AFC_Data?.memberNumber === Player.MemberNumber ? es.AFC_Data : settings;
-}
-
-// Own data is authoritative in ExtensionSettings. Public data is only a projection.
-export function getSharedSettings() {
+function currentAccount() {
     const memberNumber = Player?.MemberNumber;
     const es = Player?.ExtensionSettings;
-    if (!Number.isSafeInteger(memberNumber) || memberNumber <= 0 || !es) return null;
-    if (es.AFC_Data) {
-        if (es.AFC_Data.memberNumber !== memberNumber || !Array.isArray(es.AFC_Data.lovers)) {
+    return Number.isSafeInteger(memberNumber) && memberNumber > 0 && es ? { memberNumber, es } : null;
+}
+
+/**
+ * 讀取「我自己」的 AFC 主資料（ExtensionSettings.AFC_Data）。
+ *
+ * 純讀取：不寫入、不同步、不建立資料、不彈視窗。資料尚未建立（登入初始化前）
+ * 或不屬於目前帳號時回傳 null。公開資料（OnlineSharedSettings.AFC）只是投影，不是來源。
+ */
+export function getSharedSettings() {
+    const account = currentAccount();
+    const data = account?.es.AFC_Data;
+    if (!data) return null;
+    if (data.memberNumber !== account.memberNumber || !Array.isArray(data.lovers)) {
+        if (!warnedOwnership.has(account.es)) {
+            warnedOwnership.add(account.es);
             console.warn('[AFC] Refusing AFC data with invalid account ownership');
-            return null;
         }
-        return es.AFC_Data;
-    }
-    const old = Player.OnlineSharedSettings?.AFC;
-    if (old && !es.AFC_LegacyPublic) {
-        es.AFC_LegacyPublic = structuredClone(old);
-        ServerPlayerExtensionSettingsSync('AFC_LegacyPublic');
-    }
-    if (pendingMigrations.has(es)) return null;
-    const valid = record => Array.isArray(record?.lovers) &&
-        (record.memberNumber == null || record.memberNumber === memberNumber);
-    // On first migration, current online data wins over every backup.
-    if (old?.memberNumber != null && old.memberNumber !== memberNumber) {
-        console.warn('[AFC] Refusing public data owned by another account');
         return null;
     }
-    let source = valid(old) && old.lovers.length ? old : null;
-    if (!source) {
-        const backup = es.AFC_LoverBackup;
-        source = valid(backup) && backup.memberNumber === memberNumber && backup.lovers.length ? backup : null;
-        if (!source) source = readLegacyLocalLovers();
-        if (source?.lovers?.length) {
-            // Do not normalize missing dates here: normalization fills Date.now(),
-            // which would make an unchanged legacy backup look new on every login.
-            const fingerprint = JSON.stringify(source.lovers.map(l => [
-                Number(l.memberNumber), l.name ?? null, l.stage ?? null,
-                l.startDate ?? null, l.stageDate ?? null,
-            ]).sort((a, b) => a[0] - b[0]));
-            const decision = es.AFC_LoverRecovery;
-            if (decision?.memberNumber === memberNumber && decision.fingerprint === fingerprint
-                && decision.accepted === false) return null;
-            const account = Player;
-            const backup = structuredClone(source);
-            const pending = confirmInAFC(t('confirmLoverRecovery', memberNumber,
-                backup.lovers.map(l => `${l.name ?? ''} (#${l.memberNumber})`).join('\n'))).then(accepted => {
-                if (accepted == null || Player !== account || Player.MemberNumber !== memberNumber
-                    || Player.ExtensionSettings !== es || es.AFC_Data) return;
-                es.AFC_LoverRecovery = { memberNumber, fingerprint, accepted };
-                ServerPlayerExtensionSettingsSync('AFC_LoverRecovery');
-                // Keep a private manual recovery source even when declining a local backup.
-                es.AFC_LoverBackup = { ...backup, memberNumber };
-                ServerPlayerExtensionSettingsSync('AFC_LoverBackup');
-                if (accepted) {
-                    commitSharedSettings(es, memberNumber, backup, old);
-                    saveSharedSettings();
-                }
-            }).finally(() => pendingMigrations.delete(es));
-            pendingMigrations.set(es, pending);
-            return null;
-        }
-    }
-    return commitSharedSettings(es, memberNumber, source, old);
+    return data;
 }
 
-function commitSharedSettings(es, memberNumber, source, old) {
-    es.AFC_Data = {
-        memberNumber,
-        lovers: normalizeLoverList(Array.isArray(source?.lovers) ? source.lovers : []).slice(0, MAX_AFC_LOVERS),
+/**
+ * 登入後唯一的初始化入口：AFC_Data 不存在時建立空的主資料並同步。
+ * 已存在的資料原樣回傳；屬於其他帳號或已損壞的資料絕不覆寫（回傳 null）。
+ */
+export function initializeSharedSettings() {
+    const account = currentAccount();
+    if (!account) return null;
+    const existing = getSharedSettings();
+    if (existing) return existing;
+    if (account.es.AFC_Data) return null;
+    account.es.AFC_Data = {
+        memberNumber: account.memberNumber,
+        lovers: [],
         lockPerms: { enableAFCLock: true, enableOwnerLock: false },
-        vibeMsgMode: old?.vibeMsgMode ?? 'broadcast',
-        enableVibeSound: old?.enableVibeSound ?? true,
+        vibeMsgMode: 'broadcast',
+        enableVibeSound: true,
     };
     ServerPlayerExtensionSettingsSync('AFC_Data');
-    return es.AFC_Data;
-}
-
-// Called only by the user's explicit manual backup restore action.
-export function prepareManualLoverRecovery() {
-    const es = Player?.ExtensionSettings;
-    const memberNumber = Player?.MemberNumber;
-    if (!es || !Number.isSafeInteger(memberNumber) || memberNumber <= 0 || pendingMigrations.has(es)) return false;
-    if (es.AFC_Data) return es.AFC_Data.memberNumber === memberNumber && Array.isArray(es.AFC_Data.lovers);
-    if (es.AFC_LoverRecovery?.memberNumber !== memberNumber) return false;
-    commitSharedSettings(es, memberNumber, null, Player.OnlineSharedSettings?.AFC);
-    return true;
+    return account.es.AFC_Data;
 }
 
 /*

@@ -84,7 +84,7 @@ export async function initialize() {
             const account = Player;
             const generation = sessionGeneration;
             r132RepairPlayerCrafts();
-            await initializeSharedSettings();
+            initializeSharedSettings();
             if (Player !== account || generation !== sessionGeneration || !hookRegistry) return;
             const priv = getPrivateSettings();
             if (priv) syncLockPermsToShared(priv);
@@ -96,7 +96,7 @@ export async function initialize() {
 
     const generation = sessionGeneration;
     r132RepairPlayerCrafts();
-    await initializeSharedSettings();
+    initializeSharedSettings();
     if (generation !== sessionGeneration || !hookRegistry) return;
     if (!completeInit()) return;
 

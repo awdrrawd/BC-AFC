@@ -5,7 +5,6 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import { URL } from 'node:url';
 import v8 from 'node:v8';
-import { normalizeLoverList } from '../src/features/relationships/lover-model.js';
 const structuredClone = value => v8.deserialize(v8.serialize(value));
 
 function run(path, globals) {
@@ -23,116 +22,12 @@ test('legacy backup reads are account scoped and never use browser storage', () 
     assert.equal(c.readBackupLovers().length, 0);
 });
 
-function settings(Player, accept = true) {
-    let questions = 0;
-    const c = run('../src/core/settings.js', { Player, MOD_VERSION: 'test', MAX_AFC_LOVERS: 20,
-        normalizeLoverList, setLastKnownLoverCount() {}, readLegacyLocalLovers: () => null,
-        confirmInAFC: async () => { questions++; return accept; }, t: key => key,
+function settings(Player) {
+    const c = run('../src/core/settings.js', { Player, MOD_VERSION: 'test', setLastKnownLoverCount() {},
         ServerPlayerExtensionSettingsSync() {}, ServerAccountUpdate: { QueueData() {} },
     });
-    return { c, questions: () => questions };
+    return { c };
 }
-
-test('ES is authoritative; public writes and account switching cannot change the private list', async () => {
-    const Player = { MemberNumber: 1, ExtensionSettings: {}, OnlineSharedSettings: { AFC: { lovers: [{ memberNumber: 2 }] } } };
-    const { c, questions } = settings(Player);
-    const own = c.getSharedSettings();
-    assert.equal(questions(), 0);
-    c.saveSharedSettings();
-    Player.OnlineSharedSettings.AFC.lovers[0].memberNumber = 9;
-    assert.equal(own.lovers[0].memberNumber, 2);
-    Player.MemberNumber = 3;
-    assert.equal(await c.initializeSharedSettings(), null);
-    c.saveSharedSettings();
-    assert.equal(Player.ExtensionSettings.AFC_Data.memberNumber, 1);
-    c.Player = { MemberNumber: 4, ExtensionSettings: {}, OnlineSharedSettings: {} };
-    assert.equal(c.getSharedSettings().lovers.length, 0);
-});
-
-test('online lovers migrate without prompting and win over the legacy backup', () => {
-    const Player = { MemberNumber: 1, ExtensionSettings: { AFC_LoverBackup: { memberNumber: 1, lovers: [{ memberNumber: 8 }] } }, OnlineSharedSettings: { AFC: { lovers: [{ memberNumber: 2 }] } } };
-    const { c, questions } = settings(Player, false);
-    c.readLegacyLocalLovers = () => { throw Error('must not read local backup'); };
-    assert.equal(c.getSharedSettings().lovers[0].memberNumber, 2);
-    assert.equal(questions(), 0);
-});
-
-test('canceling fallback recovery never writes empty data or repeats the prompt', async () => {
-    const Player = { MemberNumber: 1, ExtensionSettings: {}, OnlineSharedSettings: { AFC: { lovers: [] } } };
-    const { c, questions } = settings(Player, false);
-    c.readLegacyLocalLovers = () => ({ memberNumber: 1, lovers: [{ memberNumber: 2 }] });
-    assert.equal(await c.initializeSharedSettings(), null);
-    c.saveSharedSettings();
-    assert.equal(questions(), 1);
-    assert.equal(Player.ExtensionSettings.AFC_Data, undefined);
-    assert.equal(Player.OnlineSharedSettings.AFC.lovers.length, 0);
-});
-
-test('accepted local fallback migrates when public lovers are empty', async () => {
-    const Player = { MemberNumber: 1, ExtensionSettings: {}, OnlineSharedSettings: { AFC: { lovers: [] } } };
-    const { c } = settings(Player);
-    c.readLegacyLocalLovers = () => ({ memberNumber: 1, lovers: [{ memberNumber: 2 }] });
-    assert.equal((await c.initializeSharedSettings()).lovers[0].memberNumber, 2);
-});
-
-test('legacy migration caps active lovers at 20 and preserves the complete source for manual recovery', () => {
-    const lovers = Array.from({ length: 23 }, (_, i) => ({ memberNumber: i + 2 }));
-    const player = { MemberNumber: 1, ExtensionSettings: {}, OnlineSharedSettings: { AFC: { lovers } } };
-    const { c } = settings(player);
-    assert.equal(c.getSharedSettings().lovers.length, 20);
-    assert.equal(player.ExtensionSettings.AFC_LegacyPublic.lovers.length, 23);
-});
-
-test('lover recovery choices survive a fresh login/runtime; changed backup can ask again', async () => {
-    for (const accept of [true, false]) {
-        const player = { MemberNumber: 1, ExtensionSettings: {}, OnlineSharedSettings: { AFC: { lovers: [] } } };
-        const first = settings(player, accept);
-        first.c.readLegacyLocalLovers = () => ({ lovers: [{ memberNumber: 2 }], memberNumber: 1 });
-        await first.c.initializeSharedSettings();
-        const second = settings(structuredClone(player), accept);
-        await second.c.initializeSharedSettings();
-        assert.equal(second.questions(), 0);
-        if (!accept) {
-            second.c.Player.ExtensionSettings.AFC_LoverBackup.lovers.push({ memberNumber: 3 });
-            await second.c.initializeSharedSettings();
-            assert.equal(second.questions(), 1);
-        }
-    }
-});
-
-test('pending lover dialog is deduplicated and cannot write after account changes', async () => {
-    const player = { MemberNumber: 1, ExtensionSettings: {}, OnlineSharedSettings: {} };
-    const { c } = settings(player);
-    let answer, calls = 0;
-    c.confirmInAFC = () => { calls++; return new Promise(resolve => { answer = resolve; }); };
-    c.readLegacyLocalLovers = () => ({ memberNumber: 1, lovers: [{ memberNumber: 2 }] });
-    const pending = c.initializeSharedSettings();
-    c.getSharedSettings(); c.saveSharedSettings(); assert.equal(calls, 1);
-    c.Player = { MemberNumber: 3, ExtensionSettings: {}, OnlineSharedSettings: {} };
-    answer(true); await pending;
-    assert.equal(player.ExtensionSettings.AFC_Data, undefined);
-    assert.equal(c.Player.ExtensionSettings.AFC_Data, undefined);
-});
-
-test('declining lover recovery preserves a usable manual recovery path', async () => {
-    const player = { MemberNumber: 1, ExtensionSettings: {}, OnlineSharedSettings: {} };
-    const { c } = settings(player, false);
-    c.readLegacyLocalLovers = () => ({ memberNumber: 1, lovers: [{ memberNumber: 2 }] });
-    await c.initializeSharedSettings();
-    assert.equal(player.ExtensionSettings.AFC_Data, undefined);
-    assert.equal(c.prepareManualLoverRecovery(), true);
-    assert.equal(c.getSharedSettings().lovers.length, 0);
-    assert.equal(player.ExtensionSettings.AFC_LoverBackup.lovers[0].memberNumber, 2);
-});
-
-test('legacy local fallback rejects foreign owners and never reads anonymous keys', () => {
-    const keys = [];
-    const c = run('../src/core/lover-backup.js', { Player: { MemberNumber: 1, AccountName: '' },
-        localStorage: { getItem(key) { keys.push(key); return JSON.stringify({ memberNumber: 9, lovers: [{ memberNumber: 2 }] }); } },
-    });
-    assert.equal(c.readLegacyLocalLovers(), null);
-    assert.deepEqual(keys, ['AFC_DB::1']);
-});
 
 function locks(current, backup, accept) {
 
@@ -264,4 +159,56 @@ test('backup recovery adds missing lovers without deleting others or resetting d
     c.readBackupLovers = () => [];
     assert.equal(c.restoreAllLovers('backup'), 0);
     assert.equal(lovers.length, 3);
+});
+
+test('ES is authoritative; public writes and account switching cannot change the private list', () => {
+    const Player = { MemberNumber: 1, ExtensionSettings: {}, OnlineSharedSettings: { AFC: { lovers: [{ memberNumber: 2 }] } } };
+    const { c } = settings(Player);
+    const own = c.initializeSharedSettings();
+    assert.equal(own.lovers.length, 0, 'public data is a projection, never a source');
+    own.lovers.push({ memberNumber: 5 });
+    c.saveSharedSettings();
+    assert.equal(Player.OnlineSharedSettings.AFC.lovers[0].memberNumber, 5, 'projection follows the private list');
+    Player.OnlineSharedSettings.AFC.lovers[0].memberNumber = 9;
+    assert.equal(own.lovers[0].memberNumber, 5, 'public writes cannot change the private list');
+    Player.MemberNumber = 3;
+    assert.equal(c.initializeSharedSettings(), null);
+    c.saveSharedSettings();
+    assert.equal(Player.ExtensionSettings.AFC_Data.memberNumber, 1);
+    c.Player = { MemberNumber: 4, ExtensionSettings: {}, OnlineSharedSettings: {} };
+    assert.equal(c.initializeSharedSettings().lovers.length, 0);
+});
+
+test('getSharedSettings is a pure read; initializeSharedSettings only creates empty data and never migrates', () => {
+    const synced = [];
+    const player = { MemberNumber: 1, ExtensionSettings: { AFC_LoverBackup: { memberNumber: 1, lovers: [{ memberNumber: 8 }] } },
+        OnlineSharedSettings: { AFC: { lovers: [{ memberNumber: 2 }] } } };
+    const { c } = settings(player);
+    c.ServerPlayerExtensionSettingsSync = key => synced.push(key);
+    const before = JSON.stringify(player);
+    for (let i = 0; i < 5; i++) assert.equal(c.getSharedSettings(), null);   // 初始化前沒有資料
+    assert.equal(JSON.stringify(player), before, 'nothing was written');
+    assert.deepEqual(synced, []);
+
+    const data = c.initializeSharedSettings();
+    assert.equal(data.lovers.length, 0, 'old public/backup lovers are not migrated');
+    assert.equal(data.memberNumber, 1);
+    assert.equal(c.getSharedSettings(), data);
+    assert.deepEqual(synced, ['AFC_Data']);
+    assert.deepEqual(player.OnlineSharedSettings.AFC.lovers, [{ memberNumber: 2 }], 'initialization does not touch the public projection');
+    assert.equal(player.ExtensionSettings.AFC_LegacyPublic, undefined);
+    for (let i = 0; i < 5; i++) c.getSharedSettings();
+    assert.equal(c.initializeSharedSettings(), data, 'initialization is idempotent');
+    assert.deepEqual(synced, ['AFC_Data'], 'neither reads nor repeated initialization sync');
+});
+
+test('getSharedSettings never returns another account\'s data and warns once', async () => {
+    const warnings = [];
+    const player = { MemberNumber: 1, ExtensionSettings: { AFC_Data: { memberNumber: 2, lovers: [{ memberNumber: 5 }] } }, OnlineSharedSettings: {} };
+    const { c } = settings(player);
+    c.console = { warn: (...a) => warnings.push(a), error() {}, log() {} };
+    for (let i = 0; i < 4; i++) assert.equal(c.getSharedSettings(), null);
+    assert.equal(c.initializeSharedSettings(), null);                         // 不覆寫
+    assert.equal(player.ExtensionSettings.AFC_Data.memberNumber, 2);
+    assert.equal(warnings.length, 1);
 });

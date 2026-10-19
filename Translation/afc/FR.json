@@ -105,6 +105,5 @@
   "profilePage": "{0}/{1}",
   "loverLimit": "La limite est de {0} partenaires étendus, demandes envoyées en attente comprises.",
   "targetLoverLimit": "{0} a atteint la limite de {1} partenaires étendus.",
-  "neverRecorded": "Jamais enregistré",
-  "confirmLoverRecovery": "Restaurer la sauvegarde des partenaires du compte nº {0} ?\n\n{1}\n\nVotre choix sera enregistré. Après annulation, la restauration manuelle reste disponible dans les paramètres."
+  "neverRecorded": "Jamais enregistré"
 }

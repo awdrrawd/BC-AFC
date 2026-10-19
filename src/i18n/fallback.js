@@ -15,8 +15,6 @@ const AFC_FALLBACK = {
     "loverLimit": {"TW": "拓展戀人上限為 {0} 人（包含等待回覆的申請）。", "EN": "The extended lover limit is {0}, including pending outgoing requests."},
     "targetLoverLimit": {"TW": "{0} 的拓展戀人已達 {1} 人上限。", "EN": "{0} has reached the limit of {1} extended lovers."},
     "neverRecorded": {"TW": "從未記錄", "EN": "Never recorded"},
-
-    "confirmLoverRecovery": {"TW": "帳號 #{0} 有一份戀人備份。是否復原？\n\n{1}\n\n這次選擇會保存；取消後仍可在設定中手動復原。", "EN": "Restore backup lovers for account #{0}?\n\n{1}\n\nYour choice will be saved. You can still restore manually in Settings after canceling."},
     "prefButton": {
         "TW": "拓展戀人設定",
         "EN": "AFC Settings"

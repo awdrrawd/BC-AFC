@@ -5,9 +5,9 @@
 - `ExtensionSettings.AFC_HeartLock`：心鎖完整設定、筆記與衣物快照，含帳號識別。
 - `OnlineSharedSettings`：只發布供他人讀取的副本；心鎖只公開識別資料，不公開筆記與快照。公開副本不會反向覆蓋主資料。
 
-首次搬移優先直接採用 `OnlineSharedSettings.AFC` 的非空戀人清單，不詢問、不以備份取代。線上清單為空時，才考慮帳號相符的舊 `AFC_LoverBackup` 及 localStorage `AFC_DB::帳號`／`AFC_DB::會員編號`。備份恢復需確認；取消不建立空的主資料；選擇依帳號及備份內容記錄於 `AFC_LoverRecovery`，同一份備份不會每次登入重問。已有合法 `AFC_Data` 仍為主資料，不會因正常解除所有戀人而復活舊備份。
+`getSharedSettings()` 是純讀取：只回傳目前帳號的 `ExtensionSettings.AFC_Data`，不寫入、不同步、不建立資料；資料不存在或不屬於目前帳號時回傳 `null`。登入後由 `initializeSharedSettings()` 負責唯一的初始化：`AFC_Data` 不存在就建立空的主資料並同步，已存在則原樣使用；屬於其他帳號或已損壞的資料絕不覆寫。
 
-舊本機來源僅讀取，不寫入或刪除；不讀取匿名 key 或其他帳號資料。舊 IndexedDB 是心鎖資料庫，不是戀人資料來源。帳號標記不符的資料拒絕使用。搬移前的公開來源保存於 `AFC_LegacyPublic`；先前誤按取消的使用者可從設定頁「舊版線上備份」手動恢復該保留來源，不自動覆蓋後續操作。
+舊資料自動遷移已移除：不再從 `OnlineSharedSettings.AFC`、`AFC_LoverBackup` 或 localStorage `AFC_DB::*` 搬移戀人，也不再詢問復原、不再寫入 `AFC_LoverRecovery` / `AFC_LegacyPublic`。過去版本已保存的 `AFC_LoverBackup` / `AFC_LegacyPublic` 仍可由設定頁手動復原（唯讀來源）。
 
 登入會清除前次的關係請求、授權與房間快取；未完成的線上查詢與鎖初始化會檢查帳號。角色面板只使用 BC 正在查看的角色。
 
