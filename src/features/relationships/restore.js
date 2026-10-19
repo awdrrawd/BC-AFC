@@ -17,7 +17,7 @@ export function proposeRestore(C, quiet = false) {
     if (!targetHasLoverRoom(C)) { if (!quiet) chatLocalNotice(t('targetLoverLimit', C.Name, MAX_AFC_LOVERS)); return; }
     const iHaveC = isAFCLover(target);
     const cHasMe = C.OnlineSharedSettings?.AFC?.lovers
-    ?.some(l => Number(l.memberNumber) === Number(Player.MemberNumber)) ?? false;
+    ?.some(l => Number(l?.memberNumber) === Number(Player.MemberNumber)) ?? false;
 
     let stage, startDate, stageDate;
     if (iHaveC && !cHasMe) {
@@ -28,7 +28,7 @@ export function proposeRestore(C, quiet = false) {
     } else if (!iHaveC && cHasMe) {
         // 情況A：對方有我的記錄，讀取後傳
         const theirEntry = C.OnlineSharedSettings?.AFC?.lovers
-        ?.find(l => Number(l.memberNumber) === Number(Player.MemberNumber));
+        ?.find(l => Number(l?.memberNumber) === Number(Player.MemberNumber));
         if (!theirEntry) return;
         stage = theirEntry.stage; startDate = theirEntry.startDate; stageDate = theirEntry.stageDate;
     } else { return; }

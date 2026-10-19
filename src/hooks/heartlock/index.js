@@ -15,6 +15,14 @@ import { removeHLPanel, _repositionHLPanel, panelLoad } from '../../ui/heartlock
 import { setupOrgasmHooks } from './orgasm.js';
 import { isProtectionPaused } from '../../features/heartlock/protection.js';
 
+// DrawImage / DrawImageResize 是整個遊戲最熱的函式之一（每幀成百上千次）；比對字串在模組載入時算好，
+// 避免每次呼叫都重建模板字串。
+const HEART_PREVIEW_PATH = `ItemMisc/Preview/${HEARTLOCK_NAME}.png`;
+const swapHeartPreview = (args, next) => {
+    if (typeof args[0] === 'string' && args[0].includes(HEART_PREVIEW_PATH)) args[0] = getSetting('previewImage');
+    return next(args);
+};
+
 export function installHeartLockHooks(registry) {
     const { hook } = registry;
 
@@ -113,11 +121,8 @@ export function installHeartLockHooks(registry) {
     });
 
     // ── 圖片替換 ──
-    hook('DrawImageResize', 0, (args, next) => {
-        if (typeof args[0] === 'string' && args[0].includes(`ItemMisc/Preview/${HEARTLOCK_NAME}.png`)) args[0] = getSetting('previewImage');
-        return next(args);
-    });
-    try { hook('DrawImage', 0, (args, next) => { if (typeof args[0] === 'string' && args[0].includes(`ItemMisc/Preview/${HEARTLOCK_NAME}.png`)) args[0] = getSetting('previewImage'); return next(args); }); } catch {}
+    hook('DrawImageResize', 0, swapHeartPreview);
+    try { hook('DrawImage', 0, swapHeartPreview); } catch {}
     hook('ElementButton.CreateForAsset', 0, (args, next) => {
         args[4] ??= {};
         const asset = ('Asset' in args[1]) ? args[1].Asset : args[1];

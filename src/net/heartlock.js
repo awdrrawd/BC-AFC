@@ -12,6 +12,7 @@ import { state } from '../features/heartlock/state.js';
 import { sendLocalizedAction } from '../i18n/l10n.js';
 import { ensureStorage, getOrCreateConfig, deleteConfig, saveAndSync, isRemovedLock } from '../features/heartlock/storage.js';
 import { isMemberAllowedByMe } from '../features/heartlock/permissions.js';
+import { isValidGroupName, sanitizeLockSettings } from '../features/heartlock/validate.js';
 import { rebaselineCurseIfNeeded } from '../compat/bcx-heartlock.js';
 import { emitHeartLockEvent, onHeartLockEvent } from '../features/heartlock/events.js';
 
@@ -79,11 +80,11 @@ export function notifyRemove(character, groupName, lockId) {
 export function handleHidden(data) {
     if (!data || data.Type !== 'Hidden') return;
     if (data.Content === 'HeartLockRequest') {
-        const e = data.Dictionary?.find(d => d.Tag === 'HeartLockRequest');
+        const e = data.Dictionary?.find(d => d?.Tag === 'HeartLockRequest');
         if (e?.Target === Player.MemberNumber) broadcastStorage();
     }
     if (data.Content === 'HeartLock::Sync') {
-        const e = data.Dictionary?.find(d => d.Tag === 'HeartLock::Data');
+        const e = data.Dictionary?.find(d => d?.Tag === 'HeartLock::Data');
         if (e) {
             const s = ChatRoomCharacter?.find(c => c.MemberNumber === data.Sender);
             if (s && s !== Player) {
@@ -97,8 +98,9 @@ export function handleHidden(data) {
         }
     }
     if (data.Content === 'HeartLockApply') {
-        const e = data.Dictionary?.find(d => d.Tag === 'HeartLockApply');
+        const e = data.Dictionary?.find(d => d?.Tag === 'HeartLockApply');
         if (!e || e.Target !== Player.MemberNumber) return;
+        if (!isValidGroupName(e.Group)) return;
         if (Number(e.Owner) !== Number(data.Sender)) return;
         // 發送者必須是本人允許施鎖的關係（主人/戀人），否則拒絕認領此鎖
         if (!isMemberAllowedByMe(data.Sender)) return;
@@ -107,14 +109,8 @@ export function handleHidden(data) {
         if (existing && Number(existing.owner) !== Number(data.Sender)) return;
         const cfg = getOrCreateConfig(e.Group);
         if (!cfg) return;
-        if (e.Settings && typeof e.Settings === 'object') {
-            if (typeof e.Settings.note === 'string') cfg.note = e.Settings.note.slice(0, 500);
-            if (['off', 'low', 'mid', 'high'].includes(e.Settings.vibe)) cfg.vibe = e.Settings.vibe;
-            if (['normal', 'edge', 'deny'].includes(e.Settings.orgasmMode)) cfg.orgasmMode = e.Settings.orgasmMode;
-            cfg.removeRestraints = e.Settings.removeRestraints === true;
-            const unlockTime = Date.parse(e.Settings.unlockTime);
-            cfg.unlockTime = Number.isFinite(unlockTime) ? new Date(unlockTime).toISOString() : null;
-        }
+        // 設定欄位統一經 sanitizeLockSettings 驗證（Apply：缺失的計時/移除拘束視為關閉）。
+        if (e.Settings && typeof e.Settings === 'object') Object.assign(cfg, sanitizeLockSettings(e.Settings));
         cfg.owner = e.Owner; cfg.ownerName = e.OwnerName;
         cfg.lockedAt = e.LockedAt; cfg.lockTs = Date.now(); cfg.assetName = e.AssetName ?? null; cfg.lockId = e.LockId ?? null;
         const item = InventoryGet?.(Player, e.Group);
@@ -138,16 +134,19 @@ export function handleHidden(data) {
         try { rebaselineCurseIfNeeded(e.Group); } catch {}
     }
     if (data.Content === 'HeartLock::Update') {
-        const e = data.Dictionary?.find(d => d.Tag === 'HeartLock::Update');
-        if (!e || e.Target !== Player.MemberNumber) return;
+        const e = data.Dictionary?.find(d => d?.Tag === 'HeartLock::Update');
+        if (!e || e.Target !== Player.MemberNumber || !isValidGroupName(e.Group)) return;
         if (!ensureStorage()) return;
         const cfg = Player.HeartLock.padlocks[e.Group];
         // 只有掛鎖者（owner）本人能改鎖設定（計時/震動/高潮模式/筆記等）
-        if (cfg && Number(cfg.owner) === Number(data.Sender)) { for (const key of ['note', 'unlockTime', 'removeRestraints', 'vibe', 'orgasmMode']) { if (Object.hasOwn(e.Config ?? {}, key)) cfg[key] = e.Config[key]; } saveAndSync(); }
+        if (cfg && Number(cfg.owner) === Number(data.Sender)) {
+            Object.assign(cfg, sanitizeLockSettings(e.Config, { partial: true }));
+            saveAndSync();
+        }
     }
     if (data.Content === 'HeartLock::Remove') {
-        const e = data.Dictionary?.find(d => d.Tag === 'HeartLock::Remove');
-        if (!e || e.Target !== Player.MemberNumber) return;
+        const e = data.Dictionary?.find(d => d?.Tag === 'HeartLock::Remove');
+        if (!e || e.Target !== Player.MemberNumber || !isValidGroupName(e.Group)) return;
         if (!ensureStorage()) return;
         const cfg = Player.HeartLock?.padlocks?.[e.Group];
         if (!cfg) return;

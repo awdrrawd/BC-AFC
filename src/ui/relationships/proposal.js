@@ -49,18 +49,38 @@ export function createProposalUI({ uiId, title, subText, onAccept, onDecline }) 
             "color:#eee",
         ].join(";");
     }
-    el.innerHTML = `
-        <div style="font-weight:bold;font-size:1.05em;margin-bottom:7px;">${title}</div>
-        <div style="display:flex;align-items:center;gap:10px;">
-            <button id="${uiId}-ok" style="padding:4px 18px;background:#C2185B;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:0.95em;white-space:nowrap;">${t('okBtn')}</button>
-            <button id="${uiId}-no" style="padding:4px 14px;background:transparent;color:#bbb;border:1px solid #555;border-radius:5px;cursor:pointer;font-size:0.95em;white-space:nowrap;">${t('cancelBtn')}</button>
-            <span id="${uiId}-sub" style="font-size:0.88em;opacity:0.6;">${subText}</span>
-        </div>`;
+    // 所有文字（含對方自報的名稱）一律以 textContent 寫入，不經 HTML 解析。
+    const heading = document.createElement("div");
+    heading.style.cssText = "font-weight:bold;font-size:1.05em;margin-bottom:7px;";
+    heading.textContent = title;
+
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex;align-items:center;gap:10px;";
+
+    const ok = document.createElement("button");
+    ok.id = `${uiId}-ok`;
+    ok.type = "button";
+    ok.style.cssText = "padding:4px 18px;background:#C2185B;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:0.95em;white-space:nowrap;";
+    ok.textContent = t('okBtn');
+
+    const no = document.createElement("button");
+    no.id = `${uiId}-no`;
+    no.type = "button";
+    no.style.cssText = "padding:4px 14px;background:transparent;color:#bbb;border:1px solid #555;border-radius:5px;cursor:pointer;font-size:0.95em;white-space:nowrap;";
+    no.textContent = t('cancelBtn');
+
+    const sub = document.createElement("span");
+    sub.id = `${uiId}-sub`;
+    sub.style.cssText = "font-size:0.88em;opacity:0.6;";
+    sub.textContent = subText;
+
+    row.append(ok, no, sub);
+    el.append(heading, row);
 
     container.appendChild(el);
     if (!isFloating) container.scrollTop = container.scrollHeight;
-    document.getElementById(`${uiId}-ok`)?.addEventListener('click', onAccept);
-    document.getElementById(`${uiId}-no`)?.addEventListener('click', onDecline);
+    ok.addEventListener('click', onAccept);
+    no.addEventListener('click', onDecline);
     return el;
 }
 

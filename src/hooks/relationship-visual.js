@@ -30,7 +30,7 @@ export function decorateFriendList() {
             const member = row.querySelector('.MemberNumber');
             const relation = row.querySelector('.RelationType');
             if (!member || !relation) continue;
-            const lover = lovers.find(entry => Number(entry.memberNumber) === Number(member.innerText.trim()));
+            const lover = lovers.find(entry => Number(entry?.memberNumber) === Number(member.innerText.trim()));
             if (!lover) continue;
             const label = `♥ ${stageLabel(lover.stage)}`;
             const textNode = Array.from(relation.childNodes).find(node => node.nodeType === Node.TEXT_NODE);

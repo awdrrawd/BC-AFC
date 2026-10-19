@@ -8,6 +8,7 @@ import { AFCLockAccessOn } from '../../core/state.js';
 import { chatLocalNotice } from '../../util/util.js';
 import { t } from '../../i18n/i18n.js';
 import { sendBeep } from '../../net/beep.js';
+import { peerName } from '../../net/hidden-beep.js';
 import { sendLocalizedAction } from '../../i18n/l10n.js';
 import { isAFCLover, removeLover } from './lovers.js';
 
@@ -34,7 +35,7 @@ export function initiateBreakup(num, name) {
 //   實際同意仍需至關係管理，此處僅提供美化通知
 export function handleBCLoverProposal(data) {
     const senderNum  = data.MemberNumber;
-    const senderName = data.MemberName ?? `#${senderNum}`;
+    const senderName = peerName(data.MemberName, `#${senderNum}`);
     const uiId = `el-bc-lover-${senderNum}`;
     if (document.getElementById(uiId)) return;
 
@@ -53,13 +54,13 @@ export function handleBCLoverProposal(data) {
         "line-height:1.75",
         "color:#eee",
     ].join(";");
-    el.innerHTML = `
-        <div style="font-weight:bold;font-size:16px;margin-bottom:4px;">
-            ${t('bcTitle', senderName, senderNum)}
-        </div>
-        <div style="font-size:13px;opacity:0.7;">
-            ${t('bcNote')}
-        </div>`;
+    const title = document.createElement("div");
+    title.style.cssText = "font-weight:bold;font-size:16px;margin-bottom:4px;";
+    title.textContent = t('bcTitle', senderName, senderNum);
+    const note = document.createElement("div");
+    note.style.cssText = "font-size:13px;opacity:0.7;";
+    note.textContent = t('bcNote');
+    el.append(title, note);
     chatLog.appendChild(el);
     chatLog.scrollTop = chatLog.scrollHeight;
     // 30 秒後自動移除通知

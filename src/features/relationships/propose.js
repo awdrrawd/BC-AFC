@@ -57,7 +57,7 @@ window.ChatRoomAFCCanRestore = function () {
     if (!targetHasAFC(C)) return false;
     const iHaveC = isAFCLover(C.MemberNumber);
     const cHasMe = C.OnlineSharedSettings?.AFC?.lovers
-    ?.some(l => Number(l.memberNumber) === Number(Player.MemberNumber)) ?? false;
+    ?.some(l => Number(l?.memberNumber) === Number(Player.MemberNumber)) ?? false;
     // 情況A：對方有我但我沒有對方 | 情況B：我有對方但對方沒有我
     return (iHaveC && !cHasMe) || (!iHaveC && cHasMe);
 };

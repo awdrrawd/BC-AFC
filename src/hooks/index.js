@@ -3,7 +3,7 @@
 // ════════════════════════════════════════
 
 import {
-    AFC_BEEP_TYPE, BEEP, PROFILE_BTN_X, PROFILE_BTN_Y, PROFILE_BTN_W, PROFILE_BTN_H,
+    BEEP, PROFILE_BTN_X, PROFILE_BTN_Y, PROFILE_BTN_W, PROFILE_BTN_H,
     PROFILE_PANEL_X, PROFILE_PANEL_Y, PROFILE_PANEL_W, PROFILE_PANEL_H,
 } from '../core/config.js';
 import {
@@ -20,6 +20,7 @@ import {
 import { refreshOnlineFriends, syncWithOnlineLovers } from '../net/online.js';
 import { sendBeep } from '../net/beep.js';
 import { parseBeep } from '../net/beep-router.js';
+import { extractHiddenBeep } from '../net/hidden-beep.js';
 import { parseAccountBeep, broadcastRoomNameToLovers, clearSharedRoomName } from '../net/roomname.js';
 import { broadcastAFCData, handleAFCSyncData } from '../net/sync-data.js';
 import { handleBCLoverProposal } from '../features/relationships/breakup.js';
@@ -42,7 +43,7 @@ export function setupHooks(registry) {
     hook('ChatRoomConcatenateWhitelist', 0, (args, next) => {
         const result = next(args);
         if (CurrentScreen !== 'ChatAdmin' || !args[0]?.includes('Lovers')) return result;
-        const lovers = (getSharedSettings()?.lovers ?? []).map(l => Number(l.memberNumber))
+        const lovers = (getSharedSettings()?.lovers ?? []).map(l => Number(l?.memberNumber))
             .filter(num => Number.isSafeInteger(num) && num > 0);
         return [...new Set([...result, ...lovers])];
     });
@@ -185,6 +186,9 @@ export function setupHooks(registry) {
     // ChatRoomMessage 只 hook 一次；各功能在這個入口依序處理。
     hook("ChatRoomMessage", 5, (args, next) => {
         const data = args[0];
+        // 與同層 ChatRoomSync* hook 一致：還原「進入前」的值，而不是無條件寫回 false，
+        // 避免巢狀呼叫時提前清掉外層設定的旗標。
+        const previousServerSync = heartLockState.operations.serverSync;
         heartLockState.operations.serverSync = true;
         try {
             localizeChatRoomMessage(data);
@@ -192,25 +196,14 @@ export function setupHooks(registry) {
             handleAFCSyncData(data);
             dispatchChatRoomMessage(data);
 
-            // 同房間 AFC Beep（Hidden 主要通道，跨伺服器可靠）
-            if (data?.Type === "Hidden" && data?.Content === "AFC::Beep") {
-                const e = data.Dictionary?.find(d => d.Tag === "AFC::Beep");
-                if (e && Number(e.TargetMember) === Number(Player.MemberNumber)) {
-                    parseBeep({
-                        MemberNumber: data.Sender,
-                        MemberName:   data.SenderName ?? `#${data.Sender}`,
-                        BeepType:     AFC_BEEP_TYPE,
-                        Message:      e.MsgType,
-                        ...e,
-                    });
-                }
-            }
-
-
+            // 同房間 AFC Beep（Hidden 主要通道，跨伺服器可靠）。
+            // 路由欄位只信任伺服器蓋章的 Sender，見 net/hidden-beep.js。
+            const beep = extractHiddenBeep(data, Player.MemberNumber);
+            if (beep) parseBeep(beep);
         } catch (error) {
             console.error("🐈‍⬛ [AFC] ChatRoomMessage handler failed:", error);
         } finally {
-            heartLockState.operations.serverSync = false;
+            heartLockState.operations.serverSync = previousServerSync;
         }
         const result = next(args);
         // BC 先套用房間設定，再廣播新房名與公開/私人狀態。
@@ -219,7 +212,7 @@ export function setupHooks(registry) {
     });
 
     // ── 好友列表：填入私人房間名 ────────────────────────────────
-    hook("FriendListLoadFriendList", 5, async (args, next) => {
+    hook("FriendListLoadFriendList", 5, (args, next) => {
         try {
             for (const friend of args[0] ?? []) {
                 // 私人房時伺服器可能回傳 ChatRoomName 為 null 或省略（undefined）→ 一律以 falsy 判斷
@@ -229,8 +222,13 @@ export function setupHooks(registry) {
                 }
             }
         } catch {}
-        const result = await next(args);
-        decorateFriendList();
+        // R133 的 FriendListLoadFriendList 是同步函式（舊版 hook 用 async 包裝，會改變回傳型別，
+        // 且 decorate 失敗會變成 unhandled rejection）。同步版本維持原回傳值；若某版本回傳
+        // Promise，則等它完成後再美化。
+        const decorate = () => { try { decorateFriendList(); } catch (e) { console.error("🐈‍⬛ [AFC] decorateFriendList:", e?.message); } };
+        const result = next(args);
+        if (typeof result?.then === 'function') return result.then(value => { decorate(); return value; });
+        decorate();
         return result;
     });
 

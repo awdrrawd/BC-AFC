@@ -18,10 +18,32 @@ function makeDialog(option, result, fn, marker) {
     };
 }
 
+// 已注入的選項簽章（依 dialog 陣列身分記錄）。ChatRoomCharacterViewDraw / ChatRoomMenuDraw 每幀
+// 都會呼叫注入；沒有變化時直接略過，避免每幀 splice 陣列、重建物件與重查翻譯。
+const injected = new WeakMap();   // dialog array -> { signature, entries }
+
+function wantedOptions() {
+    const w = window;
+    return [
+        w.ChatRoomAFCCanPropose?.()        && ['propose', 'dPropose', 'dProposeR', 'ChatRoomAFCPropose()'],
+        w.ChatRoomAFCCanRestore?.()        && ['restore', 'dRestore', 'dRestoreR', 'ChatRoomAFCRestore()'],
+        w.ChatRoomAFCCanProposeEngage?.()  && ['engage',  'dEngage',  'dEngageR',  'ChatRoomAFCProposeEngage()'],
+        w.ChatRoomAFCCanProposeMarry?.()   && ['marry',   'dMarry',   'dMarryR',   'ChatRoomAFCProposeMarry()'],
+        w.ChatRoomAFCCanBreakup?.()        && ['breakup', 'dBreakup', 'dBreakupR', 'ChatRoomAFCBreakup()'],
+    ].filter(Boolean);
+}
+
 export function injectAFCDialogs(C) {
     if (!C) return;
     const dialog = C.Dialog;
     if (!Array.isArray(dialog) || dialog.length === 0) return;
+
+    const wanted = wantedOptions();
+    // 語言也算簽章的一部分：換語言後文字要更新。
+    const signature = `${t('dPropose')}|${wanted.map(option => option[0]).join(',')}`;
+    const previous = injected.get(dialog);
+    if (previous && previous.signature === signature
+        && previous.entries.every(entry => dialog.includes(entry))) return;
 
     for (let i = dialog.length - 1; i >= 0; i--)
         if (dialog[i]?.[AFC_MARKER]) dialog.splice(i, 1);
@@ -29,20 +51,9 @@ export function injectAFCDialogs(C) {
     const backIndex = dialog.findIndex(d =>
                                        d?.Stage === "RelationshipSubmenu" && d?.NextStage === "10"
                                       );
-    if (backIndex === -1) return;
+    if (backIndex === -1) { injected.delete(dialog); return; }
 
-    const toInsert = [];
-    if (window.ChatRoomAFCCanPropose?.())
-        toInsert.push(makeDialog(t('dPropose'), t('dProposeR'), "ChatRoomAFCPropose()", "propose"));
-    if (window.ChatRoomAFCCanRestore?.())
-        toInsert.push(makeDialog(t('dRestore'), t('dRestoreR'), "ChatRoomAFCRestore()", "restore"));
-    if (window.ChatRoomAFCCanProposeEngage?.())
-        toInsert.push(makeDialog(t('dEngage'), t('dEngageR'), "ChatRoomAFCProposeEngage()", "engage"));
-    if (window.ChatRoomAFCCanProposeMarry?.())
-        toInsert.push(makeDialog(t('dMarry'), t('dMarryR'), "ChatRoomAFCProposeMarry()", "marry"));
-    if (window.ChatRoomAFCCanBreakup?.())
-        toInsert.push(makeDialog(t('dBreakup'), t('dBreakupR'), "ChatRoomAFCBreakup()", "breakup"));
-
-    if (toInsert.length === 0) return;
-    dialog.splice(backIndex, 0, ...toInsert);
+    const entries = wanted.map(([marker, option, result, fn]) => makeDialog(t(option), t(result), fn, marker));
+    injected.set(dialog, { signature, entries });
+    if (entries.length) dialog.splice(backIndex, 0, ...entries);
 }
