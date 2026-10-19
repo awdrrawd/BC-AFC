@@ -74,11 +74,11 @@ Data is synced back automatically after confirmation, preserving the original st
 
 **📡 LIKOSHARE 資料同步 · Data Sync**
 
-上線後自動向在線的拓展戀人發送握手同步，確認解鎖授權與房間資訊。  
-Automatically syncs with online extended lovers on login to confirm lock access and room info.
+戀人清單與鎖權限發布在 `OnlineSharedSettings`，由伺服器同步給房內玩家，不需要額外查詢或廣播。  
+Lover list and lock permissions are published through `OnlineSharedSettings`, which the server syncs to the room — no extra queries or broadcasts.
 
-透過房間內 Hidden 訊息廣播，讓房間內其他玩家即時看到你的戀人資料。  
-Broadcasts data via room Hidden messages for real-time visibility by others in the room.
+申請、接受、升格、恢復、解除等操作以 1 對 1 的 Hidden 訊息送達對象；戀人房名經 AccountBeep 分享。  
+Proposals, acceptances, upgrades, restores and breakups are 1-to-1 Hidden messages; lover room names travel via AccountBeep.
 
 ---
 

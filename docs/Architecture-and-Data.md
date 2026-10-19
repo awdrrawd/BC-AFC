@@ -22,10 +22,10 @@
 
 | 通道 | 用途 |
 |---|---|
-| ChatRoom `Hidden` `AFC::Beep` | 同房間戀人操作（申請/接受/升格/恢復/解除/同步授權）。**可靠傳輸層**：關鍵訊息重送到 ACK 為止 + 接收端冪等去重 |
-| ChatRoom `Hidden` `AFC::Sync` | 廣播自己的戀人資料給房內玩家（EBC 等伺服器同步失效時的容錯） |
+| ChatRoom `Hidden` `AFC::Beep` | 同房間戀人操作（申請/接受/升格/恢復/解除），頂層 `Target` 1 對 1 投遞；發送者身分只取伺服器蓋章的 `Sender`（見 `net/hidden-beep.js`）。**可靠傳輸層**：關鍵訊息重送到 ACK 為止 + 接收端冪等去重 |
+| `OnlineSharedSettings.AFC` / `.AFC_HeartLock` | 戀人清單、鎖權限與鎖公開摘要（owner / assetName / lockId）。伺服器同步給房內，讀取端不需查詢；舊的 `AFC::Sync` 廣播已移除 |
 | `AccountBeep`（BeepType `afcBeep`） | 跨房**戀人房名分享**（仿 BCTweaks；IsSecret:false 讓伺服器蓋上 ChatRoomName） |
-| ChatRoom `Hidden` `HeartLock::*` | 心形鎖套用/設定/移除/遠端解鎖 |
+| ChatRoom `Hidden` `HeartLock::*` | 心形鎖套用/設定/移除，皆 1 對 1。私密細節（note、計時、震動…）僅在開啟該物品面板時以 `HeartLockRequest{Group}` 請求單一部位，穿戴者驗證請求者為掛鎖者或授權關係後只回給請求者 |
 | ChatRoom `Action` `CUSTOM_SYSTEM_ACTION` + `Liko_L10N` 標記 | 在地化廣播（見 [Localization Engine](Localization-Engine.md)） |
 
 ---

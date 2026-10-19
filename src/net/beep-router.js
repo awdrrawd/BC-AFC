@@ -3,9 +3,9 @@
 //  Beep 解析與分派（含傳輸層 ACK 與可靠訊息冪等去重）
 // ════════════════════════════════════════
 
-import { AFC_BEEP_TYPE, BEEP, STAGE } from '../core/config.js';
-import { _recentBeepKeys, AFCLockAccessOn } from '../core/state.js';
-import { _sendHidden, _clearAck, sendBeep } from './beep.js';
+import { AFC_BEEP_TYPE, BEEP, STAGE, LEGACY_IGNORED_BEEPS } from '../core/config.js';
+import { _recentBeepKeys } from '../core/state.js';
+import { _sendHidden, _clearAck } from './beep.js';
 import { peerName } from './hidden-beep.js';
 import { sanitizeStage, sanitizeTimestamp } from '../features/relationships/lover-model.js';
 import { t } from '../i18n/i18n.js';
@@ -13,7 +13,7 @@ import { chatLocalNotice } from '../util/util.js';
 import { handleIncomingProposal, handleAccepted } from '../features/relationships/propose.js';
 import { handleIncomingRestore, handleRestoreAccepted } from '../features/relationships/restore.js';
 import { handleIncomingStageProposal, handleAcceptedStage } from '../features/relationships/stage.js';
-import { isAFCLover, updateLastSeen, removeLover } from '../features/relationships/lovers.js';
+import { isAFCLover, removeLover } from '../features/relationships/lovers.js';
 
 export function parseBeep(data) {
     if (!data) return;
@@ -66,21 +66,6 @@ export function parseBeep(data) {
         case BEEP.ACCEPT_MARRY:
             handleAcceptedStage(from, receiverName, STAGE.MARRIED); break;
 
-        case BEEP.SYNC_REQUEST:
-            if (isAFCLover(from)) {
-                AFCLockAccessOn.add(from);
-                updateLastSeen(from);
-                sendBeep(from, BEEP.SYNC_GRANT, { GranterName: Player.Name });
-            }
-            break;
-        case BEEP.SYNC_GRANT:
-            if (isAFCLover(from)) {
-                AFCLockAccessOn.add(from);
-                updateLastSeen(from);
-            }
-            break;
-        case BEEP.LOCK_ACCESS_OFF:
-            AFCLockAccessOn.delete(from); break;
         case BEEP.BREAKUP:
             if (isAFCLover(from)) {
                 removeLover(from);
@@ -89,6 +74,7 @@ export function parseBeep(data) {
             break;
         // 房名分享已改走 AccountBeep（見 parseAccountBeep），Hidden 不再處理 ROOM_NAME
         default:
-            console.warn("🐈‍⬛ [AFC] ⚠️ 未知 Beep:", data.Message);
+            // 舊版授權握手已移除；舊客戶端仍可能送來，靜默忽略。
+            if (!LEGACY_IGNORED_BEEPS.has(data.Message)) console.warn("🐈‍⬛ [AFC] ⚠️ 未知 Beep:", data.Message);
     }
 }

@@ -7,7 +7,7 @@
 import { MOD_NAME, MOD_VERSION } from './config.js';
 import {
     modApi, setModApi, isInitialized, setInitialized, setLastKnownLoverCount,
-    setProfilePanelOpen, AFCLockAccessOn, pendingOutgoing, pendingIncoming,
+    setProfilePanelOpen, pendingOutgoing, pendingIncoming,
     pendingStageProp, pendingStageInc, pendingRestoreOut, pendingRestoreInc, _pendingAcks,
     loversPrivateRoom, onlineFriendsCache, _recentBeepKeys, _lastProposalSent,
     setCurrentPrivateRoomName, setLastOnlineFetch,
@@ -24,7 +24,7 @@ import { waitForLogin } from '../hooks/lifecycle.js';
 import { clearChatRoomMessageSubscribers } from '../hooks/chat-message-channel.js';
 import { setupCommands } from './commands.js';
 import { registerSettingsUI, AFCSettingsUI } from '../ui/settings-page.js';
-import { syncWithOnlineLovers, cancelOnlineFetch } from '../net/online.js';
+import { cancelOnlineFetch } from '../net/online.js';
 import { isAFCLover, getLoverEntry } from '../features/relationships/lovers.js';
 import { getLoverRegions, isPanelOpen, getPanelRect } from '../ui/relationships/profile.js';
 import { getLoverRoom } from '../net/roomname.js';
@@ -89,7 +89,6 @@ export async function initialize() {
             const priv = getPrivateSettings();
             if (priv) syncLockPermsToShared(priv);
             initHeartLock(modApi, hookRegistry).catch(console.error);
-            syncWithOnlineLovers();
         });
         return result;
     });
@@ -130,8 +129,6 @@ function completeInit() {
 
         // 登入後才能正確取得 TranslationLanguage，ButtonText 翻譯才準確
         registerSettingsUI();
-
-        syncWithOnlineLovers();
 
         installRoomSync(hookRegistry);
 
@@ -206,7 +203,6 @@ function cleanupSession() {
     for (const k of Object.keys(_pendingAcks)) _clearAck(k);
     for (const pending of [pendingOutgoing, pendingIncoming, pendingStageProp, pendingStageInc,
                            pendingRestoreOut, pendingRestoreInc]) clearRequestStore(pending);
-    AFCLockAccessOn.clear();
     _recentBeepKeys.clear();
     onlineFriendsCache.clear();
     for (const key of Object.keys(loversPrivateRoom)) delete loversPrivateRoom[key];

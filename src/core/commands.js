@@ -3,7 +3,8 @@
 //  /afc-* 診斷與操作指令
 // ════════════════════════════════════════
 
-import { isInitialized, AFCLockAccessOn } from './state.js';
+import { isInitialized } from './state.js';
+import { isOnline } from '../net/online.js';
 import { getSharedSettings } from './settings.js';
 import { t } from '../i18n/i18n.js';
 import { waitFor, daysSince, formatDuration, chatLocalNotice } from '../util/util.js';
@@ -44,7 +45,7 @@ export async function setupCommands(registry) {
             Description: "顯示目前 AFC 插件狀態與戀人列表",
             Action: () => {
                 const lovers = getSharedSettings()?.lovers ?? [];
-                chatLocalNotice(`已初始化=${isInitialized} | 戀人=${lovers.length} | 線上=${AFCLockAccessOn.size}`);
+                chatLocalNotice(`已初始化=${isInitialized} | 戀人=${lovers.length} | 線上=${lovers.filter(l => isOnline(l.memberNumber)).length}`);
                 for (const l of lovers)
                     chatLocalNotice(`  ♥ ${l.name} (#${l.memberNumber}) | ${l.stage} | ${formatDuration(Date.now() - l.startDate)}`);
             }

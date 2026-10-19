@@ -117,7 +117,7 @@ export function convertToHeartLock(character, item, groupName, settings = {}) {
         if (cfg) { cfg.owner = Player.MemberNumber; cfg.ownerName = Player.Nickname || Player.Name; cfg.lockedAt = now; cfg.lockTs = Date.now(); cfg.assetName = assetName; cfg.lockId = lockId; Object.assign(cfg, settings); cfg._fullSnapshot = snapshotItem(item, groupName); saveAndSync(); }
     } else {
         try {
-            ServerSend('ChatRoomChat', { Type: 'Hidden', Content: 'HeartLockApply', Dictionary: [{ Tag: 'HeartLockApply', Target: character.MemberNumber, Group: groupName, Owner: Player.MemberNumber, OwnerName: Player.Nickname || Player.Name, LockedAt: now, AssetName: assetName, LockId: lockId, Snapshot: snapshotItem(item, groupName), Settings: settings }] });
+            ServerSend('ChatRoomChat', { Type: 'Hidden', Content: 'HeartLockApply', Target: character.MemberNumber, Dictionary: [{ Tag: 'HeartLockApply', Target: character.MemberNumber, Group: groupName, Owner: Player.MemberNumber, OwnerName: Player.Nickname || Player.Name, LockedAt: now, AssetName: assetName, LockId: lockId, Snapshot: snapshotItem(item, groupName), Settings: settings }] });
         } catch {}
     }
     try { if (typeof ChatRoomCharacterItemUpdate === 'function' && groupName) ChatRoomCharacterItemUpdate(character, groupName); } catch {}

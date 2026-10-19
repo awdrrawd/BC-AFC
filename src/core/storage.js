@@ -1,5 +1,5 @@
 import { BEEP } from './config.js';
-import { AFCLockAccessOn, setLastKnownLoverCount } from './state.js';
+import { setLastKnownLoverCount } from './state.js';
 import { getSharedSettings, saveSharedSettings, defaultPrivate } from './settings.js';
 import { sendBeep } from '../net/beep.js';
 import { t } from '../i18n/i18n.js';
@@ -11,9 +11,9 @@ import { clearAllLocks } from '../features/heartlock/lock.js';
 export function factoryReset() {
     try {
         const lovers = (getSharedSettings()?.lovers ?? []).slice();
-        // 1) 通知所有戀人解除關係（BREAKUP 讓對方也移除；LOCK_ACCESS_OFF 收回解鎖授權）
+        // 1) 通知所有戀人解除關係（BREAKUP 讓對方也移除）
         for (const l of lovers) {
-            try { sendBeep(l.memberNumber, BEEP.LOCK_ACCESS_OFF); sendBeep(l.memberNumber, BEEP.BREAKUP); } catch {}
+            try { sendBeep(l.memberNumber, BEEP.BREAKUP); } catch {}
         }
         // 2) 破壞所有戀人鎖（HeartLock，bundle 內直接呼叫）
         try { clearAllLocks(); } catch (e) { console.error("🐈‍⬛ [AFC] ❌ 破壞戀人鎖失敗:", e?.message); }
@@ -24,7 +24,6 @@ export function factoryReset() {
         ServerPlayerExtensionSettingsSync('AFC_LoverBackup');
         Player.ExtensionSettings.AFC = JSON.stringify(defaultPrivate());
         // 4) 重建預設並同步
-        AFCLockAccessOn.clear();
         setLastKnownLoverCount(0);   // 解除 saveSharedSettings 的「戀人歸零」保護
         getSharedSettings();
         saveSharedSettings();

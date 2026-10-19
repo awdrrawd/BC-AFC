@@ -14,7 +14,6 @@ export function setInitialized(v) { isInitialized = v; }
 
 // 關係領域的 runtime tree。以下具名匯出都是同一份資料的參照，方便各模組按需引用。
 export const relationRuntime = {
-    lockAccess: new Set(),
     privateRooms: {},
     requests: {
         lover:   { outgoing: {}, incoming: {} },
@@ -25,7 +24,6 @@ export const relationRuntime = {
     proposalCooldowns: {},
     pendingAcks: {},
 };
-export const AFCLockAccessOn   = relationRuntime.lockAccess;
 export const loversPrivateRoom = relationRuntime.privateRooms;
 export const pendingOutgoing   = relationRuntime.requests.lover.outgoing;
 export const pendingIncoming   = relationRuntime.requests.lover.incoming;

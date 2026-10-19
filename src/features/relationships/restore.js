@@ -4,7 +4,7 @@
 // ════════════════════════════════════════
 
 import { STAGE, BEEP, PROPOSE_EXPIRE_MS, MAX_AFC_LOVERS } from '../../core/config.js';
-import { pendingRestoreOut, pendingRestoreInc, AFCLockAccessOn } from '../../core/state.js';
+import { pendingRestoreOut, pendingRestoreInc } from '../../core/state.js';
 import { t } from '../../i18n/i18n.js';
 import { chatLocalNotice } from '../../util/util.js';
 import { sendBeep } from '../../net/beep.js';
@@ -68,7 +68,6 @@ function acceptRestore(senderNum, senderName, stage, startDate, stageDate, close
     // Case A：我（保有方）已有對方，找出我記錄的對方資料，回傳讓對方 addLover
     // Case B：我剛 addLover 完畢，回傳確認
     const myEntryForSender = getLoverEntry(senderNum);
-    AFCLockAccessOn.add(senderNum);
     updateLastSeen(senderNum);
     sendBeep(senderNum, BEEP.RESTORE_ACCEPT, {
         ReceiverName:      Player.Name,
@@ -91,7 +90,6 @@ export function handleRestoreAccepted(fromNum, receiverName, stage, startDate, s
                       stageDate: stageDate ?? Date.now() });
         if (!restored) { chatLocalNotice(t('loverLimit', MAX_AFC_LOVERS)); return; }
     }
-    AFCLockAccessOn.add(fromNum);
     updateLastSeen(fromNum);
     chatLocalNotice(t('restoreOK', receiverName));
 }

@@ -21,9 +21,6 @@ export const BEEP = {
     ACCEPT_ENGAGE:    "AFCAcceptEngage",
     PROPOSE_MARRY:    "AFCProposeMarry",
     ACCEPT_MARRY:     "AFCAcceptMarry",
-    SYNC_REQUEST:     "AFCSyncRequest",
-    SYNC_GRANT:       "AFCSyncGrant",
-    LOCK_ACCESS_OFF:  "AFCLockAccessOff",
     BREAKUP:          "AFCBreakup",
     ROOM_NAME:        "AFCRoomName",
     ACK_T:            "AFCAckT",        // 傳輸層 ACK（與語意 ACK 區分）
@@ -37,6 +34,10 @@ export const RELIABLE_BEEPS = new Set([
     BEEP.PROPOSE_MARRY,  BEEP.ACCEPT_MARRY,
     BEEP.BREAKUP,
 ]);
+
+// 舊版（≤0.7.x）「鎖定授權」握手訊息：功能已移除（對應的鎖名稱從未存在），
+// 但舊客戶端仍可能送來，收到時靜默忽略，避免「未知 Beep」警告。
+export const LEGACY_IGNORED_BEEPS = new Set(["AFCSyncRequest", "AFCSyncGrant", "AFCLockAccessOff"]);
 
 // AccountBeep（跨房）訊息：只用於戀人房名分享
 export const AB = {

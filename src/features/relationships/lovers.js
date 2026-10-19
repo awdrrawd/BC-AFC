@@ -4,7 +4,7 @@
 // ════════════════════════════════════════
 
 import { STAGE, MAX_AFC_LOVERS } from '../../core/config.js';
-import { AFCLockAccessOn, loversPrivateRoom, setLastKnownLoverCount, pendingOutgoing, pendingRestoreOut } from '../../core/state.js';
+import { loversPrivateRoom, setLastKnownLoverCount, pendingOutgoing, pendingRestoreOut } from '../../core/state.js';
 import { getSharedSettings, saveSharedSettings } from '../../core/settings.js';
 import { normalizeLover, normalizeLoverList, normalizeMemberNumber, sameMemberNumber } from './lover-model.js';
 
@@ -75,7 +75,6 @@ export function removeLover(memberNumber) {
     const normalized = normalizeMemberNumber(memberNumber);
     if (normalized === null) return;
     s.lovers = s.lovers.filter(l => !sameMemberNumber(l.memberNumber, normalized));
-    AFCLockAccessOn.delete(normalized);
     delete loversPrivateRoom[normalized];
     commitLovers(s);
 }

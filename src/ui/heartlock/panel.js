@@ -48,7 +48,7 @@ export function openHLPanel(ch, gn) {
     p.ctlEditing = false; p.unlockConfirming = false;
     const draft = getLockDraft(ch);
     dpInit(getPadlockConfig(ch, gn));
-    if (ch && !draft && !ch.IsPlayer()) emitHeartLockEvent('request-remote-data', ch);
+    if (ch && !draft && !ch.IsPlayer()) emitHeartLockEvent('request-remote-data', { character: ch, group: gn });
 
     const sc = _hlScaleFactor();
     const c  = document.getElementById('MainCanvas');

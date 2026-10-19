@@ -98,36 +98,6 @@ test('stage and timestamp sanitizers', () => {
     for (const bad of [-1, NaN, Infinity, 'x', '', null, undefined, true, [], 10 + 86400001]) assert.equal(sanitizeTimestamp(bad, 10), undefined);
 });
 
-function syncContext(sender, characters) {
-    const context = vm.createContext({
-        console, structuredClone: globalThis.structuredClone,
-        Player: { MemberNumber: ME }, ChatRoomCharacter: characters,
-        ServerSend() {}, getSharedSettings: () => null, sanitizePeerLovers, sanitizeLockPerms,
-    });
-    vm.runInContext(fs.readFileSync(new URL('../src/net/sync-data.js', import.meta.url), 'utf8')
-        .replace(/^import .*;\r?\n/gm, '').replace(/export /g, ''), context);
-    return context;
-}
-
-test('P2P AFC::Sync data is sanitized before it is written onto the sender', () => {
-    const sender = { MemberNumber: 5, OnlineSharedSettings: {} };
-    const c = syncContext(5, [sender]);
-    c.handleAFCSyncData({ Content: 'AFC::Sync', Sender: 5, Dictionary: [null, { Tag: 'AFCData', Data: {
-        memberNumber: 5, lovers: [null, { memberNumber: 9, stage: 77 }, 'x'], lockPerms: { enableAFCLock: 'true', enableOwnerLock: true },
-    } }] });
-    assert.deepEqual(sender.OnlineSharedSettings.AFC.lovers, [{ memberNumber: 9 }]);
-    assert.deepEqual(sender.OnlineSharedSettings.AFC.lockPerms, { enableAFCLock: false, enableOwnerLock: true });
-});
-
-test('P2P AFC::Sync rejects a sender claiming to be someone else, self-broadcasts and non-objects', () => {
-    const sender = { MemberNumber: 5, OnlineSharedSettings: {} };
-    const c = syncContext(5, [sender]);
-    c.handleAFCSyncData({ Content: 'AFC::Sync', Sender: 5, Dictionary: [{ Tag: 'AFCData', Data: { memberNumber: 6, lovers: [{ memberNumber: 9 }] } }] });
-    c.handleAFCSyncData({ Content: 'AFC::Sync', Sender: 5, Dictionary: [{ Tag: 'AFCData', Data: 'string' }] });
-    c.handleAFCSyncData({ Content: 'AFC::Sync', Sender: ME, Dictionary: [{ Tag: 'AFCData', Data: { lovers: [{ memberNumber: 9 }] } }] });
-    assert.deepEqual(sender.OnlineSharedSettings, {});
-});
-
 // ── HTML 注入 ──────────────────────────────────────────────
 
 // 最小假 DOM：任何對 innerHTML 的寫入都視為失敗。
@@ -236,4 +206,19 @@ test('dialog injection follows state changes and recovers if the game rebuilt th
     C.Dialog = C.Dialog.filter(d => !d.__AFC__);
     c.injectAFCDialogs(C);
     assert.equal(C.Dialog.filter(d => d.__AFC__).length, 1);
+});
+
+// ── 1 對 1 投遞 ────────────────────────────────────────────
+
+test('AFC beeps are addressed to the target only (top-level Target), keeping TargetMember for compatibility', () => {
+    const sent = [];
+    const context = vm.createContext({ console, Player: { MemberNumber: ME }, RELIABLE_BEEPS: new Set(), AFC_AB_TYPE: 'afcBeep',
+        _pendingAcks: {}, bumpMidSeq: () => 0, ServerSend: (...args) => sent.push(args) });
+    vm.runInContext(fs.readFileSync(new URL('../src/net/beep.js', import.meta.url), 'utf8')
+        .replace(/^import .*;\r?\n/gm, '').replace(/export /g, ''), context);
+    context.sendBeep(77, 'AFCPropose', { SenderName: 'Me' });
+    const [, message] = sent[0];
+    assert.equal(message.Target, 77);
+    assert.equal(message.Dictionary[0].TargetMember, 77);
+    assert.equal(message.Dictionary[0].MsgType, 'AFCPropose');
 });

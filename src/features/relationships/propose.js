@@ -4,7 +4,7 @@
 // ════════════════════════════════════════
 
 import { STAGE, BEEP, PROPOSE_COOLDOWN_MS, PROPOSE_EXPIRE_MS, STAGE_PROMOTE_DAYS, MAX_AFC_LOVERS } from '../../core/config.js';
-import { _lastProposalSent, pendingOutgoing, pendingIncoming, AFCLockAccessOn } from '../../core/state.js';
+import { _lastProposalSent, pendingOutgoing, pendingIncoming } from '../../core/state.js';
 import { getPrivateSettings, savePrivateSettings } from '../../core/settings.js';
 import { chatLocalNotice, daysSince } from '../../util/util.js';
 import { t } from '../../i18n/i18n.js';
@@ -135,7 +135,6 @@ function acceptProposal(senderNum, senderName, close = () => cleanupIncomingUI(s
         if (!isAFCLover(senderNum)) chatLocalNotice(t('loverLimit', MAX_AFC_LOVERS));
         return;
     }
-    AFCLockAccessOn.add(senderNum);
     updateLastSeen(senderNum);
     broadcastEvent('becameLovers', senderNum, senderName);
     sendBeep(senderNum, BEEP.ACCEPT, { ReceiverName: Player.Name });
@@ -150,7 +149,6 @@ export function handleAccepted(fromNum, receiverName) {
         if (!addLover(fromNum, receiverName, STAGE.DATING)) {
             chatLocalNotice(t('loverLimit', MAX_AFC_LOVERS)); return;
         }
-        AFCLockAccessOn.add(fromNum);
         updateLastSeen(fromNum);
         chatLocalNotice(t('proposeOK', receiverName));
     }

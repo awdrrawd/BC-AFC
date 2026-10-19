@@ -3,11 +3,11 @@
 // ════════════════════════════════════════
 
 import {
-    BEEP, PROFILE_BTN_X, PROFILE_BTN_Y, PROFILE_BTN_W, PROFILE_BTN_H,
+    PROFILE_BTN_X, PROFILE_BTN_Y, PROFILE_BTN_W, PROFILE_BTN_H,
     PROFILE_PANEL_X, PROFILE_PANEL_Y, PROFILE_PANEL_W, PROFILE_PANEL_H,
 } from '../core/config.js';
 import {
-    AFCLockAccessOn, loversPrivateRoom, profilePanelOpen,
+    loversPrivateRoom, profilePanelOpen,
     setProfilePanelOpen, setProfilePageFresh, profilePageFresh,
     setLastOnlineFetch, setOwnerTextY, setInInfoSheet, _inInfoSheet,
     setCurrentPrivateRoomName,
@@ -17,12 +17,10 @@ import {
     getCurrentViewingCharacter, drawProfileButton, drawProfilePanel,
     drawBCRelationDots, handleProfileClick,
 } from '../ui/relationships/profile.js';
-import { refreshOnlineFriends, syncWithOnlineLovers } from '../net/online.js';
-import { sendBeep } from '../net/beep.js';
+import { refreshOnlineFriends } from '../net/online.js';
 import { parseBeep } from '../net/beep-router.js';
 import { extractHiddenBeep } from '../net/hidden-beep.js';
 import { parseAccountBeep, broadcastRoomNameToLovers, clearSharedRoomName } from '../net/roomname.js';
-import { broadcastAFCData, handleAFCSyncData } from '../net/sync-data.js';
 import { handleBCLoverProposal } from '../features/relationships/breakup.js';
 import { reconcileWithRoom } from '../features/relationships/reconcile.js';
 import { installRelationshipVisualHooks, installRelationshipDialogHooks, decorateFriendList } from './relationship-visual.js';
@@ -145,18 +143,6 @@ export function setupHooks(registry) {
         return next(args);
     });
 
-    // ── 解鎖權限 ────────────────────────────────────────────────
-    hook("DialogCanUnlock", 5, (args, next) => {
-        try {
-            const C = args[0], item = args[1];
-            if (!C || !item?.Property) return next(args);
-            const lb = item.Property.LockedBy;
-            if (lb === "AFCLoveLock" || lb === "AFCTimerLock")
-                return C.ID !== 0 && AFCLockAccessOn.has(C.MemberNumber);
-        } catch (e) { console.error("🐈‍⬛ [AFC] ❌ DialogCanUnlock:", e.message); }
-        return next(args);
-    });
-
     // ── AccountBeep（跨房房名分享 + BC 原生戀人申請美化通知）──────
     registerSocketListener("AccountBeep", (data) => {
         try {
@@ -170,13 +156,10 @@ export function setupHooks(registry) {
         const result = next(args);
         setTimeout(() => {
             ensureHeartLockStorage();
-            syncWithOnlineLovers();
             if (ChatRoomData) {
                 setCurrentPrivateRoomName(ChatRoomData.Name);
                 broadcastRoomNameToLovers();
             }
-            // 廣播 AFC 資料給房間內玩家（EBC 等環境下伺服器同步可能失效）
-            broadcastAFCData();
         }, 600);
         // 房內角色的 OnlineSharedSettings 載入後做雙向對帳，自動補齊不對稱
         setTimeout(() => { try { reconcileWithRoom(); } catch {} }, 1800);
@@ -193,7 +176,6 @@ export function setupHooks(registry) {
         try {
             localizeChatRoomMessage(data);
             handleHidden(data);
-            handleAFCSyncData(data);
             dispatchChatRoomMessage(data);
 
             // 同房間 AFC Beep（Hidden 主要通道，跨伺服器可靠）。
@@ -230,12 +212,6 @@ export function setupHooks(registry) {
         if (typeof result?.then === 'function') return result.then(value => { decorate(); return value; });
         decorate();
         return result;
-    });
-
-    // ── 離線撤銷授權 ────────────────────────────────────────────
-    hook("ServerDisconnect", 5, (args, next) => {
-        try { for (const num of AFCLockAccessOn) sendBeep(num, BEEP.LOCK_ACCESS_OFF); } catch {}
-        return next(args);
     });
 
     // ── 離開私人房：通知戀人移除已分享的房名 ─────────────────────
