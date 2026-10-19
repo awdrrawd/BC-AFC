@@ -19,7 +19,7 @@ export function reconcileWithRoom() {
         const num    = C.MemberNumber;
         const iHaveC = isAFCLover(num);
         const cHasMe = (C.OnlineSharedSettings?.AFC?.lovers ?? [])
-            .some(l => Number(l.memberNumber) === Number(Player.MemberNumber));
+            .some(l => Number(l?.memberNumber) === Number(Player.MemberNumber));
 
         if (iHaveC && !cHasMe) {
             if (!pendingRestoreOut[num]) proposeRestore(C, true);
@@ -28,7 +28,7 @@ export function reconcileWithRoom() {
             // 對方廣播的 lovers 內含「對方眼中的我們關係」（stage/stageDate/startDate）。
             // 兩端各自向較高階段收斂，最終一致；升格會 broadcast，另一端下次同步即同步。
             const theirEntryOfMe = (C.OnlineSharedSettings?.AFC?.lovers ?? [])
-                .find(l => Number(l.memberNumber) === Number(Player.MemberNumber));
+                .find(l => Number(l?.memberNumber) === Number(Player.MemberNumber));
             if (theirEntryOfMe) {
                 reconcileStage(num, theirEntryOfMe.stage, theirEntryOfMe.stageDate, theirEntryOfMe.startDate);
             }

@@ -6,6 +6,8 @@
 import { AFC_BEEP_TYPE, BEEP, STAGE } from '../core/config.js';
 import { _recentBeepKeys, AFCLockAccessOn } from '../core/state.js';
 import { _sendHidden, _clearAck, sendBeep } from './beep.js';
+import { peerName } from './hidden-beep.js';
+import { sanitizeStage, sanitizeTimestamp } from '../features/relationships/lover-model.js';
 import { t } from '../i18n/i18n.js';
 import { chatLocalNotice } from '../util/util.js';
 import { handleIncomingProposal, handleAccepted } from '../features/relationships/propose.js';
@@ -19,7 +21,10 @@ export function parseBeep(data) {
     if (data.BeepType !== AFC_BEEP_TYPE) return;
 
     const from     = data.MemberNumber;
-    const fromName = data.MemberName ?? `#${from}`;
+    const fromName = peerName(data.MemberName, `#${from}`);
+    // 對方自報名稱屬於不可信輸入：一律經 peerName 過濾（字串、去控制字元、限長）。
+    const senderName   = peerName(data.SenderName,   fromName);
+    const receiverName = peerName(data.ReceiverName, fromName);
 
     // ── 傳輸層 ACK：收到對方的 ACK → 停止重送 ──────────────
     if (data.Message === BEEP.ACK_T) { _clearAck(data.AckId); return; }
@@ -38,28 +43,28 @@ export function parseBeep(data) {
 
     switch (data.Message) {
         case BEEP.PROPOSE:
-            handleIncomingProposal(from, data.SenderName ?? fromName); break;
+            handleIncomingProposal(from, senderName); break;
         case BEEP.PROPOSE_ACK:
             chatLocalNotice(t('proposeAck', fromName)); break;
         case BEEP.ACCEPT:
-            handleAccepted(from, data.ReceiverName ?? fromName); break;
+            handleAccepted(from, receiverName); break;
         case BEEP.ACCEPT_ACK:
             break;
         case BEEP.RESTORE_PROPOSE:
-            handleIncomingRestore(from, data.SenderName ?? fromName,
-                                  data.Stage, data.StartDate, data.StageDate); break;
+            handleIncomingRestore(from, senderName, sanitizeStage(data.Stage),
+                                  sanitizeTimestamp(data.StartDate), sanitizeTimestamp(data.StageDate)); break;
         case BEEP.RESTORE_ACCEPT:
-            handleRestoreAccepted(from, data.ReceiverName ?? fromName,
-                                  data.Stage, data.StartDate, data.StageDate); break;
+            handleRestoreAccepted(from, receiverName, sanitizeStage(data.Stage),
+                                  sanitizeTimestamp(data.StartDate), sanitizeTimestamp(data.StageDate)); break;
 
         case BEEP.PROPOSE_ENGAGE:
-            handleIncomingStageProposal(from, data.SenderName ?? fromName, STAGE.ENGAGED); break;
+            handleIncomingStageProposal(from, senderName, STAGE.ENGAGED); break;
         case BEEP.PROPOSE_MARRY:
-            handleIncomingStageProposal(from, data.SenderName ?? fromName, STAGE.MARRIED); break;
+            handleIncomingStageProposal(from, senderName, STAGE.MARRIED); break;
         case BEEP.ACCEPT_ENGAGE:
-            handleAcceptedStage(from, data.ReceiverName ?? fromName, STAGE.ENGAGED); break;
+            handleAcceptedStage(from, receiverName, STAGE.ENGAGED); break;
         case BEEP.ACCEPT_MARRY:
-            handleAcceptedStage(from, data.ReceiverName ?? fromName, STAGE.MARRIED); break;
+            handleAcceptedStage(from, receiverName, STAGE.MARRIED); break;
 
         case BEEP.SYNC_REQUEST:
             if (isAFCLover(from)) {

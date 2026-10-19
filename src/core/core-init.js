@@ -159,8 +159,8 @@ function completeInit() {
                 const lovers = ch?.OnlineSharedSettings?.AFC?.lovers ?? [];
                 const perms  = ch?.OnlineSharedSettings?.AFC?.lockPerms;
                 if (!perms?.enableAFCLock) return false;
-                return lovers.some(l => Number(l.memberNumber) === Number(Player.MemberNumber))
-                || (Player.Lovership?.some(l => Number(l.MemberNumber) === Number(ch?.MemberNumber)) ?? false);
+                return lovers.some(l => Number(l?.memberNumber) === Number(Player.MemberNumber))
+                || (Player.Lovership?.some(l => Number(l?.MemberNumber) === Number(ch?.MemberNumber)) ?? false);
             },
             /** 取得戀人清單（唯讀複本，順序＝面板顯示順序）*/
             getLovers:        () => structuredClone(getSharedSettings()?.lovers ?? []),

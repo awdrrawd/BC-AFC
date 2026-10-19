@@ -12,7 +12,7 @@ function runtime() {
     const c = vm.createContext({
         getLockDraft, repairHeartLockDuplicates() {},
         Date: class extends Date { static now() { return now; } },
-        GRAB_WINDOW_MS: 14000, GRAB_COOLDOWN_MS: 120000,
+        GRAB_WINDOW_MS: 14000, GRAB_COOLDOWN_MS: 120000, MAX_TEXT: 500,
         HEARTLOCK_NAME: 'HeartLock', HSLOCK_NAME: 'HighSecurityPadlock', EXT_KEY: 'AFC_HeartLock',
         DEFAULT_STORAGE: { padlocks: {} }, clone: value => JSON.parse(JSON.stringify(value)),
         state: { operations: {}, panel: {} }, _pendingRestore: new Set(),
@@ -37,7 +37,7 @@ function runtime() {
     c.ChatRoomCharacter = [c.Player];
     c.sent = [];
     c.ServerSend = (...args) => c.sent.push(args);
-    for (const file of ['protection', 'storage', 'snapshot', 'lock', 'net', 'timer', 'vibe']) {
+    for (const file of ['protection', 'validate', 'storage', 'snapshot', 'lock', 'net', 'timer', 'vibe']) {
         vm.runInContext(fs.readFileSync(new URL(file === 'net' ? '../src/net/heartlock.js' : `../src/features/heartlock/${file}.js`, import.meta.url), 'utf8')
             .replace(/^import [\s\S]*?;\r?\n/gm, '').replace(/export /g, ''), c);
     }
@@ -273,4 +273,52 @@ test('orgasm hook ignores a repeated ActivityOrgasmPrepare while the orgasm bar 
     player.ArousalSettings.OrgasmTimer = 0;
     hooks.ActivityOrgasmPrepare([player], next);
     assert.equal(natives, 1, 'a fresh orgasm still goes through the native flow');
+});
+
+test('an unparseable unlock time keeps the lock closed instead of opening it (fail-closed timer)', () => {
+    const { c } = runtime();
+    const cfg = c.Player.HeartLock.padlocks.ItemArms;
+    for (const bad of ['garbage', 'NaN', {}, true]) {
+        cfg.unlockTime = bad;
+        c.checkTimers();
+        assert.equal(c.Player.HeartLock.padlocks.ItemArms, cfg, `lock survives unlockTime=${JSON.stringify(bad)}`);
+        assert.equal(c.Player.Appearance[0].Property.LockedBy, 'HighSecurityPadlock');
+    }
+    cfg.unlockTime = new Date(1).toISOString();   // 過期的合法時間仍會解鎖
+    c.checkTimers();
+    assert.equal(c.Player.ExtensionSettings.AFC_HeartLock.padlocks.ItemArms, undefined);
+});
+
+test('remote Update/Apply/Remove validate group and values; only the owner may change a lock', () => {
+    const { c } = runtime();
+    const cfg = c.Player.HeartLock.padlocks.ItemArms;
+    const send = (Content, extra, sender = 2) => c.handleHidden({ Type: 'Hidden', Content, Sender: sender,
+        Dictionary: [{ Tag: Content, Target: 1, Group: 'ItemArms', ...extra }] });
+
+    // owner 傳來的垃圾值被丟棄，不會污染鎖
+    send('HeartLock::Update', { Config: { unlockTime: 'garbage', vibe: 'max', note: 'x'.repeat(5000), removeRestraints: 'yes' } });
+    assert.equal(cfg.unlockTime ?? null, null);
+    assert.equal(cfg.vibe ?? 'off', 'off');
+    assert.equal(cfg.note.length, 500);
+    assert.equal('removeRestraints' in cfg ? cfg.removeRestraints : false, false);
+
+    // 合法值照常套用，且可明確清除計時
+    send('HeartLock::Update', { Config: { unlockTime: '2030-01-01T00:00:00Z', vibe: 'mid' } });
+    assert.equal(cfg.unlockTime, '2030-01-01T00:00:00.000Z'); assert.equal(cfg.vibe, 'mid');
+    send('HeartLock::Update', { Config: { unlockTime: null } });
+    assert.equal(cfg.unlockTime, null);
+
+    // 非 owner 的更新一律無效
+    send('HeartLock::Update', { Config: { vibe: 'high' } }, 3);
+    assert.equal(cfg.vibe, 'mid');
+
+    // 原型鏈部位名稱不會被處理
+    for (const group of ['__proto__', 'constructor', 'toString']) {
+        send('HeartLock::Update', { Group: group, Config: { vibe: 'high' } });
+        send('HeartLock::Remove', { Group: group });
+        send('HeartLockApply', { Group: group, Owner: 2, AssetName: 'x', LockId: 'l' });
+    }
+    assert.equal(Object.prototype.vibe, undefined);
+    assert.equal(c.Player.HeartLock.padlocks.ItemArms, cfg);
+    assert.equal(Object.keys(c.Player.HeartLock.padlocks).length, 1);
 });

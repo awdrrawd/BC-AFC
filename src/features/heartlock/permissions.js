@@ -33,8 +33,8 @@ export function isAllowedToLock(ch) {
 
     // Fallback：直接讀 OnlineSharedSettings
     const afcLovers = ch.OnlineSharedSettings?.AFC?.lovers ?? [];
-    if (afcLovers.some(l => Number(l.memberNumber) === meNum)) return true;
-    if (ch.Lovership?.some(l => Number(l.MemberNumber) === meNum)) return true;
+    if (afcLovers.some(l => Number(l?.memberNumber) === meNum)) return true;
+    if (ch.Lovership?.some(l => Number(l?.MemberNumber) === meNum)) return true;
 
     return false;
 }
@@ -63,9 +63,9 @@ export function isAllowedToUnlock(C, cfg) {
     if (!lockPerms?.enableAFCLock) return false;
     // AFC 戀人
     const afcLovers = C.OnlineSharedSettings?.AFC?.lovers ?? [];
-    if (afcLovers.some(l => Number(l.memberNumber) === meNum)) return true;
+    if (afcLovers.some(l => Number(l?.memberNumber) === meNum)) return true;
     // BC 原生戀人
-    if (C.Lovership?.some(l => Number(l.MemberNumber) === meNum)) return true;
+    if (C.Lovership?.some(l => Number(l?.MemberNumber) === meNum)) return true;
     return false;
 }
 
@@ -87,8 +87,8 @@ export function isMemberAllowedByMe(memberNumber) {
     if (!lockPerms?.enableAFCLock) return false;
     // AFC 戀人
     const afcLovers = Player.OnlineSharedSettings?.AFC?.lovers ?? [];
-    if (afcLovers.some(l => Number(l.memberNumber) === n)) return true;
+    if (afcLovers.some(l => Number(l?.memberNumber) === n)) return true;
     // BC 原生戀人
-    if (Player.Lovership?.some(l => Number(l.MemberNumber) === n)) return true;
+    if (Player.Lovership?.some(l => Number(l?.MemberNumber) === n)) return true;
     return false;
 }

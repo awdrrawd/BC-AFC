@@ -8,6 +8,7 @@ import { HEARTLOCK_NAME } from './config.js';
 import { state } from './state.js';
 import { log } from './util.js';
 import { ensureStorage } from './storage.js';
+import { parseUnlockTime } from './validate.js';
 import { sendLocalizedAction } from '../../i18n/l10n.js';
 
 export function startTimerCheck() {
@@ -19,7 +20,10 @@ export function checkTimers() {
     const now = Date.now();
     for (const gn of Object.keys(Player.HeartLock?.padlocks ?? {})) {
         const cfg = Player.HeartLock.padlocks[gn];
-        if (!cfg?.unlockTime || now < new Date(cfg.unlockTime).getTime()) continue;
+        if (!cfg?.unlockTime) continue;
+        // 無法解析的時間 → NaN；舊寫法 `now < NaN` 為 false，會「立刻解鎖」。改為保持上鎖（fail-closed）。
+        const due = parseUnlockTime(cfg.unlockTime);
+        if (due == null || now < Date.parse(due)) continue;
         try {
             if (removeLock(gn, { removeRestraint: !!cfg.removeRestraints })) {
                 try { sendLocalizedAction('hl', 'timerExpired', [Player.Nickname || Player.Name, HEARTLOCK_NAME]); } catch {}
