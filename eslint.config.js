@@ -57,6 +57,15 @@ export default [
       'no-unused-vars': ['warn', { args: 'none', varsIgnorePattern: '^_' }],
       'no-empty': 'off',
       'no-cond-assign': 'off',
+      // 對方玩家的名稱、備註等資料不可信；寫入 HTML 一律改用 textContent / DOM 節點。
+      // （曾因 innerHTML 插入對方自報的名稱造成 HTML 注入。）
+      // 清空容器（innerHTML = ''）允許；其餘動態 HTML 需以 eslint-disable 註明為何安全。
+      'no-restricted-syntax': ['error',
+        { selector: "AssignmentExpression[left.property.name=/^(innerHTML|outerHTML)$/][right.type!='Literal']",
+          message: '不要把動態內容寫入 innerHTML/outerHTML；使用 textContent 或 createElement。' },
+        { selector: "CallExpression[callee.property.name=/^(insertAdjacentHTML|write|writeln)$/]",
+          message: '不要使用 insertAdjacentHTML / document.write 寫入動態內容。' },
+      ],
     },
   },
 ];

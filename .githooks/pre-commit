@@ -1,0 +1,4 @@
+#!/bin/sh
+# 提交前跑 lint、測試與孤兒模組檢查。啟用：npm run setup-hooks　停用：git config --unset core.hooksPath
+# 緊急略過（不建議）：git commit --no-verify
+exec npm run check --silent
