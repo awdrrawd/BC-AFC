@@ -40,6 +40,7 @@ export function showHTMLDatePicker(onConfirm, initDate) {
             const isOther = off !== 0, isSelected = !isOther && d === date.getDate();
             dayCells += `<div data-d="${d}" data-off="${off}" style="text-align:center;padding:3px 2px;cursor:pointer;border-radius:3px;font-size:12px;background:${isSelected?'#8B1A4A':'#280a1c'};color:${isOther?'#554':'#fff'};">${d}</div>`;
         }
+        // eslint-disable-next-line no-restricted-syntax -- 只插入本檔計算出的數字與常數樣式，不含任何使用者／對方輸入
         picker.innerHTML = `
             <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center;">
                 <select id="hl_y" style="${selStyle}">${genYearOpts(y)}</select>

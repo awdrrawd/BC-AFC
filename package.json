@@ -12,7 +12,11 @@
     "build": "vite build",
     "lint": "eslint .",
     "test": "node --test",
-    "check:assets": "node scripts/check-assets.mjs"
+    "check:assets": "node scripts/check-assets.mjs",
+    "check:orphans": "node scripts/check-orphans.mjs",
+    "check:bc": "node scripts/check-bc-compat.mjs",
+    "check": "npm run lint && npm test && npm run check:orphans",
+    "setup-hooks": "git config core.hooksPath .githooks"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
