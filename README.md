@@ -3,209 +3,135 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-0.7.1-purple.svg)
+![Version](https://img.shields.io/badge/version-0.7.3-purple.svg)
 ![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)
 ![BondageClub](https://img.shields.io/badge/BondageClub-Compatible-pink.svg)
-![EN](https://img.shields.io/badge/EN-✔️-blue.svg)
-![ZH](https://img.shields.io/badge/ZH-✔️-pink.svg)
+![Languages](https://img.shields.io/badge/i18n-TW%20%7C%20CN%20%7C%20EN%20%7C%20DE%20%7C%20FR%20%7C%20RU%20%7C%20UA-blue.svg)
 
 </div>
 
-一個 BondageClub UserScript 插件，拓展原生戀人系統，支援多名戀人、關係進展（交往→訂婚→結婚）以及心形鎖拓展。  
-A BondageClub UserScript plugin extending the native lover system — multiple lovers, relationship stages (dating → engaged → married), and a Heart Padlock extension.
-
-> 本插件內含 **BC Heart Lock Extension（心形鎖拓展）**，安裝 AFC 後心形鎖功能會自動載入，無需另行安裝。
-> This plugin includes the **BC Heart Lock Extension**. It loads automatically with AFC — no separate install needed.
-
-## 📚 文件 · Documentation
-
-完整的架構、資料模型、多語系統與公開 API 說明請見 [`docs/`](docs/README.md)。
-See [`docs/`](docs/README.md) for architecture, data model, localization, and public API documentation.
+Bondage Club UserScript：突破原生戀人數量限制，提供多名戀人、關係進展（交往 → 訂婚 → 結婚），並內建**心形鎖（Heart Lock）**。安裝 AFC 後心形鎖自動載入，無需另外安裝。  
+A Bondage Club UserScript that lifts the native lover limit with multiple lovers, relationship stages (dating → engaged → married), and a bundled **Heart Lock** padlock — no separate install required.
 
 ---
 
 ## ✨ 功能 · Features
 
-**💕 拓展戀人系統 · Extended Lover System**
+### 💕 拓展戀人 · Extended Lovers
+- 獨立於原生系統的拓展戀人名單，上限 **20 人**。  
+  A separate extended-lover list, capped at **20**.
+- 在對話選單提出申請，對方 **3 分鐘內**確認才成立；同一對象申請冷卻 60 秒。  
+  Propose from the dialogue menu; the other side has **3 minutes** to accept (60 s cooldown between proposals).
+- 解除關係：對話選單與 `/afc-breakup` 可隨時解除；偏好設定頁的戀人名單中，**超過 7 天沒見面**才能單方面解除（按鈕平時為灰色）。解除時會通知對方，對方離線或沒收到時紀錄暫時不對稱，可用「關係恢復」補齊。  
+  Break up any time from the dialogue menu or `/afc-breakup`; in the settings page the Break-up button unlocks only after **7 days without meeting**. The other party is notified; an asymmetric record can be repaired through Restore.
 
-突破 BC 原生戀人數量限制，建立獨立的拓展戀人名單。  
-Bypass BC's native lover limit with a separate extended lover list.
+### 💍 關係進展 · Relationship Stages
+- 交往滿 7 天可提訂婚，訂婚滿 7 天可提結婚，需對方線上確認。  
+  Engagement after 7 days of dating, marriage after 7 days engaged; the other party must accept online.
+- 各階段不同顏色標籤：交往粉紅、訂婚金色、結婚桃紅。  
+  Stage colour tags: dating (pink), engaged (gold), married (rose).
 
-在對話選單中直接提出申請，雙方確認後成立關係，3 分鐘內有效。  
-Propose directly from the dialogue menu. Confirmed by both parties within 3 minutes.
+### 📋 Profile 面板 · Profile Panel
+- 在他人的個人資料頁展開拓展戀人列表，每頁 10 人，最多 20 人；右向三角翻頁。  
+  Browse a character's extended lovers on their Profile page, 10 per page (up to 20).
+- 顯示階段與交往時長／起始日期（設定中切換），可選擇顯示在線燈號。  
+  Shows stage plus duration or start date, with optional online indicators.
+- 提供 `window.Liko.AFC` 供其他插件在條目上疊加按鈕，見 [Public API](docs/Public-API.md)。
 
-支援單方面解除關係（超過 7 天未見面時可不通知對方）。  
-One-sided breakup is allowed after 7 days of no contact.
+### 🔄 關係恢復 · Relationship Restore
+一方有記錄、另一方沒有時，任一方可在對話中發起恢復，對方確認後補齊並保留原始起始日期與階段。  
+When only one side holds the record, either party can request a restore; the original start date and stage are preserved.
 
----
+### 🏠 戀人房名分享 · Lover Room Sharing
+戀人進入私人房時，房名經 AccountBeep 分享給在線戀人，其他插件可透過 `getLoverRoom()` 取得。  
+Private room names are shared with online lovers via AccountBeep and exposed through `getLoverRoom()`.
 
-**💍 關係進展 · Relationship Stages**
+### 🔒 心形鎖 · Heart Lock（內含 · bundled）
+可由拓展戀人或 BC 原生戀人上鎖／解鎖的心形掛鎖，五個分頁：**總覽 / 筆記 / 計時器 / 控制 / 解鎖**。
 
-交往滿 7 天後可提出訂婚，訂婚滿 7 天後可提求婚，對方需線上確認。  
-After 7 days of dating, propose engagement; after 7 days engaged, propose marriage. The other party must accept online.
+| 功能 | 說明 |
+|---|---|
+| 筆記 Note | 最多 500 字，支援圖片網址內嵌 |
+| 計時器 Timer | 到期自動解鎖，可選同時移除拘束 |
+| 震動 Vibe | 關 / 低 / 中 / 高，每 60 秒發送一次震動訊息 |
+| 高潮控制 Orgasm | 正常 / 邊緣 / 拒絕 |
+| 防脫逃 Anti-Escape | 鎖被異常移除時自動復原並廣播；短時間反覆衝突會暫停自動復原 |
+| 製作品鎖 Craft Lock | 在 BC 製作介面為製作品預設心鎖參數，使用時才實際上鎖 |
+| 備份復原 Recovery | 鎖遺失時由設定資料與完整快照補回，需穿戴者確認 |
 
-各階段顯示不同顏色標籤（交往 粉紅、訂婚 金色、結婚 桃紅）。  
-Each stage displays a different color tag (dating: pink, engaged: gold, married: rose).
+詳細的資料保存與保護規則見 [docs/Storage.md](docs/Storage.md)。
 
----
-
-**📋 Profile 面板 · Profile Panel**
-
-在對方的個人資料頁面，可查看其拓展戀人列表（最多 10 人，左右各 5 人）。  
-View a character's extended lover list on their Profile page (up to 10 entries).
-
-顯示關係階段、交往天數或起始日期（可在設定中切換顯示模式）。  
-Shows relationship stage, days together, or start date (configurable in settings).
-
-可選擇在自己的 Profile 頁面顯示在線狀態燈號（綠點）。  
-Optionally show online status indicators (green dot) on your own Profile page.
-
----
-
-**🔄 關係恢復 · Relationship Restore**
-
-當雙方資料不對稱（一方有記錄、一方沒有）時，可在對話中發起恢復申請。  
-When relationship data is asymmetric (one side has the record, the other doesn't), either party can initiate a restore request.
-
-對方確認後自動補齊資料，並同步原始關係日期與階段。  
-Data is synced back automatically after confirmation, preserving the original start date and stage.
-
----
-
-**📡 LIKOSHARE 資料同步 · Data Sync**
-
-戀人清單與鎖權限發布在 `OnlineSharedSettings`，由伺服器同步給房內玩家，不需要額外查詢或廣播。  
-Lover list and lock permissions are published through `OnlineSharedSettings`, which the server syncs to the room — no extra queries or broadcasts.
-
-申請、接受、升格、恢復、解除等操作以 1 對 1 的 Hidden 訊息送達對象；戀人房名經 AccountBeep 分享。  
-Proposals, acceptances, upgrades, restores and breakups are 1-to-1 Hidden messages; lover room names travel via AccountBeep.
+### 🌐 多語系 · i18n
+繁體中文、簡體中文、英文、德文、法文、俄文、烏克蘭文；聊天廣播會依接收者的語言自動改寫（[說明](docs/Localization-Engine.md)）。
 
 ---
 
-**🔒 BC Heart Lock Extension（內含）· Heart Padlock (Bundled)**
+## 📦 安裝 · Installation
 
-一款心形掛鎖，可由拓展戀人或 BC 原生戀人上鎖與解鎖。  
-A heart-shaped padlock that can be locked and unlocked by extended lovers or BC native lovers.
-
-五個標籤面板（總覽 / 筆記 / 計時器 / 控制 / 解鎖），全功能 DOM 介面。  
-Five-tab panel (Overview / Note / Timer / Control / Unlock) with a full DOM interface.
-
-- **筆記 Note** — 最多 500 字的愛情筆記，支援圖片網址嵌入。  
-  Up to 500-character love note with image URL embedding.
-- **計時器 Timer** — 設定解鎖截止時間，到期自動解鎖，可選同時移除拘束。  
-  Set an unlock deadline; auto-unlocks on expiry, optionally removing restraints.
-- **震動控制 Vibe** — 低 / 中 / 高三段強度，每 60 秒廣播一次震動訊息。  
-  Three vibration levels; broadcasts a vibe message every 60 seconds.
-- **高潮控制 Orgasm Control** — 正常 / 邊緣 / 拒絕三種模式。  
-  Normal / Edge / Deny modes.
-- **防脫逃保護 Anti-Escape** — 鎖被異常移除時自動復原，並發送廣播訊息。  
-  Automatically restores if the lock is removed abnormally, with a broadcast message.
-
-支援多語言：繁體中文、簡體中文、英文、德文、法文、俄文、烏克蘭文。  
-Multilingual: Traditional Chinese, Simplified Chinese, English, German, French, Russian, Ukrainian.
-
----
-
-## 📦 安裝方式 · Installation
-
-> 安裝 AFC 後，心形鎖拓展（Heart Lock Extension）會**自動載入**，無需另行安裝。
-> After installing AFC, the Heart Lock Extension **loads automatically** — no separate install needed.
-
-### 🧩 透過 PCM 管理器（推薦） · Via PCM Manager (Recommended)
-
-若你已安裝 [Liko PCM](https://awdrrawd.github.io/liko-Plugin-Repository/)，可在插件列表中直接啟用 AFC，無需單獨安裝。
-If you have [Liko PCM](https://awdrrawd.github.io/liko-Plugin-Repository/) installed, enable AFC directly from the plugin list.
-
----
-
-### 🔌 透過 FUSAM（推薦） · Via FUSAM (Recommended)
-
-1. 安裝 FUSAM（若尚未安裝）：https://sidiousious.gitlab.io/bc-addon-loader/  
-   Install FUSAM if you don't have it yet: https://sidiousious.gitlab.io/bc-addon-loader/
-
-2. 登入 BondageClub 後，前往主設定頁面點擊頂部的 **ADD-ON**。  
-   After logging in, click **ADD-ON** at the top of the main settings page.
-
-3. 在列表中找到 **Liko-AFC**，選擇版本後點擊 **Save**。
-   Find **Liko-AFC** in the list, select your preferred branch, and click **Save**.
-
-4. 重新載入 BC。  
-   Reload BondageClub.
-
----
-
-### 🐵 直接安裝 · Direct installation
-Tampermonkey / Violentmonkey
-
-安裝載入器（loader）即可，插件本體與心形鎖已由 CI 打包到 GitHub Pages，載入器會自動抓取最新版：  
-Install the loader — the plugin bundle (with Heart Lock) is built by CI to GitHub Pages, and the loader fetches the latest build automatically:
-
-👉 **[安裝 loader.user.js · Install loader.user.js](https://github.com/awdrrawd/BC-AFC/raw/refs/heads/main/loader.user.js)**
-
----
-
-### 💻 瀏覽器控制台 · Browser Console
-
-開啟 F12，在 Console 分頁貼上以下程式碼（直接載入 Pages 上的打包檔）：  
-Open F12 DevTools and paste the following into the Console tab (loads the bundle from Pages):
+| 方式 | 步驟 |
+|---|---|
+| **Liko PCM**（推薦） | 在 [Liko PCM](https://awdrrawd.github.io/liko-Plugin-Repository/) 插件列表啟用 AFC |
+| **FUSAM**（推薦） | 安裝 [FUSAM](https://sidiousious.gitlab.io/bc-addon-loader/) → 登入 BC → 設定頁頂部 **ADD-ON** → 找到 **Liko-AFC** → 選分支 → **Save** → 重新載入 |
+| **Tampermonkey / Violentmonkey** | 安裝 **[loader.user.js](https://github.com/awdrrawd/BC-AFC/raw/refs/heads/main/loader.user.js)**，載入器自動抓取 CI 發佈於 GitHub Pages 的最新版 |
+| **瀏覽器控制台** | F12 → Console 貼上下方程式碼 |
 
 ```javascript
 import(`https://awdrrawd.github.io/BC-AFC/assets/main.js?v=${Date.now()}`);
 ```
 
----
-
-### 🛠️ 開發 · Development
-
-原始碼採模組化（`src/`），由 vite 打包成單一 `dist/assets/main.js`，推送到 `main` 後 GitHub Actions 自動部署到 Pages。  
-Source is modular (`src/`), bundled by vite into a single `dist/assets/main.js`; pushing to `main` triggers GitHub Actions to deploy to Pages.
-
-```bash
-npm install
-npm run build       # 打包到 dist/（並把 Images/ 複製進 public/）
-npm run lint        # eslint 檢查
-npm run dev         # vite build --watch + preview :5175，配 loader.local.user.js 本地開發
-```
-
-- **本地開發**：安裝 `loader.local.user.js`（改讀 `http://localhost:5175/assets/main.js`），跑 `npm run dev` 後重整 BC 即可即時看到改動。  
-  **Local dev:** install `loader.local.user.js` (reads from `http://localhost:5175/assets/main.js`), run `npm run dev`, reload BC.
-- 心形鎖邏輯位於 `src/features/heartlock/`，介面位於 `src/ui/heartlock/`，與 AFC 一起打包。完整目錄見 [架構說明](docs/architecture.md)。
-  Heart Lock is bundled with AFC; see the architecture document for module responsibilities.
+相依：[bcModSdk](https://github.com/Jomshir98/bondage-club-mod-sdk)（自動載入）。
 
 ---
 
 ## ⚙️ 設定 · Settings
 
-在 BC 偏好設定頁面中找到 **拓展戀人設定 / EL Settings** 進入設定頁面：  
-Go to BC Preferences and find **EL Settings** to open the settings page:
+BC **偏好設定 → EL Settings（拓展戀人設定）**：
 
-| 設定 Setting | 說明 Description |
+| 設定 | 說明 |
 |---|---|
-| 拓展戀人系統 Extended Lover System | 啟用 / 停用整個拓展戀人系統 Enable/disable the EL system |
-| 拓展戀人鎖 EL Lock | 允許戀人使用心形鎖 Allow lovers to use Heart Padlock |
-| 主人使用拓展鎖 Owner Lock | 允許你的主人也使用心形鎖 Allow your owner to use Heart Padlock |
-| 線上狀態燈號 Online Indicator | 在 Profile 頁面顯示綠點 Show green dots on Profile page |
-| 顯示模式 Display Mode | 日期模式 / 時長模式切換 Toggle date vs duration display |
-| 震動信息 Vibe Message | 開啟 / 廣播 / 僅自己可見 On / Broadcast / Local only |
-| 震動音效 Vibe Sound | 震動時播放音效（僅自己聽到）Play sound on vibe (local only) |
+| 拓展戀人系統 | 啟用／停用整個系統（停用時鎖權限一律關閉） |
+| 拓展戀人鎖 | 允許戀人對你使用心形鎖 |
+| 主人使用拓展鎖 | 允許你的主人使用心形鎖 |
+| 線上狀態燈號 | Profile 頁顯示綠點 |
+| 顯示模式 | 日期 / 時長 |
+| 震動訊息 | 關閉 / 廣播 / 僅自己可見 |
+| 震動音效 | 震動時播放音效（僅自己聽到） |
+
+## 💬 聊天指令 · Commands
+
+| 指令 | 說明 |
+|---|---|
+| `/afc-propose [會員編號]` | 向同房玩家提出申請 |
+| `/afc-status` | 顯示插件狀態、戀人列表與線上戀人數 |
+| `/afc-breakup [會員編號]` | 解除指定戀人關係 |
+| `/afc-lastseen` | 顯示各戀人最後見面時間 |
+| `/afc-debug-hidden` | 診斷：印出下一則 Hidden 訊息的欄位結構 |
 
 ---
 
-## 🔧 相依 · Dependencies
+## 🛠️ 開發 · Development
 
-- [bcModSdk](https://github.com/Jomshir98/bondage-club-mod-sdk) — 自動載入，無需手動安裝。Auto-loaded, no manual install needed.
+原始碼模組化於 `src/`，由 Vite 打包；推送到 `main` 後 GitHub Actions 驗證並部署到 Pages。
 
----
+```bash
+npm install
+npm run dev        # build --watch + preview :5175，搭配 loader.local.user.js
+npm run build      # 輸出 dist/（先複製 Images/ 到 public/）
+npm run check      # lint + test + 孤兒模組檢查（與 CI 相同的快速部分）
+npm run check:assets
+npm run check:bc -- <BC 原始碼目錄>   # 檢查被 hook 的 BC 函式是否仍存在
+npm run setup-hooks                   # 選用：啟用 pre-commit 檢查
+```
+
+本地開發：安裝 `loader.local.user.js`（讀 `http://localhost:5175/assets/main.js`），執行 `npm run dev` 後重整 BC。  
+注意：`dist/assets/main.js`（入口）與 `app.js`（應用本體）必須一起發佈。
+
+## 📚 文件 · Documentation
+
+架構、資料保存、公開 API、翻譯引擎與相容性說明見 **[docs/](docs/README.md)**。
 
 ## 📄 授權 · License
 
-MIT License © Likolisu
-
-使用本插件的程式碼時，請附上來源連結或保留版權聲明。  
-When using code from this project, please include a link to the source or retain the copyright notice.
-
----
-
-[R132Beta3 分支修補與驗收](docs/r132-compatibility.md)
+MIT License © Likolisu。使用本專案程式碼時請附上來源連結或保留版權聲明。
 
 🐾 Made with 🐾 by **Likolisu**
