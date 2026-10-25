@@ -2,6 +2,9 @@
 
 供維護者與其他插件作者使用；安裝與功能介紹見[專案 README](../README.md)。
 
+**🗺 互動式架構圖：[開啟 AFC 架構與功能分支圖](https://awdrrawd.github.io/BC-AFC/docs/afc-architecture.html)**（GitHub Pages）  
+依「前端 UI → 功能規則 → 資料 → 通訊 → BC 邊界」列出每個功能的模組與實際檔案，可搜尋、切換深淺色。離線或本機查看請直接開啟 [afc-architecture.html](afc-architecture.html)；文字版見 [architecture.md](architecture.md)。
+
 ## 文件索引
 
 | 文件 | 用途 |
@@ -13,7 +16,7 @@
 | [r132-compatibility.md](r132-compatibility.md) | R132／BCX 相容機制、限制、測試依據 |
 | [verification.md](verification.md) | **待辦**：尚需遊戲內驗收的項目 |
 | [GitHub-Automation.md](GitHub-Automation.md) | CI、Pages、BC 相容檢查、本機檢查指令 |
-| [afc-architecture.html](afc-architecture.html) | 可搜尋、可篩選的互動式架構導覽 |
+| [afc-architecture.html](https://awdrrawd.github.io/BC-AFC/docs/afc-architecture.html) | 互動式功能分支圖（Pages 線上版；功能 → 模組 → 檔案，依前端到後端排列） |
 
 ## 快速查詢
 
