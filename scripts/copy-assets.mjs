@@ -26,3 +26,9 @@ copyInto('Images/', 'public/', n => /\.png$/i.test(n));
 rmSync(root + 'public/Translation/', { recursive: true, force: true });
 copyInto('Translation/afc/', 'public/Translation/afc/', n => n.endsWith('.json'));
 copyInto('Translation/hl/', 'public/Translation/hl/', n => n.endsWith('.json'));
+
+// 互動式架構圖：隨 Pages 一併發布
+// https://awdrrawd.github.io/BC-AFC/docs/afc-architecture.html
+mkdirSync(root + 'public/docs/', { recursive: true });
+copyFileSync(root + 'docs/afc-architecture.html', root + 'public/docs/afc-architecture.html');
+console.log('🐈‍⬛ [AFC] docs/afc-architecture.html -> public/docs/');

@@ -3,126 +3,124 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AFC 架構導覽</title>
+<title>AFC 架構與功能分支圖</title>
 <meta name="color-scheme" content="light dark">
 <style>
 :root{
-  --bg:#f7f5fb;--surface:#fff;--surface-2:#f1edf8;--line:#e3dcef;--text:#1d1830;--muted:#6b6381;
-  --brand:#c2417d;--brand-2:#7c5cff;--ring:rgba(124,92,255,.35);--shadow:0 1px 2px rgba(40,20,80,.06),0 8px 24px rgba(40,20,80,.06);
-  --core:#7c5cff;--hooks:#0ea5b7;--relations:#e0558f;--net:#d98a12;--heartlock:#d6455d;--i18n:#2f9e6b;--ui:#4f7cf0;--compat:#8a7f9c;
-  --code-bg:#f1edf8;--code-fg:#4a2f8f;
+  --bg:#f7f5fb;--surface:#fff;--surface-2:#f1edf8;--line:#b9aed0;--text:#1d1830;--muted:#6b6381;
+  --brand:#c2417d;--brand-2:#7c5cff;--ring:rgba(118,72,254,.35);--shadow:0 1px 2px rgba(40,20,80,.06),0 8px 24px rgba(40,20,80,.06);
+  --boot:#2f9e6b;--front:#0e93a6;--logic:#7c5cff;--data:#d98a12;--net:#4f7cf0;--bc:#d6455d;--verify:#8a7f9c;
+  --code-bg:#f1edf8;--code-fg:#4a2f8f;--border:#e3dcef;
 }
 :root[data-theme="dark"]{
-  --bg:#0d0a14;--surface:#171221;--surface-2:#1f1830;--line:#2f2642;--text:#f3eefa;--muted:#a89fbd;
+  --bg:#0d0b11;--surface:#17131e;--surface-2:#211b2a;--line:#665778;--text:#f5f1fa;--muted:#a89fbd;
   --brand:#f06aa5;--brand-2:#a58bff;--ring:rgba(165,139,255,.4);--shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
-  --core:#a58bff;--hooks:#52d0dd;--relations:#f58bb8;--net:#f0b44c;--heartlock:#ff7a8d;--i18n:#5ed49b;--ui:#7da2ff;--compat:#b3a8c6;
-  --code-bg:#251c38;--code-fg:#dccbff;
+  --boot:#5ed49b;--front:#52d0dd;--logic:#a58bff;--data:#f0b44c;--net:#7da2ff;--bc:#ff7a8d;--verify:#b3a8c6;
+  --code-bg:#251c38;--code-fg:#dccbff;--border:#352e40;
 }
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
-    --bg:#0d0a14;--surface:#171221;--surface-2:#1f1830;--line:#2f2642;--text:#f3eefa;--muted:#a89fbd;
+    --bg:#0d0b11;--surface:#17131e;--surface-2:#211b2a;--line:#665778;--text:#f5f1fa;--muted:#a89fbd;
     --brand:#f06aa5;--brand-2:#a58bff;--ring:rgba(165,139,255,.4);--shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
-    --core:#a58bff;--hooks:#52d0dd;--relations:#f58bb8;--net:#f0b44c;--heartlock:#ff7a8d;--i18n:#5ed49b;--ui:#7da2ff;--compat:#b3a8c6;
-    --code-bg:#251c38;--code-fg:#dccbff;
+    --boot:#5ed49b;--front:#52d0dd;--logic:#a58bff;--data:#f0b44c;--net:#7da2ff;--bc:#ff7a8d;--verify:#b3a8c6;
+    --code-bg:#251c38;--code-fg:#dccbff;--border:#352e40;
   }
 }
 *{box-sizing:border-box}
-html{scroll-behavior:smooth;scroll-padding-top:84px}
+html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--text);font:15px/1.6 "Inter","Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
-body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(800px 380px at 85% -5%,color-mix(in srgb,var(--brand-2) 18%,transparent),transparent 70%),radial-gradient(600px 300px at 5% 0,color-mix(in srgb,var(--brand) 14%,transparent),transparent 70%)}
-a{color:var(--brand-2)}
-code,.path{font-family:ui-monospace,"JetBrains Mono","SFMono-Regular",Menlo,Consolas,monospace}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(800px 380px at 85% -5%,color-mix(in srgb,var(--brand) 16%,transparent),transparent 70%),radial-gradient(600px 300px at 5% 0,color-mix(in srgb,var(--brand-2) 10%,transparent),transparent 70%)}
+a{color:inherit}
+code,.file{font-family:ui-monospace,"JetBrains Mono","SFMono-Regular",Menlo,Consolas,monospace}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:none;box-shadow:0 0 0 3px var(--ring)}
 
-.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:14px;padding:12px clamp(16px,4vw,40px);background:color-mix(in srgb,var(--bg) 78%,transparent);backdrop-filter:saturate(1.4) blur(14px);border-bottom:1px solid var(--line)}
-.brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.01em;white-space:nowrap}
+.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:14px;padding:12px clamp(16px,4vw,40px);background:color-mix(in srgb,var(--bg) 78%,transparent);backdrop-filter:saturate(1.4) blur(14px);border-bottom:1px solid var(--border)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;white-space:nowrap;cursor:pointer;border:0;background:none;color:inherit;font-size:inherit;padding:0}
 .brand i{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;font-style:normal;font-size:16px}
 .search{position:relative;flex:1;max-width:520px;margin-left:auto}
-.search input{width:100%;height:40px;padding:0 44px 0 40px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--text);font:inherit;outline:none;transition:box-shadow .15s,border-color .15s}
-.search input:focus{border-color:var(--brand-2);box-shadow:0 0 0 4px var(--ring)}
+.search input{width:100%;height:40px;padding:0 44px 0 40px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);font:inherit;outline:none;transition:box-shadow .15s,border-color .15s}
+.search input:focus{border-color:var(--brand);box-shadow:0 0 0 4px var(--ring)}
 .search svg{position:absolute;left:13px;top:11px;width:18px;height:18px;color:var(--muted)}
-.search kbd{position:absolute;right:10px;top:9px;padding:1px 7px;border-radius:6px;border:1px solid var(--line);background:var(--surface-2);color:var(--muted);font:12px/20px ui-monospace,monospace}
-.icon-btn{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--text);cursor:pointer;transition:transform .15s,border-color .15s}
-.icon-btn:hover{border-color:var(--brand-2);transform:translateY(-1px)}
-.icon-btn:focus-visible,.chip:focus-visible,.side a:focus-visible,.path:focus-visible{outline:none;box-shadow:0 0 0 3px var(--ring)}
+.search kbd{position:absolute;right:10px;top:9px;padding:1px 7px;border-radius:6px;border:1px solid var(--border);background:var(--surface-2);color:var(--muted);font:12px/20px ui-monospace,monospace}
+.icon-btn{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;transition:transform .15s,border-color .15s}
+.icon-btn:hover{border-color:var(--brand);transform:translateY(-1px)}
 
-.shell{display:grid;grid-template-columns:230px minmax(0,1fr);gap:36px;max-width:1360px;margin:0 auto;padding:28px clamp(16px,4vw,40px) 60px}
-.side{position:sticky;top:84px;align-self:start;display:grid;gap:2px;font-size:14px}
-.side small{margin:0 0 8px 12px;color:var(--muted);font-weight:600;letter-spacing:.08em;text-transform:uppercase;font-size:11px}
-.side a{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;color:var(--muted);text-decoration:none;transition:background .15s,color .15s}
-.side a span{width:8px;height:8px;border-radius:50%;background:var(--c,var(--brand-2));opacity:.55}
-.side a:hover{background:var(--surface-2);color:var(--text)}
-.side a.active{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
-.side a.active span{opacity:1;box-shadow:0 0 0 4px color-mix(in srgb,var(--c) 22%,transparent)}
-.side a.off{display:none}
+.shell{display:grid;grid-template-columns:250px minmax(0,1fr);gap:32px;max-width:1440px;margin:0 auto;padding:26px clamp(16px,4vw,40px) 60px}
+.side{position:sticky;top:78px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;display:grid;gap:2px;font-size:14px;padding-right:4px}
+.side h4{margin:14px 0 4px 12px;color:var(--muted);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.side h4:first-child{margin-top:0}
+.side button{display:flex;align-items:center;gap:10px;width:100%;padding:8px 12px;border:0;border-radius:10px;background:none;color:var(--muted);font:inherit;text-align:left;cursor:pointer;transition:background .15s,color .15s}
+.side button span{flex:none;width:8px;height:8px;border-radius:50%;background:var(--c);opacity:.6}
+.side button:hover{background:var(--surface-2);color:var(--text)}
+.side button.active{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+.side button.active span{opacity:1;box-shadow:0 0 0 4px color-mix(in srgb,var(--c) 22%,transparent)}
 
-.hero{padding:10px 0 26px}
-.hero h1{margin:0 0 10px;font-size:clamp(30px,4.4vw,48px);line-height:1.12;letter-spacing:-.01em}
-.hero h1 em{font-style:normal;background:linear-gradient(90deg,var(--brand),var(--brand-2));-webkit-background-clip:text;background-clip:text;color:transparent}
-.hero p{max-width:720px;margin:0;color:var(--muted);font-size:16px}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-top:22px}
-.stat{padding:14px 16px;border-radius:14px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow)}
-.stat b{display:block;font-size:26px;line-height:1.1;letter-spacing:-.02em}
-.stat span{color:var(--muted);font-size:13px}
+h1{margin:0 0 8px;font-size:clamp(28px,4vw,42px);line-height:1.15;letter-spacing:-.01em}
+h1 em{font-style:normal;background:linear-gradient(90deg,var(--brand),var(--brand-2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.lead{margin:0;color:var(--muted);max-width:760px;font-size:16px}
+h2.sub{margin:30px 0 10px;font-size:15px;color:var(--muted);letter-spacing:.04em}
 
-.chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 26px}
-.chip{display:inline-flex;align-items:center;gap:7px;padding:6px 13px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--muted);font:inherit;font-size:13px;cursor:pointer;transition:all .15s}
-.chip i{width:8px;height:8px;border-radius:50%;background:var(--c,var(--brand-2))}
-.chip:hover{color:var(--text);border-color:var(--c,var(--brand-2))}
-.chip[aria-pressed="true"]{color:#fff;background:var(--c,var(--brand-2));border-color:transparent}
-.chip[aria-pressed="true"] i{background:#fff}
+/* 依賴管線 */
+.pipe{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding:6px 2px 14px}
+.pnode{flex:1 0 170px;position:relative;padding:12px 14px;border-radius:14px;background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--c);box-shadow:var(--shadow)}
+.pnode b{display:block;color:var(--c);font-size:13px;margin-bottom:2px}
+.pnode small{display:block;color:var(--muted);font-size:12.5px;line-height:1.5}
+.parrow{flex:0 0 34px;display:grid;place-items:center;color:var(--line);font-size:20px}
+.pnote{margin:8px 0 0;color:var(--muted);font-size:13.5px}
+.pnote b{color:var(--text)}
 
-.sec{margin-bottom:44px}
-.sec.hide{display:none}
-.sec h2{display:flex;align-items:center;gap:10px;margin:0 0 4px;font-size:22px;letter-spacing:-.01em}
-.sec h2 .dot{width:10px;height:10px;border-radius:50%;background:var(--c)}
-.lead{margin:0 0 18px;color:var(--muted);max-width:760px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
-.card{position:relative;display:flex;flex-direction:column;gap:6px;padding:16px 16px 14px;border-radius:16px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);transition:transform .18s,border-color .18s}
-.card::before{content:"";position:absolute;left:16px;right:16px;top:0;height:3px;border-radius:0 0 4px 4px;background:var(--c)}
-.card:hover{transform:translateY(-3px);border-color:color-mix(in srgb,var(--c) 55%,var(--line))}
-.card h3{margin:4px 0 0;font-size:15.5px}
-.card p{margin:0;color:var(--muted);font-size:14px}
-.card.hide{display:none}
-.paths{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto;padding-top:8px}
-.path{border:0;padding:3px 8px;border-radius:7px;background:var(--code-bg);color:var(--code-fg);font-size:12px;cursor:copy;overflow-wrap:anywhere;text-align:left;transition:filter .15s}
-.path:hover{filter:brightness(1.12)}
-.note{margin:16px 0 0;padding:13px 16px;border-radius:12px;border:1px solid var(--line);border-left:4px solid var(--c);background:var(--surface);color:var(--muted);font-size:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.tile{position:relative;display:flex;flex-direction:column;gap:6px;padding:16px;border-radius:16px;background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow);text-align:left;color:inherit;font:inherit;cursor:pointer;transition:transform .18s,border-color .18s}
+.tile:hover{transform:translateY(-3px);border-color:var(--brand)}
+.tile h3{margin:0;font-size:16px}
+.tile p{margin:0;color:var(--muted);font-size:13.5px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.layers{display:flex;flex-wrap:wrap;gap:5px;margin-top:auto;padding-top:8px}
+.badge{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11.5px;font-weight:600;color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent);border:1px solid color-mix(in srgb,var(--c) 35%,transparent)}
+.tile.hide{display:none}
 
-.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;counter-reset:s}
-.step{position:relative;padding:16px;border-radius:16px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow)}
-.step::before{counter-increment:s;content:counter(s);display:grid;place-items:center;width:28px;height:28px;margin-bottom:10px;border-radius:50%;background:linear-gradient(135deg,var(--c),var(--brand-2));color:#fff;font-weight:700;font-size:13px}
-.step:not(:last-child)::after{content:"";position:absolute;top:30px;left:calc(100% + 2px);width:10px;height:2px;background:var(--line)}
-.step h3{margin:0 0 4px;font-size:15px}
-.step p{margin:0 0 8px;color:var(--muted);font-size:13.5px}
-.step.hide{display:none}
+/* 線性樹 */
+.crumb{display:flex;align-items:center;gap:8px;margin-bottom:14px;font-size:13px;color:var(--muted)}
+.crumb button{border:0;background:none;color:var(--brand);font:inherit;cursor:pointer;padding:0}
+.detail h2{margin:0 0 6px;font-size:26px;letter-spacing:-.01em}
+.detail .lead{margin-bottom:20px}
+.tree{overflow:auto;padding:28px 26px;border:1px solid var(--border);border-radius:18px;background:var(--surface);box-shadow:var(--shadow)}
+.bundle{display:grid;grid-template-columns:190px minmax(0,1fr);gap:56px;align-items:center;min-width:860px}
+.root{position:relative;padding:14px 16px;border-radius:14px;background:color-mix(in srgb,var(--brand) 9%,var(--surface-2));border:1px solid color-mix(in srgb,var(--brand) 65%,var(--border));color:var(--text);font-weight:700;line-height:1.35;box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 12%,transparent),0 0 20px color-mix(in srgb,var(--brand) 30%,transparent)}
+.root::after{content:"";position:absolute;left:100%;top:50%;width:28px;border-top:2px solid var(--line)}
+.rows{display:flex;flex-direction:column}
+.row{position:relative;display:grid;grid-template-columns:270px minmax(0,1fr);gap:50px;align-items:center;padding:7px 0}
+.row::before{content:"";position:absolute;left:-28px;top:50%;width:28px;border-top:2px solid var(--line)}
+.row::after,.down::before{content:"";position:absolute;left:-28px;top:0;bottom:0;border-left:2px solid var(--line)}
+.row:first-child::after{top:50%}
+.row:last-child::after{bottom:50%}
+.row:only-child::after{display:none}
+.branch{position:relative;padding:10px 14px;border-radius:12px;background:var(--surface-2);border:1px solid var(--border);border-left:4px solid var(--c)}
+.branch{transition:box-shadow .2s}
+.branch:hover{box-shadow:0 0 0 2px color-mix(in srgb,var(--c) 28%,transparent),0 0 16px color-mix(in srgb,var(--c) 28%,transparent)}
+.branch::after{content:"";position:absolute;left:100%;top:50%;width:50px;border-top:2px solid var(--line)}
+.branch .t{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:700;font-size:14.5px}
+.branch p{margin:3px 0 0;color:var(--muted);font-size:13px;line-height:1.5}
+.copy{margin-left:auto;padding:1px 8px;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font:11.5px/1.6 inherit;cursor:pointer}
+.copy:hover{color:var(--text);border-color:var(--brand)}
+.files{position:relative;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.files::before{content:"";position:absolute;left:-12px;top:50%;border:6px solid transparent;border-left:9px solid var(--line);border-right:0;transform:translateY(-50%)}
+.file{padding:4px 10px;border-radius:8px;background:var(--code-bg);color:var(--code-fg);font-size:12.5px;text-decoration:none;overflow-wrap:anywhere;border:1px solid transparent;transition:border-color .15s}
+.file:hover{border-color:var(--brand);text-decoration:underline}
+.down{position:relative;width:270px;height:24px;display:grid;place-items:center;color:var(--muted);font-size:12px}
+.down span{padding:0 8px;background:var(--surface);position:relative;z-index:1}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin:14px 2px 0;color:var(--muted);font-size:12.5px;align-items:center}
 
-.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:16px;background:var(--surface);box-shadow:var(--shadow)}
-table{width:100%;border-collapse:collapse;font-size:14px}
-th,td{padding:11px 16px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
-th{background:var(--surface-2);color:var(--muted);font-size:12px;letter-spacing:.06em;text-transform:uppercase}
-tr:last-child td{border-bottom:0}
-tr.hide{display:none}
-td.hl{font-weight:700;color:var(--brand);white-space:nowrap}
-
-.folders{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
-.folder{border-radius:16px;overflow:hidden;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow)}
-.folder.hide{display:none}
-.folder h3{margin:0;padding:11px 15px;font:600 13.5px ui-monospace,monospace;background:color-mix(in srgb,var(--c) 14%,var(--surface-2));color:var(--text)}
-.folder ul{margin:0;padding:10px 15px 13px;list-style:none;display:grid;gap:5px;color:var(--muted);font-size:13.5px}
-.folder li b{color:var(--text);font-weight:600}
-
-.empty{display:none;padding:50px 20px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:16px}
+.empty{display:none;padding:50px 20px;text-align:center;color:var(--muted);border:1px dashed var(--border);border-radius:16px;margin-top:14px}
 .empty.show{display:block}
-footer{padding:26px;text-align:center;color:var(--muted);font-size:13px;border-top:1px solid var(--line)}
 .toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,20px);padding:9px 16px;border-radius:999px;background:var(--text);color:var(--bg);font-size:13px;opacity:0;pointer-events:none;transition:all .25s}
 .toast.show{opacity:1;transform:translate(-50%,0)}
+footer{padding:26px;text-align:center;color:var(--muted);font-size:13px;border-top:1px solid var(--border)}
 
 @media (max-width:900px){
   .shell{display:block}
-  .side{position:sticky;top:65px;z-index:10;display:flex;overflow-x:auto;gap:6px;margin:0 -16px 20px;padding:10px 16px;background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
-  .side small{display:none}
-  .side a{white-space:nowrap;border:1px solid var(--line);background:var(--surface)}
-  .step::after{display:none}
+  .side{position:sticky;top:65px;z-index:10;display:flex;max-height:none;overflow-x:auto;gap:6px;margin:0 -16px 20px;padding:10px 16px;background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+  .side h4{display:none}
+  .side button{width:auto;white-space:nowrap;border:1px solid var(--border);background:var(--surface)}
   .brand b{display:none}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
@@ -130,10 +128,10 @@ footer{padding:26px;text-align:center;color:var(--muted);font-size:13px;border-t
 </head>
 <body>
 <header class="top">
-  <div class="brand"><i>🌸</i><b>AFC 架構導覽</b></div>
+  <button class="brand" id="home" type="button" title="回到總覽"><i>🌸</i><b>AFC 架構與功能分支圖</b></button>
   <label class="search">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-    <input id="q" type="search" placeholder="搜尋模組、功能、檔案或通道…" autocomplete="off" aria-label="搜尋">
+    <input id="q" type="search" placeholder="搜尋功能、模組或檔案…" autocomplete="off" aria-label="搜尋">
     <kbd>/</kbd>
   </label>
   <button class="icon-btn" id="theme" type="button" aria-label="切換深淺色" title="切換深淺色">
@@ -142,295 +140,142 @@ footer{padding:26px;text-align:center;color:var(--muted);font-size:13px;border-t
 </header>
 
 <div class="shell">
-  <nav class="side" id="side" aria-label="章節"><small>章節</small></nav>
-  <main>
-    <section class="hero">
-      <h1>Abundantia Florum<br><em>─Chromatica─</em></h1>
-      <p>多名戀人、關係進展與內建心形鎖的 Bondage Club 插件。這裡是目前的模組邊界、Hook／通道入口、資料保存與 Heart Lock 流程；點擊任何檔案路徑即可複製。</p>
-      <div class="stats" id="stats"></div>
-    </section>
-    <div class="chips" id="chips" role="group" aria-label="依領域篩選"></div>
-    <div id="content"></div>
-    <div class="empty" id="empty">找不到符合的項目，試試其他關鍵字或清除篩選。</div>
-  </main>
+  <nav class="side" id="nav" aria-label="功能分支"></nav>
+  <main id="main"></main>
 </div>
-<footer>AFC Architecture · 內容資料位於本檔 script 開頭的 SECTIONS，詳細說明見 <a href="architecture.md">architecture.md</a></footer>
+<footer>功能資料位於本檔 <code>features</code> 陣列；改檔名或刪模組後請同步更新。完整說明見 <a href="https://github.com/awdrrawd/BC-AFC/blob/main/docs/architecture.md">architecture.md</a></footer>
 <div class="toast" id="toast" role="status"></div>
 
 <script>
-/* ───────── 內容資料（改文字只需編輯這裡）───────── */
-const DOMAINS = {
-  core:      { label: '核心',   c: 'var(--core)' },
-  hooks:     { label: 'Hook',   c: 'var(--hooks)' },
-  relations: { label: '關係',   c: 'var(--relations)' },
-  net:       { label: '通訊',   c: 'var(--net)' },
-  heartlock: { label: '心形鎖', c: 'var(--heartlock)' },
-  i18n:      { label: '翻譯',   c: 'var(--i18n)' },
-  ui:        { label: '介面',   c: 'var(--ui)' },
-  compat:    { label: '相容',   c: 'var(--compat)' },
+const features=[
+ ['啟動與初始化','main.js 建立 window.Liko.AFC 與重複載入守衛，再動態載入 app.js；core-init 分兩階段初始化（載入期與登入後），登入後才處理設定資料與帳號驗證。',[['Bootstrap','入口與重複載入守衛','main.js,app.js'],['Config','常數、上限與版本','core/config.js'],['Init','兩階段初始化','core/core-init.js'],['Commands','聊天指令 /afc-*','core/commands.js'],['Docs','模組邊界與流程','../docs/architecture.md']]],
+ ['Hooks 與通道派送','所有 bcModSdk Hook 集中在 hooks/，經 registry 登記以便整批釋放；ChatRoomMessage 只有一個中央 Hook，依序派送給 L10N、Heart Lock 與 AFC Beep。',[['Entry','統一安裝入口','hooks/index.js'],['Registry','hook、interval、timeout 與 scope 釋放','hooks/registry.js,hooks/lifecycle.js'],['Message','ChatRoomMessage 中央派送','hooks/chat-message-channel.js'],['Room','房內角色資料載入後對帳','hooks/room-sync.js'],['Visual','關係標籤與圖示繪製','hooks/relationship-visual.js'],['Tests','房間同步','../test/room-sync.test.js']]],
+ ['拓展戀人資料與規則','戀人模型驗證與正規化、唯一寫入入口（上限 20 人，等待中的申請預留名額）、申請生命週期與房內對帳。',[['Model','MemberNumber、日期與清單正規化','features/relationships/lover-model.js'],['Service','新增、更新、移除、替換戀人','features/relationships/lovers.js'],['Requests','送出、倒數、接受、拒絕與過期','features/relationships/request-manager.js'],['Reconcile','補齊不對稱關係','features/relationships/reconcile.js'],['Tests','模型與上限','../test/lover-model.test.js,../test/lover-limit.test.js']]],
+ ['關係互動流程','申請（3 分鐘有效、60 秒冷卻）、升格（每階段滿 7 天）、關係恢復與解除；介面為對話選單與確認視窗。設定頁名單的解除需超過 7 天沒見面。',[['Dialog','對話選單入口','features/relationships/dialog.js'],['Propose','提出申請與接受','features/relationships/propose.js'],['Stage','訂婚與結婚升格','features/relationships/stage.js'],['Restore','關係恢復與備份復原','features/relationships/restore.js,features/relationships/backup-restore.js'],['Breakup','解除關係與通知','features/relationships/breakup.js'],['UI','申請與確認視窗','ui/relationships/proposal.js,ui/confirmation.js']]],
+ ['Profile 面板與設定頁','在他人個人資料頁展開拓展戀人面板（每頁 10 人、最多 20 人），並提供 window.Liko.AFC 供其他插件疊加按鈕；設定頁包含各項開關與戀人名單。',[['Profile','戀人面板與區塊座標','ui/relationships/profile.js'],['Settings','EL Settings 設定頁','ui/settings-page.js'],['Tests','分頁','../test/profile-pagination.test.js'],['Docs','公開 API 與 Profile 面板契約','../docs/Public-API.md']]],
+ ['資料與持久化','ExtensionSettings 是主資料，OnlineSharedSettings 只發布副本、不反向覆蓋；執行期狀態集中管理，不是第二份持久資料。屬於其他帳號或損壞的資料絕不覆寫。',[['State','relationRuntime 執行期狀態','core/state.js'],['Settings','設定存取與公開副本','core/settings.js'],['Storage','AFC_Data 讀寫與初始化','core/storage.js'],['Backup','舊備份唯讀來源','core/lover-backup.js'],['Tests','持久化與安全','../test/persistence.test.js'],['Docs','資料保存規則','../docs/Storage.md']]],
+ ['網路與通道','AFC::Beep（Hidden、頂層 Target 1 對 1，只信伺服器 Sender）、AccountBeep 房名分享、HeartLock::* 與 OnlineSharedSettings 公開副本；關鍵訊息重送到 ACK，接收端冪等去重。',[['Hidden','Hidden 訊息與可靠傳輸','net/hidden-beep.js'],['Beep','AFC Beep 與路由','net/beep.js,net/beep-router.js'],['Heart Lock','HeartLock 訊息收發','net/heartlock.js'],['Room','戀人房名分享','net/roomname.js,net/online.js'],['Socket','ServerSocket 單一 dispatcher','core/socket.js'],['Tests','Sender 與安全','../test/security.test.js']]],
+ ['Heart Lock 核心','鎖具套用、權限（唯一來源）、驗證、完整快照、防脫逃與冷卻、計時與震動。以獨立 registry scope 啟動，可功能級回滾。',[['Init','啟動與生命週期','features/heartlock/init.js'],['Permissions','戀人與主人權限','features/heartlock/permissions.js'],['Lock','鎖具套用與完整性檢查','features/heartlock/lock.js,features/heartlock/events.js'],['Protection','防脫逃與衝突冷卻','features/heartlock/protection.js'],['Timer','到期解鎖與震動','features/heartlock/timer.js,features/heartlock/vibe.js'],['Snapshot','完整快照','features/heartlock/snapshot.js'],['Validate','時間與部位驗證','features/heartlock/validate.js,features/heartlock/util.js'],['State','鎖狀態與保存','features/heartlock/state.js,features/heartlock/storage.js'],['Tests','生命週期與驗證','../test/heartlock-lifecycle.test.js,../test/heartlock-validate.test.js']]],
+ ['Heart Lock Craft 範本','在 BC 製作介面為製作品預設心鎖參數，使用時才實際上鎖；清單先過原生 DialogCanUseCraftedItem，再驗證權限，實際使用時再驗證一次。',[['Editor','原生 90×90 檢查鎖按鈕與面板入口','ui/heartlock/craft-editor.js'],['Hooks','清單可見性、圖示、序列化、穿戴事件','hooks/heartlock/crafting.js'],['Recipes','配方識別、槽位綁定','features/heartlock/crafting/recipes.js'],['Settings','白名單設定與相對計時','features/heartlock/crafting/settings.js'],['Draft','共用面板導向本地草稿','features/heartlock/crafting/draft-config.js'],['Craft','Craft 還原','features/heartlock/craft.js'],['Tests','範本、還原與鑰匙升級','../test/craft-lock.test.js,../test/craft-restore.test.js,../test/craft-key-upgrade.test.js']]],
+ ['Heart Lock 介面','DOM 面板五個分頁：總覽、筆記、計時器、控制、解鎖；其他玩家鎖具的細節只在開啟面板時以請求取得。',[['Panel','面板與共用輔助','ui/heartlock/panel.js,ui/heartlock/helpers.js'],['Tabs','分頁','ui/heartlock/tabs/index.js,ui/heartlock/tabs/overview.js,ui/heartlock/tabs/note.js,ui/heartlock/tabs/timer.js,ui/heartlock/tabs/control.js,ui/heartlock/tabs/unlock.js'],['Note','筆記與圖片內嵌','ui/heartlock/note.js'],['Date','日期選擇器','ui/heartlock/datepicker.js'],['Hooks','圖示與高潮事件','hooks/heartlock/index.js,hooks/heartlock/orgasm.js'],['Outfit','服裝工具整合 API','features/heartlock/outfit-api.js']]],
+ ['移除保護與相容','R132 的移除入口、屬性壓縮與 Craft 精簡資料的適配，以及與 BCX 詛咒共存。相容模組可獨立移除的只有 r132-craft。',[['Removal','InventoryRemoveItems 入口保護','hooks/heartlock/removal.js'],['R132 Lock','屬性壓縮適配','compat/r132-heartlock.js'],['R132 Craft','Craft 資料補齊（可移除）','compat/r132-craft.js'],['BCX','詛咒基準重新蓋章','compat/bcx-heartlock.js'],['Tests','R132 與 Craft 資料','../test/r132.test.js,../test/r132-craft-data.test.js'],['Docs','相容機制與限制','../docs/r132-compatibility.md']]],
+ ['翻譯系統','AFC 與 Heart Lock 共用一套跨插件引擎（命名空間 afc 與 hl）；UI 字串只有自己看到，聊天 L10N 送出英文底本加標記，接收端依自己的語言改寫。',[['Entry','翻譯入口','i18n/i18n.js'],['Engine','共用引擎','i18n/engine.js'],['L10N','聊天在地化','i18n/l10n.js'],['Fallback','離線後備','i18n/fallback.js'],['Dictionary','七語系字庫來源','../Translation/afc/EN.json,../Translation/hl/EN.json'],['Utils','文字與提示工具','util/text.js,util/toast.js,util/util.js'],['Tests','翻譯鍵一致','../test/translations.test.js'],['Docs','引擎與字庫維護','../docs/Localization-Engine.md']]],
+ ['驗證與自動化','CI 依序執行 lint、測試、孤兒模組檢查、建置與資源檢查，通過後才部署 Pages；BC 函式存在性每週檢查，本機可啟用 pre-commit。',[['Orphans','找出沒有被 import 的模組','../scripts/check-orphans.mjs'],['Assets','翻譯鍵與建置資源','../scripts/check-assets.mjs,../scripts/copy-assets.mjs'],['BC','被掛鉤函式存在性','../scripts/check-bc-compat.mjs'],['CI','驗證與部署','../.github/workflows/deploy.yml'],['Weekly','BC 相容與 CodeQL','../.github/workflows/bc-compat.yml,../.github/workflows/codeql.yml'],['Tests','自動化','../test/automation.test.js'],['Guide','CI 與本機指令','../docs/GitHub-Automation.md']]]
+];
+let active=features[0];
+const groupOf=['核心','核心','關係','關係','關係','資料與通訊','資料與通訊','Heart Lock','Heart Lock','Heart Lock','Heart Lock','翻譯與維護','翻譯與維護'];
+const LAYERS={boot:{n:'啟動',r:0,c:'--boot'},front:{n:'前端 UI',r:1,c:'--front'},logic:{n:'功能規則',r:2,c:'--logic'},data:{n:'資料',r:3,c:'--data'},net:{n:'通訊',r:4,c:'--net'},bc:{n:'BC 邊界',r:5,c:'--bc'},verify:{n:'驗證／文件',r:6,c:'--verify'}};
+const PIPE=[
+ ['玩家操作','boot','在個人資料頁、對話選單、設定頁與心鎖面板操作'],
+ ['前端 UI','front','ui/ 的 Profile 面板、設定頁、申請視窗、Heart Lock 面板'],
+ ['功能規則','logic','features/ 的戀人與 Heart Lock 規則 · i18n/ · util/'],
+ ['資料','data','core/ 的 state、settings、storage · ExtensionSettings'],
+ ['通訊','net','net/ 的 AFC::Beep、HeartLock::*、AccountBeep · core/socket.js'],
+ ['BC 邊界','bc','hooks/ 與 compat/ 掛鉤 BC 函式與 R132／BCX 相容'],
+ ['遊戲與其他玩家','verify','BC 伺服器、對方的 AFC／FCM／AEE']
+];
+
+const $=(s,r=document)=>r.querySelector(s);
+const el=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;if(x!=null)n.textContent=x;return n};
+const nav=$('#nav'),main=$('#main'),q=$('#q');
+const state={view:'overview',query:''};
+const REPO='https://github.com/awdrrawd/BC-AFC/blob/main/';
+const pathOf=file=>file.startsWith('../')?file.slice(3):'src/'+file;
+const layerOf=files=>{
+  const p=pathOf(files.split(',')[0]);
+  if(!p.startsWith('src/'))return 'verify';
+  const s=p.slice(4);
+  if(s==='main.js'||s==='app.js'||s==='core/core-init.js'||s==='core/config.js'||s==='core/commands.js')return 'boot';
+  if(s.startsWith('hooks/')||s.startsWith('compat/'))return 'bc';
+  if(s.startsWith('net/')||s==='core/socket.js')return 'net';
+  if(s.startsWith('ui/'))return 'front';
+  if(/^core\/(state|settings|storage|lover-backup)\.js$/.test(s)||/^features\/heartlock\/(state|storage)\.js$/.test(s))return 'data';
+  return 'logic';
 };
+const branchesOf=f=>f[2].map((b,k)=>({b,k,layer:layerOf(b[2])})).sort((x,y)=>LAYERS[x.layer].r-LAYERS[y.layer].r||x.k-y.k);
+const layersOf=f=>[...new Set(branchesOf(f).map(x=>x.layer))];
+const groupColor=g=>({'核心':'--boot','關係':'--logic','資料與通訊':'--data','Heart Lock':'--bc','翻譯與維護':'--verify'}[g]);
+const matches=(f,qs)=>!qs||JSON.stringify(f).toLowerCase().includes(qs);
 
-const STATS = [
-  ['20', '戀人上限'],
-  ['3', '階段：交往／訂婚／結婚'],
-  ['5', '通訊通道'],
-  ['5', '心鎖分頁'],
-  ['7', '語系'],
-];
-
-const SECTIONS = [
-  { id: 'flow', title: '執行流程', d: 'core', kind: 'steps',
-    lead: '入口只負責啟動；核心完成登入與設定初始化後建立 Hook，再啟動 Heart Lock。',
-    items: [
-      { t: 'Bundle 入口', p: '建立 window.Liko.AFC 與重複載入守衛，再動態載入 app.js。', f: ['src/main.js', 'src/app.js'] },
-      { t: '核心初始化', p: '兩階段：載入期（SDK）與登入後（設定資料、帳號驗證）。', f: ['core/core-init.js'] },
-      { t: '統一 Hooks', p: '安裝 AFC 與通道入口，全部登記到 registry 以便整批釋放。', f: ['hooks/index.js', 'hooks/registry.js'] },
-      { t: 'Heart Lock', p: '以獨立 registry scope 啟動，可功能級回滾。', f: ['features/heartlock/init.js'] },
-    ] },
-
-  { id: 'hooks', title: 'Hook 與通道派送', d: 'hooks', kind: 'cards',
-    lead: '所有 bcModSdk Hook 集中在 src/hooks/。同一個遊戲函式只掛一次，再由內部處理器派送。',
-    items: [
-      { t: '中央安裝入口', p: 'AFC 畫面、訊息與離線處理的 Hook 安裝點。', f: ['hooks/index.js'] },
-      { t: '生命週期 registry', p: '統一登記 hook、interval、timeout；scope 支援整批釋放。', f: ['hooks/registry.js', 'hooks/lifecycle.js'] },
-      { t: 'ChatRoomMessage', p: '唯一的訊息 Hook，依序處理 L10N、Heart Lock、AFC Beep 與診斷訂閱。', f: ['hooks/chat-message-channel.js'] },
-      { t: 'ServerSocket', p: '每個 event 只註冊一個底層 dispatcher，內部可有多個訂閱者。', f: ['core/socket.js'] },
-      { t: '房間同步與關係顯示', p: '房內角色資料載入後對帳；關係標籤與圖示繪製。', f: ['hooks/room-sync.js', 'hooks/relationship-visual.js'] },
-      { t: 'Heart Lock Hooks', p: '鎖具、圖示、移除保護、Craft 與高潮事件。', f: ['hooks/heartlock/index.js', 'hooks/heartlock/removal.js', 'hooks/heartlock/crafting.js', 'hooks/heartlock/orgasm.js'] },
-    ],
-    table: { head: ['優先序', '誰', 'InformationSheet 行為'],
-      rows: [
-        ['10', 'BCX', '接管資料頁；子頁開啟時不呼叫 next，底下全被跳過'],
-        ['7', 'AFC', '繪製戀人面板與 Profile 模態（面板內遮 hover、吃點擊）'],
-        ['8（建議）', 'overlay 插件，如 FCM', '繪製在 AFC 之上，並在 AFC 模態之前處理點擊'],
-        ['5', '一般繪製', '一般插件'],
-      ], hlCol: 0,
-      note: 'bcModSdk 規則：數字大者先跑、屬外層；不呼叫 next() 會短路整條鏈。' } },
-
-  { id: 'relations', title: '關係系統', d: 'relations', kind: 'steps',
-    lead: '資料正規化與寫入集中在 service；申請、升格、恢復共用同一套 request manager。',
-    items: [
-      { t: '輸入驗證', p: 'MemberNumber、日期與清單正規化。', f: ['features/relationships/lover-model.js'] },
-      { t: '唯一寫入入口', p: '新增、更新、移除、替換戀人；上限 20 人，等待中的申請預留名額。', f: ['features/relationships/lovers.js'] },
-      { t: '互動流程', p: '申請（3 分鐘有效、60 秒冷卻）、升格（每階段滿 7 天）、恢復、解除。', f: ['propose.js', 'stage.js', 'restore.js', 'breakup.js'] },
-    ],
-    extra: [
-      { t: '請求生命週期', p: '送出、收到、倒數、接受、拒絕與過期清理。', f: ['features/relationships/request-manager.js'] },
-      { t: '房內對帳', p: '房間角色資料載入後補齊不對稱關係。', f: ['features/relationships/reconcile.js'] },
-      { t: '備份復原', p: '舊備份只當唯讀來源，復原只補缺少的戀人，不清空清單。', f: ['core/lover-backup.js', 'features/relationships/backup-restore.js'] },
-      { t: '解除規則', p: '對話選單與 /afc-breakup 隨時可解除；設定頁名單需超過 7 天沒見面。', f: ['ui/settings-page.js', 'features/relationships/breakup.js'] },
-    ] },
-
-  { id: 'data', title: '資料與持久化', d: 'core', kind: 'cards',
-    lead: 'ExtensionSettings 是主資料；OnlineSharedSettings 只發布副本，不反向覆蓋。Runtime 狀態不是第二份持久資料。',
-    items: [
-      { t: 'AFC_Data', p: '本人戀人與共享偏好的唯一主資料，含 memberNumber 帳號識別；其他帳號或損壞資料絕不覆寫。', f: ['ExtensionSettings.AFC_Data'] },
-      { t: 'AFC', p: '私人偏好設定。', f: ['ExtensionSettings.AFC'] },
-      { t: 'AFC_HeartLock', p: 'padlocks、craftLocks、declinedRecovery、recoveryDecisions、removedLocks；快照為 version 2 / runtime 完整 JSON。', f: ['ExtensionSettings.AFC_HeartLock'] },
-      { t: '公開副本', p: '戀人清單、鎖權限、鎖摘要（owner／assetName／lockId）。筆記與快照不公開。', f: ['OnlineSharedSettings.AFC', 'OnlineSharedSettings.AFC_HeartLock'] },
-      { t: 'relationRuntime', p: 'requests（lover／stage／restore）、privateRooms、recentBeeps、proposalCooldowns、pendingAcks。', f: ['core/state.js'] },
-      { t: 'Heart Lock state', p: 'lifecycle、timers、vibe、operations、panel 分組。', f: ['features/heartlock/state.js'] },
-    ],
-    note: '清除關係只由明確解除或確認出廠重置執行，不因離線或同步缺漏刪除。完整規則見 Storage.md。' },
-
-  { id: 'net', title: '網路與通道', d: 'net', kind: 'cards',
-    lead: 'AFC 不控制 BC 連線，只在既有事件上同步關係、房名與 Heart Lock 資料。',
-    items: [
-      { t: 'AFC::Beep', p: '同房關係操作（Hidden、頂層 Target 1 對 1）。身分只信伺服器 Sender；關鍵訊息重送到 ACK，接收端冪等去重。', f: ['net/hidden-beep.js', 'net/beep.js', 'net/beep-router.js'] },
-      { t: 'OnlineSharedSettings', p: '戀人清單與鎖摘要由伺服器同步給房內，讀取端不需查詢或廣播。', f: ['core/settings.js'] },
-      { t: 'AccountBeep', p: '跨房分享私人房名（afcBeep），只送得到好友；戀人恆為好友。', f: ['net/roomname.js', 'net/online.js'] },
-      { t: 'HeartLock::*', p: '套用、設定、移除與請求，皆 1 對 1。私密細節只在開啟面板時由 HeartLockRequest 請求，經授權驗證後僅回給請求者。', f: ['net/heartlock.js'] },
-      { t: 'Liko_L10N Action', p: 'CUSTOM_SYSTEM_ACTION 搭配標記，接收端依自己的語言改寫聊天訊息。', f: ['i18n/l10n.js'] },
-    ] },
-
-  { id: 'heartlock', title: 'Heart Lock', d: 'heartlock', dd: 'compat', kind: 'folders',
-    lead: '內含於 AFC bundle，共用中央 i18n、Hook registry 與訊息入口。',
-    items: [
-      { t: 'features/heartlock/', li: [['lock.js', '鎖具套用與完整性檢查'], ['permissions.js', '戀人／主人權限，唯一來源'], ['snapshot.js · storage.js', '完整快照、保存與復原'], ['protection.js', '防脫逃與冷卻'], ['timer.js · vibe.js', '到期解鎖（每 60 秒檢查）、震動循環']] },
-      { t: 'features/heartlock/crafting/', li: [['recipes.js', '配方識別、槽位綁定'], ['settings.js', '白名單設定、相對計時'], ['draft-config.js', '共用面板導向本地草稿']] },
-      { t: 'ui/heartlock/', li: [['panel.js', 'DOM 面板'], ['tabs/', '總覽、筆記、計時、控制、解鎖'], ['craft-editor.js', '原生 90×90 檢查鎖按鈕'], ['datepicker.js', '日期選擇']] },
-      { t: 'compat/', li: [['r132-heartlock.js', '屬性壓縮適配'], ['r132-craft.js', 'Craft 資料補齊（可移除）'], ['bcx-heartlock.js', 'BCX 詛咒共存']] },
-    ],
-    note: '防脫逃：14 秒內第 4 次衝突，暫停自動復原 120 秒。震動每 5 秒計時，每 12 次（60 秒）發送一次訊息。' },
-
-  { id: 'i18n', title: '翻譯系統', d: 'i18n', kind: 'cards',
-    lead: 'AFC 與 Heart Lock 共用一套跨插件引擎，命名空間分別為 afc 與 hl，沒有第二份 i18n。',
-    items: [
-      { t: 'UI 字串', p: '設定頁、面板與本地提示；只有自己看到。', f: ['i18n/i18n.js'] },
-      { t: '聊天 L10N', p: '送出英文底本加標記，接收端依自己的語言改寫。', f: ['i18n/l10n.js', 'i18n/engine.js'] },
-      { t: '字庫與後備', p: '七語系 JSON 來源，加上離線 fallback。新增文字須同步所有語系。', f: ['Translation/afc/', 'Translation/hl/', 'i18n/fallback.js'] },
-    ] },
-
-  { id: 'rules', title: '設計原則', d: 'compat', kind: 'cards',
-    lead: '歷次安全審查後固定下來的規則；修改相關程式碼時必須維持。',
-    items: [
-      { t: '身分只信 Sender', p: '路由鍵與身分不得讀 payload，可信欄位最後寫入。', f: ['net/hidden-beep.js'] },
-      { t: '不寫 innerHTML', p: '對方可控字串一律 textContent；ESLint 強制，僅日期選擇器例外。', f: ['eslint.config.js'] },
-      { t: '時間必須驗證', p: '無法解析的時間保持上鎖，不得因 NaN 比較而解鎖。', f: ['features/heartlock/validate.js'] },
-      { t: '部位名稱驗證', p: '擋掉 __proto__、constructor 等原型鏈成員。', f: ['isValidGroupName'] },
-      { t: '私密細節按需請求', p: '不廣播整份鎖設定；請求者須是掛鎖者或授權關係。', f: ['net/heartlock.js'] },
-      { t: '同步重建 ≠ 解鎖', p: '物品暫時消失不得刪除設定；只有確認解除成功才清理。', f: ['hooks/heartlock/removal.js'] },
-    ] },
-
-  { id: 'folders', title: '目錄責任', d: 'ui', dd: 'core', kind: 'folders',
-    lead: '新 hook 放 hooks、畫面放 ui、規則放 features、訊息協議放 net、版本補丁放 compat。',
-    items: [
-      { t: 'core/', li: [['初始化、設定、狀態'], ['儲存、Socket dispatcher'], ['聊天指令（/afc-*）']] },
-      { t: 'hooks/', li: [['所有 bcModSdk Hook'], ['通道派送與生命週期']] },
-      { t: 'features/', li: [['relationships：模型、流程、對帳'], ['heartlock：鎖、權限、快照、Craft']] },
-      { t: 'net/', li: [['Hidden Beep 與可靠傳輸'], ['AccountBeep 房名、在線查詢']] },
-      { t: 'ui/', li: [['Profile 面板、設定頁'], ['申請介面、heartlock 面板']] },
-      { t: 'compat/ · i18n/ · util/', li: [['R132 與 BCX 相容'], ['翻譯引擎與 fallback'], ['通用工具與提示']] },
-    ],
-    note: '建置入口為 src/main.js，Vite 輸出 dist/assets/main.js 與 app.js，兩個檔案必須一起發佈。' },
-
-  { id: 'ops', title: '維護指令', d: 'core', kind: 'cards',
-    lead: '改動後依影響範圍執行；CI 會跑 lint、test、orphans、build、check:assets。',
-    items: [
-      { t: '日常檢查', p: 'lint + 測試 + 孤兒模組檢查（與 CI 相同的快速部分）。', f: ['npm run check'] },
-      { t: '本地開發', p: 'build --watch 並在 :5175 預覽，搭配 loader.local.user.js。', f: ['npm run dev'] },
-      { t: '建置與資源', p: '打包至 dist/；檢查翻譯鍵、佔位符與資源。', f: ['npm run build', 'npm run check:assets'] },
-      { t: 'BC 相容', p: '檢查被 hook 的 BC 函式是否仍存在（不檢查簽名）。', f: ['npm run check:bc -- <BC 原始碼>'] },
-    ] },
-];
-
-/* ───────── 渲染 ───────── */
-const $ = (s, r = document) => r.querySelector(s);
-const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
-const content = $('#content'), side = $('#side'), chips = $('#chips'), q = $('#q'), empty = $('#empty');
-const state = { query: '', domain: null };
-
-function paths(list) {
-  const box = el('div', 'paths');
-  for (const f of list) {
-    const b = el('button', 'path', f); b.type = 'button'; b.title = '點擊複製';
-    b.addEventListener('click', () => copy(f));
-    box.append(b);
-  }
-  return box;
+function renderNav(){
+  const qs=state.query.trim().toLowerCase();nav.replaceChildren();let last='';
+  features.forEach((f,i)=>{
+    if(!matches(f,qs))return;
+    if(groupOf[i]!==last){last=groupOf[i];nav.append(el('h4',null,last))}
+    const b=el('button',f===active&&state.view==='feature'?'active':'');b.type='button';b.style.setProperty('--c','var('+groupColor(groupOf[i])+')');
+    b.append(el('span'),document.createTextNode(f[0]));b.addEventListener('click',()=>open(i));nav.append(b);
+  });
 }
-function card(it, d, cls) {
-  const c = el('article', cls); c.style.setProperty('--c', DOMAINS[d].c);
-  c.append(el('h3', null, it.t), el('p', null, it.p), paths(it.f));
-  return c;
-}
-function folder(it, d) {
-  const c = el('article', 'folder'); c.style.setProperty('--c', DOMAINS[d].c);
-  const ul = el('ul');
-  for (const [a, b] of it.li) {
-    const li = el('li');
-    if (b) li.append(el('b', null, a), document.createTextNode(' ' + b)); else li.textContent = a;
-    ul.append(li);
-  }
-  c.append(el('h3', null, it.t), ul);
-  return c;
-}
-function table(t) {
-  const wrap = el('div', 'tablewrap'), tb = el('table'), thead = el('thead'), tr = el('tr');
-  for (const h of t.head) tr.append(el('th', null, h));
-  thead.append(tr); tb.append(thead);
-  const body = el('tbody');
-  for (const r of t.rows) {
-    const row = el('tr');
-    r.forEach((v, i) => row.append(el('td', i === t.hlCol ? 'hl' : null, v)));
-    body.append(row);
-  }
-  tb.append(body); wrap.append(tb);
+function pipeline(){
+  const wrap=el('div','pipe');
+  PIPE.forEach(([t,l,d],i)=>{
+    if(i)wrap.append(el('div','parrow','→'));
+    const n=el('div','pnode');n.style.setProperty('--c','var('+LAYERS[l].c+')');n.append(el('b',null,t),el('small',null,d));wrap.append(n);
+  });
   return wrap;
 }
-
-for (const s of SECTIONS) {
-  const sec = el('section', 'sec'); sec.id = s.id; sec.dataset.domain = s.d; sec.dataset.domain2 = s.dd || '';
-  sec.style.setProperty('--c', DOMAINS[s.d].c);
-  const h = el('h2'); h.append(el('span', 'dot'), document.createTextNode(s.title));
-  sec.append(h, el('p', 'lead', s.lead));
-  const gridClass = s.kind === 'steps' ? 'steps' : s.kind === 'folders' ? 'folders' : 'grid';
-  const grid = el('div', gridClass);
-  for (const it of s.items) {
-    grid.append(s.kind === 'steps' ? card(it, s.d, 'step') : s.kind === 'folders' ? folder(it, s.dd || s.d) : card(it, s.d, 'card'));
-  }
-  sec.append(grid);
-  if (s.extra) {
-    const g2 = el('div', 'grid'); g2.style.marginTop = '14px';
-    for (const it of s.extra) g2.append(card(it, s.d, 'card'));
-    sec.append(g2);
-  }
-  if (s.table) {
-    const w = table(s.table); w.style.marginTop = '14px'; sec.append(w);
-    if (s.table.note) sec.append(el('p', 'note', s.table.note));
-  }
-  if (s.note) sec.append(el('p', 'note', s.note));
-  content.append(sec);
-
-  const a = el('a'); a.href = '#' + s.id; a.dataset.target = s.id; a.style.setProperty('--c', DOMAINS[s.d].c);
-  a.append(el('span'), document.createTextNode(s.title)); side.append(a);
-}
-
-for (const [n, l] of STATS) { const d = el('div', 'stat'); d.append(el('b', null, n), el('span', null, l)); $('#stats').append(d); }
-
-for (const [k, v] of Object.entries(DOMAINS)) {
-  if (!SECTIONS.some(s => s.d === k || s.dd === k)) continue;
-  const b = el('button', 'chip'); b.type = 'button'; b.setAttribute('aria-pressed', 'false'); b.style.setProperty('--c', v.c);
-  b.append(el('i'), document.createTextNode(v.label));
-  b.addEventListener('click', () => {
-    state.domain = state.domain === k ? null : k;
-    chips.querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', String(x === b && state.domain === k)));
-    apply();
+function renderOverview(){
+  const qs=state.query.trim().toLowerCase();main.replaceChildren();
+  const h=el('h1');h.append(document.createTextNode('AFC 架構與功能分支圖'),document.createElement('br'),el('em','','依賴由前端到後端'));
+  main.append(h,el('p','lead','拓展戀人、關係進展與內建 Heart Lock 的模組邊界。上方是整體呼叫方向；選擇功能後，樹狀圖依「前端 → 功能規則 → 資料 → 通訊 → BC 邊界」排列模組與實際檔案，點擊檔案可開啟原始碼。'));
+  main.append(el('h2','sub','整體呼叫方向'),pipeline());
+  const note=el('p','pnote');note.append(document.createTextNode('反向路徑：'),el('b',null,'BC 事件'),document.createTextNode(' 經 hooks/ 進入；ChatRoomMessage 只有一個中央 Hook，依序派送給 L10N、Heart Lock 與 AFC Beep，再由 net/ 驗證 Sender 後交給 features/ 處理。'));
+  main.append(note,el('h2','sub','功能分支'));
+  const grid=el('div','grid');let shown=0;
+  features.forEach((f,i)=>{
+    if(!matches(f,qs))return;shown++;
+    const t=el('button','tile');t.type='button';t.append(el('h3',null,f[0]),el('p',null,f[1]));
+    const ls=el('div','layers');for(const l of layersOf(f)){const b=el('span','badge',LAYERS[l].n);b.style.setProperty('--c','var('+LAYERS[l].c+')');ls.append(b)}
+    t.append(ls);t.addEventListener('click',()=>open(i));grid.append(t);
   });
-  chips.append(b);
+  main.append(grid,el('div','empty'+(shown?'':' show'),'找不到符合的項目，試試其他關鍵字。'));
 }
-
-/* ───────── 搜尋與篩選 ───────── */
-function apply() {
-  const qs = state.query.trim().toLowerCase();
-  let anyVisible = false;
-  document.querySelectorAll('.sec').forEach(sec => {
-    const domainOk = !state.domain || sec.dataset.domain === state.domain || sec.dataset.domain2 === state.domain;
-    const title = sec.querySelector('h2').textContent.toLowerCase();
-    let hits = 0;
-    sec.querySelectorAll('.card,.step,.folder,tbody tr').forEach(u => {
-      const ok = !qs || title.includes(qs) || u.textContent.toLowerCase().includes(qs);
-      u.classList.toggle('hide', !ok);
-      if (ok) hits++;
-    });
-    const show = domainOk && hits > 0;
-    sec.classList.toggle('hide', !show);
-    side.querySelector('[data-target="' + sec.id + '"]').classList.toggle('off', !show);
-    if (show) anyVisible = true;
-  });
-  empty.classList.toggle('show', !anyVisible);
+function renderFeature(){
+  const i=features.indexOf(active),f=active;main.replaceChildren();
+  const crumb=el('div','crumb');const back=el('button',null,'← 總覽');back.type='button';back.addEventListener('click',()=>{state.view='overview';render()});
+  crumb.append(back,document.createTextNode('/ '+groupOf[i]));
+  const d=el('section','detail');d.append(el('h2',null,f[0]),el('p','lead',f[1]));
+  const tree=el('div','tree'),bundle=el('div','bundle');
+  bundle.append(el('div','root',f[0]));
+  const rows=el('div','rows');let prev=null;
+  for(const {b,layer} of branchesOf(f)){
+    if(prev){const dn=el('div','down');dn.append(el('span',null,prev===layer?'↓':'↓ '+LAYERS[prev].n+' → '+LAYERS[layer].n));rows.append(dn)}
+    prev=layer;
+    const row=el('div','row'),br=el('div','branch');br.style.setProperty('--c','var('+LAYERS[layer].c+')');
+    const t=el('div','t');t.append(document.createTextNode(b[0]));
+    const bd=el('span','badge',LAYERS[layer].n);bd.style.setProperty('--c','var('+LAYERS[layer].c+')');t.append(bd);
+    const cp=el('button','copy','複製');cp.type='button';cp.title='複製此群組的檔案路徑';cp.addEventListener('click',()=>copy(b[2].split(',').map(pathOf).join('\n')));t.append(cp);
+    br.append(t,el('p',null,b[1]));
+    const files=el('div','files');
+    for(const file of b[2].split(',')){const a=el('a','file',pathOf(file));a.href=REPO+pathOf(file);a.title='開啟檔案';files.append(a)}
+    row.append(br,files);rows.append(row);
+  }
+  bundle.append(rows);tree.append(bundle);
+  const lg=el('div','legend');lg.append(document.createTextNode('依賴方向由上而下：'));
+  for(const l of ['boot','front','logic','data','net','bc','verify']){const b=el('span','badge',LAYERS[l].n);b.style.setProperty('--c','var('+LAYERS[l].c+')');lg.append(b)}
+  d.append(tree,lg);main.append(crumb,d);
 }
-q.addEventListener('input', () => { state.query = q.value; apply(); });
-document.addEventListener('keydown', e => {
-  if (e.key === '/' && document.activeElement !== q && !e.metaKey && !e.ctrlKey) { e.preventDefault(); q.focus(); }
-  else if (e.key === 'Escape' && document.activeElement === q) { q.value = ''; state.query = ''; apply(); q.blur(); }
+function render(){renderNav();state.view==='overview'?renderOverview():renderFeature()}
+function open(i){active=features[i];state.view='feature';try{history.replaceState(null,'','#f'+i)}catch{}window.scrollTo({top:0});render()}
+$('#home').addEventListener('click',()=>{state.view='overview';state.query='';q.value='';try{history.replaceState(null,'','#')}catch{}render()});
+q.addEventListener('input',()=>{state.query=q.value;state.view='overview';render()});
+document.addEventListener('keydown',e=>{
+  if(e.key==='/'&&document.activeElement!==q&&!e.metaKey&&!e.ctrlKey){e.preventDefault();q.focus()}
+  else if(e.key==='Escape'&&document.activeElement===q){q.value='';state.query='';render();q.blur()}
 });
-
-/* ───────── scrollspy ───────── */
-const links = [...side.querySelectorAll('a')];
-const io = new IntersectionObserver(es => {
-  const v = es.filter(e => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-  if (v) links.forEach(l => l.classList.toggle('active', l.dataset.target === v.target.id));
-}, { rootMargin: '-15% 0px -65%', threshold: [0, .2, .5] });
-document.querySelectorAll('.sec').forEach(s => io.observe(s));
-
-/* ───────── 複製與主題 ───────── */
-const toast = $('#toast'); let toastTimer;
-function showToast(msg) {
-  toast.textContent = msg; toast.classList.add('show');
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('show'), 1400);
-}
-async function copy(text) {
-  try { await navigator.clipboard.writeText(text); showToast('已複製：' + text); }
-  catch { showToast('無法存取剪貼簿'); }
-}
-const root = document.documentElement;
-try { const saved = localStorage.getItem('afc-doc-theme'); if (saved) root.dataset.theme = saved; } catch { /* storage 不可用時沿用系統設定 */ }
-$('#theme').addEventListener('click', () => {
-  const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
-  root.dataset.theme = dark ? 'light' : 'dark';
-  try { localStorage.setItem('afc-doc-theme', root.dataset.theme); } catch { /* 忽略 */ }
+const toast=$('#toast');let timer;
+function showToast(m){toast.textContent=m;toast.classList.add('show');clearTimeout(timer);timer=setTimeout(()=>toast.classList.remove('show'),1400)}
+async function copy(text){try{await navigator.clipboard.writeText(text);showToast('已複製路徑')}catch{showToast('無法存取剪貼簿')}}
+const root=document.documentElement;
+try{const s=localStorage.getItem('afc-doc-theme');if(s)root.dataset.theme=s}catch{}
+$('#theme').addEventListener('click',()=>{
+  const dark=root.dataset.theme?root.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;
+  root.dataset.theme=dark?'light':'dark';
+  try{localStorage.setItem('afc-doc-theme',root.dataset.theme)}catch{}
 });
+const m=/^#f(\d+)$/.exec(location.hash);
+if(m&&features[Number(m[1])]){active=features[Number(m[1])];state.view='feature'}
+render();
 </script>
 </body>
 </html>
