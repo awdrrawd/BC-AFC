@@ -88,7 +88,7 @@ export async function initialize() {
             if (Player !== account || generation !== sessionGeneration || !hookRegistry) return;
             const priv = getPrivateSettings();
             if (priv) syncLockPermsToShared(priv);
-            initHeartLock(modApi, hookRegistry).catch(console.error);
+            initHeartLock(hookRegistry).catch(console.error);
         });
         return result;
     });
@@ -102,7 +102,7 @@ export async function initialize() {
 
     // 啟動 Heart Lock（bundle 內模組，共用 AFC 的 modApi）
     try {
-        await initHeartLock(modApi, hookRegistry);
+        await initHeartLock(hookRegistry);
     } catch (e) {
         cleanupHeartLock();
         console.error("🐈‍⬛ [AFC] ❌ Heart Lock 啟動失敗:", e);
@@ -131,9 +131,6 @@ function completeInit() {
         registerSettingsUI();
 
         installRoomSync(hookRegistry);
-
-
-
 
         setInitialized(true);
         console.log(`🐈‍⬛ [AFC] ✅ v${MOD_VERSION} (${detectLang()}) 初始化完成`);

@@ -1,13 +1,9 @@
 import { installCraftingHeartLock } from '../../hooks/heartlock/crafting.js';
 import { resetProtection } from './protection.js';
 import { isHeartLock, isProtected, sanitizeOutfitItem } from './outfit-api.js';
-// ════════════════════════════════════════
-//  HeartLock module: init.js
-//  initHeartLock(modApi)：由 AFC core-init 於 phase 1 呼叫，共用 AFC 的 modApi。
-//  （原獨立版自行 registerMod；此處保留 getModApi 作為備援。）
-// ════════════════════════════════════════
+// Heart Lock is initialized and disposed through the AFC hook registry.
 
-import { MOD_VER, MOD_NAME } from './config.js';
+import { MOD_VER } from './config.js';
 import { state } from './state.js';
 import { log, clone, waitFor } from './util.js';
 import {
@@ -23,24 +19,7 @@ import { _pendingRestore } from './state.js';
 let disposeHooks = null;
 let initializationGeneration = 0;
 
-// 備援：若未取得共用 modApi，才自行註冊
-function getModApi() {
-    if (state.lifecycle.modApi) return state.lifecycle.modApi;
-    if (!window.bcModSdk?.registerMod) return null;
-    try {
-        state.lifecycle.modApi = window.bcModSdk.registerMod({
-            name: MOD_NAME, fullName: 'Heart Lock BC',
-            version: MOD_VER, repository: 'https://github.com/awdrrawd/BC-AFC',
-        });
-        return state.lifecycle.modApi;
-    } catch (e) {
-        if (!window.bcModSdk.getModsInfo?.().find(m => m.name === MOD_NAME))
-            console.error('🐈‍⬛ [HeartLock] registerMod failed', e);
-        return null;
-    }
-}
-
-export async function initHeartLock(sharedModApi, hookRegistry) {
+export async function initHeartLock(hookRegistry) {
     if (state.lifecycle.initialized) return;
     const generation = ++initializationGeneration;
     const memberNumber = Player?.MemberNumber;
@@ -49,12 +28,7 @@ export async function initHeartLock(sharedModApi, hookRegistry) {
     // 心形鎖文本（'hl' 命名空間）已由 AFC core-init 的 registerFallback()（內建後備）
     //  與 ensureAfcI18n()（執行期 fetch Translation/hl/<LANG>.json）一併註冊，這裡不再重複註冊。
 
-    // Phase 1：取得 modApi（優先用 AFC 傳入的共用 modApi）
-    if (sharedModApi) state.lifecycle.modApi = sharedModApi;
-    const modApi = state.lifecycle.modApi ?? getModApi();
-    if (!modApi) { console.error('🐈‍⬛ [HeartLock] modApi unavailable.'); return; }
-
-    // Phase 2：AFC 核心已確認登入，這裡只等待遊戲資源就緒
+    // AFC 核心已確認登入，這裡只等待遊戲資源就緒
     await waitFor(() =>
                   !!window.AssetFemale3DCG &&
                   !!AssetGroupGet?.('Female3DCG', 'ItemMisc')

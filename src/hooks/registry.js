@@ -1,16 +1,19 @@
 // 統一管理 bcModSdk hooks、計時器與額外清理函式。
 export function createHookRegistry(modApi) {
-    const disposers = [];
+    const disposers = new Set();
     let disposed = false;
 
     const add = disposer => {
         if (typeof disposer !== 'function') return disposer;
+        const release = () => {
+            if (!disposers.delete(release)) return;
+            disposer();
+        };
+        disposers.add(release);
         if (disposed) {
-            try { disposer(); } catch {}
-        } else {
-            disposers.push(disposer);
+            try { release(); } catch {}
         }
-        return disposer;
+        return release;
     };
 
     return {
@@ -21,19 +24,23 @@ export function createHookRegistry(modApi) {
             return timer;
         },
         timeout: (callback, delay) => {
-            const timer = setTimeout(callback, delay);
-            add(() => clearTimeout(timer));
+            const timer = setTimeout(() => {
+                release();
+                callback();
+            }, delay);
+            const release = add(() => clearTimeout(timer));
             return timer;
         },
         scope: () => {
             const child = createHookRegistry(modApi);
-            add(() => child.dispose());
+            const release = add(() => child.dispose());
+            child.add(() => disposers.delete(release));
             return child;
         },
         add,
         dispose: () => {
             disposed = true;
-            for (const disposer of disposers.splice(0).reverse()) {
+            for (const disposer of [...disposers].reverse()) {
                 try { disposer(); } catch {}
             }
         },

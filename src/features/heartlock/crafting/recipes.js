@@ -47,11 +47,17 @@ export function createCraftRecipeStore() {
         // Copied inventory recipes have no slot reference. Only accept an
         // unambiguous match; an identical ordinary recipe must never gain a lock.
         const key = craftLockKey(craft);
-        const matches = (Player.Crafting ?? []).filter(item => item && craftLockKey(item) === key);
-        if (!matches.length) return undefined;
-        const settings = matches.map(item => recipes.get(item));
-        if (settings.some(value => !value || JSON.stringify(value) !== JSON.stringify(settings[0]))) return undefined;
-        return settings[0];
+        let settings, serialized;
+        for (const item of Player.Crafting ?? []) {
+            if (!item || craftLockKey(item) !== key) continue;
+            const value = recipes.get(item);
+            if (!value) return undefined;
+            const candidate = JSON.stringify(value);
+            if (settings && candidate !== serialized) return undefined;
+            settings ??= value;
+            serialized = candidate;
+        }
+        return settings;
     };
     const saveRecipes = () => {
         if (!ensureStorage() || !Array.isArray(Player.Crafting)) return;

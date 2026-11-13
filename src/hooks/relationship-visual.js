@@ -22,15 +22,19 @@ export function installRelationshipVisualHooks(registry) {
 }
 
 export function decorateFriendList() {
-        const lovers = getSharedSettings()?.lovers ?? [];
-        const containerId = (typeof FriendListIDs !== 'undefined' && FriendListIDs.friendList)
+        const lovers = new Map();
+        for (const lover of getSharedSettings()?.lovers ?? []) {
+            const memberNumber = Number(lover?.memberNumber);
+            if (!lovers.has(memberNumber)) lovers.set(memberNumber, lover);
+        }
+        const containerId = (typeof FriendListIDs !== 'undefined' ? FriendListIDs.friendList : undefined)
             ?? 'FriendListContent';
         const rows = document.getElementById(containerId)?.getElementsByClassName('friend-list-row') ?? [];
         for (const row of rows) {
             const member = row.querySelector('.MemberNumber');
             const relation = row.querySelector('.RelationType');
             if (!member || !relation) continue;
-            const lover = lovers.find(entry => Number(entry?.memberNumber) === Number(member.innerText.trim()));
+            const lover = lovers.get(Number(member.innerText.trim()));
             if (!lover) continue;
             const label = `♥ ${stageLabel(lover.stage)}`;
             const textNode = Array.from(relation.childNodes).find(node => node.nodeType === Node.TEXT_NODE);

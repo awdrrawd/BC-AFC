@@ -6,7 +6,7 @@
 import { TAB_OVERVIEW } from './config.js';
 
 export const state = {
-    lifecycle: { initialized: false, assetCreated: false, modApi: null },
+    lifecycle: { initialized: false, assetCreated: false },
     timers: { vibe: null, vibeAnimation: null, unlockCheck: null, integrity: null },
     vibe: { cycle: 0, animationUntil: 0, animationLevel: 0 },
     operations: {
