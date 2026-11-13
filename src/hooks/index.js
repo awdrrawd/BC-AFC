@@ -80,20 +80,23 @@ export function setupHooks(registry) {
             && MouseX >= PROFILE_PANEL_X && MouseX <= PROFILE_PANEL_X + PROFILE_PANEL_W
             && MouseY >= PROFILE_PANEL_Y && MouseY <= PROFILE_PANEL_Y + PROFILE_PANEL_H;
         let _mx, _my, _masked = false;
+        let result;
         try {
             setOwnerTextY(null);
             setInInfoSheet(true);
             if (_panelModal) {
                 _mx = MouseX; _my = MouseY; MouseX = -9999; MouseY = -9999; _masked = true;
             }
-            const r = next(args);
-            if (_masked) { MouseX = _mx; MouseY = _my; _masked = false; }
+            result = next(args);
+        } finally {
+            if (_masked) { MouseX = _mx; MouseY = _my; }
             setInInfoSheet(false);
-
-            if (CurrentScreen !== "InformationSheet") return r;
+        }
+        try {
+            if (CurrentScreen !== "InformationSheet") return result;
             if (typeof InformationSheetSecondScreen !== 'undefined' && InformationSheetSecondScreen) {
                 setProfilePanelOpen(false);
-                return r;
+                return result;
             }
 
             if (!profilePageFresh) {
@@ -106,12 +109,10 @@ export function setupHooks(registry) {
             if (C?.MemberNumber === Player.MemberNumber) drawBCRelationDots(C);
             drawProfileButton();
             drawProfilePanel();
-            return r;
+            return result;
         } catch (e) {
-            if (_masked) { MouseX = _mx; MouseY = _my; }
-            setInInfoSheet(false);
             console.error("🐈‍⬛ [AFC] ❌ InformationSheetRun:", e.message);
-            return next(args);
+            return result;
         }
     });
     // 優先序 7（＞ FCM 主按鈕的 5）：面板展開時，落在「面板矩形內」的點擊由本 hook
