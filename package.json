@@ -16,7 +16,9 @@
     "check:orphans": "node scripts/check-orphans.mjs",
     "check:bc": "node scripts/check-bc-compat.mjs",
     "check": "npm run lint && npm test && npm run check:orphans",
-    "setup-hooks": "git config core.hooksPath .githooks"
+    "setup-hooks": "git config core.hooksPath .githooks",
+    "sync:i18n": "node scripts/sync-i18n.mjs",
+    "check:i18n": "node scripts/sync-i18n.mjs --check"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
