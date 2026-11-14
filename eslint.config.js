@@ -39,7 +39,7 @@ const bcGlobals = [
 const bcWritableGlobals = ['DialogFocusItem', 'MouseX', 'MouseY'];
 
 export default [
-  { ignores: ['dist/**', 'node_modules/**', 'legacy/**', 'public/**', 'loader.user.js', 'loader.local.user.js', 'scripts/**', 'vite.config.js', 'eslint.config.js'] },
+  { ignores: ['src/i18n/engine.js', 'dist/**', 'node_modules/**', 'legacy/**', 'public/**', 'loader.user.js', 'loader.local.user.js', 'scripts/**', 'vite.config.js', 'eslint.config.js'] },
   js.configs.recommended,
   {
     files: ['src/**/*.js'],
