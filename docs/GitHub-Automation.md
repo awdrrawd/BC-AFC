@@ -5,7 +5,7 @@
 | 工作流程 | 觸發 | 內容 |
 |---|---|---|
 | `deploy.yml` Validate and deploy | PR、push main | `npm ci` → lint → test → **check:orphans** → build → check:assets；main 通過後部署 Pages |
-| `bc-compat.yml` BC compatibility | 每週一、手動 | 對 BC 原始碼檢查所有被 hook 的函式是否還存在；失敗時自動開（或更新）一則 `bc-compat` issue |
+| `bc-compat.yml` BC compatibility | 每週一、手動 | 對 BC 原始碼檢查所有被 hook 的函式是否還存在；有缺失時自動開一則 `bc-compat` issue；缺失清單改變時更新並留言，全部恢復後自動關閉（`scripts/bc-compat-issue.mjs`） |
 | `codeql.yml` CodeQL | PR、push main、每週三 | 靜態安全分析（HTML 注入、原型污染等） |
 | Dependabot | 每週 | npm 與 Actions 更新，不自動合併 |
 

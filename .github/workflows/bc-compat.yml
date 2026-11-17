@@ -1,5 +1,6 @@
 name: BC compatibility
 # 每週檢查 AFC 所 hook 的 Bondage Club 函式，在目前的 BC 原始碼中是否仍然存在。
+# 有缺失時開 issue，缺失清單改變時更新並留言，全部恢復後自動關閉。
 # 需要先設定儲存庫變數 BC_REPO_URL（見 docs/GitHub-Automation.md）。
 on:
   schedule:
@@ -42,19 +43,17 @@ jobs:
       - name: Check hook targets
         id: check
         shell: bash
-        run: node scripts/check-bc-compat.mjs /tmp/bc 2>&1 | tee /tmp/bc-compat.log
-      - name: Open or update an issue
-        if: failure() && steps.check.outcome == 'failure'
+        run: |
+          set +e
+          node scripts/check-bc-compat.mjs /tmp/bc 2>&1 | tee /tmp/bc-compat.log
+          code=${PIPESTATUS[0]}
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          # 0 = 全部存在、1 = 有缺失（交給下一步通知）；2 以上 = 檢查本身壞了，才讓 job 失敗
+          if [ "$code" -gt 1 ]; then exit "$code"; fi
+      - name: Sync the tracking issue (update on change, close when resolved)
+        if: steps.check.outputs.code == '0' || steps.check.outputs.code == '1'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          gh label create bc-compat --color D93F0B --description "BC 更新造成 AFC hook 失效" 2>/dev/null || true
-          body="$(printf 'BC 版本：%s\n\n```\n%s\n```\n\n工作流程：%s\n' "$(git -C /tmp/bc describe --tags --always)" "$(cat /tmp/bc-compat.log)" "$RUN_URL")"
-          existing="$(gh issue list --label bc-compat --state open --json number --jq '.[0].number')"
-          if [ -n "$existing" ]; then
-            gh issue comment "$existing" --body "$body"
-          else
-            gh issue create --label bc-compat --title "BC 更新後部分 AFC hook 目標消失" --body "$body"
-          fi
+          GH_REPO: ${{ github.repository }}
+        run: node scripts/bc-compat-issue.mjs /tmp/bc-compat.log "${{ steps.check.outputs.code }}" "$(git -C /tmp/bc describe --tags --always)"
