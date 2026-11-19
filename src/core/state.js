@@ -63,9 +63,3 @@ export function bumpMidSeq() { return _midSeq++; }
 // 上一次已知的戀人數量（防止異常覆蓋）
 export let _lastKnownLoverCount = -1;
 export function setLastKnownLoverCount(v) { _lastKnownLoverCount = v; }
-
-// Profile 主人燈號 Y 座標（由 DrawTextFit hook 攔截更新）
-export let _ownerTextY  = null;
-export function setOwnerTextY(v) { _ownerTextY = v; }
-export let _inInfoSheet = false;
-export function setInInfoSheet(v) { _inInfoSheet = v; }

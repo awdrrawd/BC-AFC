@@ -8,7 +8,7 @@ import {
 import {
     loversPrivateRoom, profilePanelOpen,
     setProfilePanelOpen, setProfilePageFresh, profilePageFresh,
-    setLastOnlineFetch, setOwnerTextY, setInInfoSheet, _inInfoSheet,
+    setLastOnlineFetch,
     setCurrentPrivateRoomName,
 } from '../core/state.js';
 import { registerSocketListener } from '../core/socket.js';
@@ -46,22 +46,6 @@ export function setupHooks(registry) {
     });
 
     // ── Profile 頁面 ────────────────────────────────────────────
-    // DrawTextFit hook：攔截 BC 的主人文字，取得精確 Y 座標作為備用
-    hook("DrawTextFit", 0, (args, next) => {
-        if (_inInfoSheet) {
-            const text = String(args[0] ?? "");
-            const y    = args[2];
-            if (typeof y === 'number' && y > 400) {
-                const C = getCurrentViewingCharacter();
-                const ownerNum = C?.Ownership?.MemberNumber;
-                if (ownerNum && text.includes(String(ownerNum))) {
-                    setOwnerTextY(y);
-                }
-            }
-        }
-        return next(args);
-    });
-
     // 優先序刻意 < 10：接管角色資料頁的工具（如 BCX gui.ts）會用 priority 10 hook
     // InformationSheetRun，子頁開啟時直接 return（不呼叫 next）→ 短路整條 hook 鏈。
     // 我們掛在較低優先序，一旦有工具接管畫面就自然被跳過、不繪製 → 自動隱藏，
@@ -81,15 +65,12 @@ export function setupHooks(registry) {
         let _mx, _my, _masked = false;
         let result;
         try {
-            setOwnerTextY(null);
-            setInInfoSheet(true);
             if (_panelModal) {
                 _mx = MouseX; _my = MouseY; MouseX = -9999; MouseY = -9999; _masked = true;
             }
             result = next(args);
         } finally {
             if (_masked) { MouseX = _mx; MouseY = _my; }
-            setInInfoSheet(false);
         }
         try {
             if (CurrentScreen !== "InformationSheet") return result;
