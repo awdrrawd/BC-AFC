@@ -3,7 +3,6 @@
 // ════════════════════════════════════════
 
 import {
-    PROFILE_BTN_X, PROFILE_BTN_Y, PROFILE_BTN_W, PROFILE_BTN_H,
     PROFILE_PANEL_X, PROFILE_PANEL_Y, PROFILE_PANEL_W, PROFILE_PANEL_H,
 } from '../core/config.js';
 import {
@@ -15,7 +14,7 @@ import {
 import { registerSocketListener } from '../core/socket.js';
 import {
     getCurrentViewingCharacter, drawProfileButton, drawProfilePanel,
-    drawBCRelationDots, handleProfileClick,
+    drawBCRelationDots, removeProfileDom,
 } from '../ui/relationships/profile.js';
 import { refreshOnlineFriends } from '../net/online.js';
 import { parseBeep } from '../net/beep-router.js';
@@ -115,31 +114,16 @@ export function setupHooks(registry) {
             return result;
         }
     });
-    // 優先序 7（＞ FCM 主按鈕的 5）：面板展開時，落在「面板矩形內」的點擊由本 hook
-    //  吃掉（不呼叫 next）→ 點不到面板後方的原生關係等；面板外（角色、右側按鈕、
-    //  FCM 主按鈕等）照常傳遞。FCM 疊在戀人條目上的按鈕請掛 priority > 7，會在本
-    //  hook 之前處理 → 正常可點。
-    hook("InformationSheetClick", 7, (args, next) => {
-        try {
-            if (!(typeof InformationSheetSecondScreen !== 'undefined' && InformationSheetSecondScreen)
-                && handleProfileClick()) return;
-            const panelModal = profilePanelOpen && CurrentScreen === "InformationSheet"
-                && !(typeof InformationSheetSecondScreen !== 'undefined' && InformationSheetSecondScreen);
-            if (panelModal
-                && MouseIn(PROFILE_PANEL_X, PROFILE_PANEL_Y, PROFILE_PANEL_W, PROFILE_PANEL_H)
-                && !MouseIn(PROFILE_BTN_X, PROFILE_BTN_Y, PROFILE_BTN_W, PROFILE_BTN_H)) {
-                return;   // 面板區塊內：消化點擊，不傳遞給後方元素
-            }
-            // 面板外的點擊（非我們的按鈕）→ 收起面板（維持原本行為），但仍照常傳遞。
-            if (!MouseIn(PROFILE_BTN_X, PROFILE_BTN_Y, PROFILE_BTN_W, PROFILE_BTN_H)) {
-                setProfilePanelOpen(false);
-            }
-        } catch {}
+    // 按鈕與面板是 DOM 元素（見 ui/relationships/profile.js），點擊由元素自己處理，
+    //  不再需要 InformationSheetClick hook。資料頁卸載時移除 DOM。
+    hook("InformationSheetUnload", 0, (args, next) => {
+        try { setProfilePanelOpen(false); removeProfileDom(); } catch {}
         return next(args);
     });
     hook("InformationSheetExit", 10, (args, next) => {
         if (document.getElementById(HL_PANEL_ID)) { removeHLPanel(); return; }
         setProfilePanelOpen(false);
+        removeProfileDom();
         setProfilePageFresh(false);
         return next(args);
     });
