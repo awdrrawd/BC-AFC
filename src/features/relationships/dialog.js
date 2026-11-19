@@ -18,8 +18,8 @@ function makeDialog(option, result, fn, marker) {
     };
 }
 
-// 已注入的選項簽章（依 dialog 陣列身分記錄）。ChatRoomCharacterViewDraw / ChatRoomMenuDraw 每幀
-// 都會呼叫注入；沒有變化時直接略過，避免每幀 splice 陣列、重建物件與重查翻譯。
+// 已注入的選項簽章（依 dialog 陣列身分記錄）。注入會被定時重複呼叫；沒有變化時直接略過，
+// 避免反覆 splice 陣列、重建物件與重查翻譯。
 const injected = new WeakMap();   // dialog array -> { signature, entries }
 
 function wantedOptions() {

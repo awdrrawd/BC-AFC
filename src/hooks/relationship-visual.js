@@ -45,11 +45,10 @@ export function decorateFriendList() {
 }
 
 export function installRelationshipDialogHooks(registry) {
-    const { hook } = registry;
+    // R134 的聊天室畫面由 ChatRoomViews 以載入時的函式參照呼叫，hook 全域的
+    // ChatRoomCharacterViewDraw / ChatRoomMenuDraw 都不會被觸發，因此改為定時注入。
     const injectDialogs = () => {
         try { if (CurrentCharacter) injectAFCDialogs(CurrentCharacter); } catch {}
     };
-    hook('ChatRoomCharacterViewDraw', 1, (args, next) => { const result = next(args); injectDialogs(); return result; });
-    hook('ChatRoomMenuDraw', 1, (args, next) => { const result = next(args); injectDialogs(); return result; });
     registry.interval(injectDialogs, 1000);
 }

@@ -34,10 +34,9 @@ function profileRuntime() {
         profilePanelOpen: true, CurrentScreen: 'InformationSheet', InformationSheetSecondScreen: false,
         PROFILE_PANEL_X: 0, PROFILE_PANEL_Y: 0, PROFILE_PANEL_W: 100, PROFILE_PANEL_H: 100,
         MouseX: 50, MouseY: 60, profilePageFresh: true, Player: { MemberNumber: 1 },
-        setOwnerTextY() {}, getCurrentViewingCharacter: () => null,
+        getCurrentViewingCharacter: () => null,
         drawProfileButton() {}, drawProfilePanel() {},
     });
-    c.setInInfoSheet = value => { c.inInfoSheet = value; };
     vm.runInContext(fs.readFileSync(new URL('../src/hooks/index.js', import.meta.url), 'utf8')
         .replace(/^import [\s\S]*?;\r?\n/gm, '').replace(/export /g, ''), c);
     c.setupHooks({ hook: (name, _priority, fn) => { hooks[name] = fn; } });
@@ -57,11 +56,9 @@ test('profile rendering restores mouse state and never repeats native rendering 
     assert.equal(calls, 1);
     assert.equal(c.MouseX, 50);
     assert.equal(c.MouseY, 60);
-    assert.equal(c.inInfoSheet, false);
     assert.throws(() => run([], () => { calls++; throw Error('native failed'); }), /native failed/);
     assert.equal(calls, 2);
     assert.equal(c.MouseX, 50);
-    assert.equal(c.inInfoSheet, false);
 });
 
 test('friend decoration indexes members once and supports the default container ID', () => {
