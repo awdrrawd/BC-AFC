@@ -82,7 +82,11 @@ if (room?.ChatRoomName) { /* 可顯示、供玩家點擊加入 */ }
 }
 ```
 
-### ⚠️ 優先序契約（務必遵守）
+### DOM 版資訊頁（BC R134 之後）
+
+BC 的資訊頁已是 HTML 畫面並蓋在畫布之上，AFC 的按鈕與面板因此改為 DOM 元素：`#afc-profile-button`、`#afc-profile-panel`，每個戀人條目是 `.afc-lover[data-member-number]`（含 `.afc-lover-name`／`.afc-lover-date`（內有 `.afc-lover-date-text`，本身是 flex，可在其後附加元素）／`.afc-lover-dot`）；面板每次（重新）產生後會在 `document` 觸發 `afc:profile-panel-rendered`（`detail.panel` 為面板元素），可在此事件附加自己的元素。`getProfileLoverRegions()` 回傳的座標與條目位置一致，面板重建時（翻頁、線上狀態變動）元素會被重新產生，疊加的元素需在每次 `InformationSheetRun` 檢查後重新附加。畫布式 `DrawButton`／`InformationSheetClick` 疊加在 DOM 版不再可用。
+
+### ⚠️ 優先序契約（畫布版 BC，務必遵守）
 
 AFC 的面板繪製與**模態**掛在 `InformationSheetRun` / `InformationSheetClick` 的 **priority 7**：面板展開時，落在面板矩形內、priority < 7 的元素都被「遮罩 hover ＋ 吃掉點擊」。
 

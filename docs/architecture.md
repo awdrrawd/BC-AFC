@@ -74,8 +74,8 @@ bcModSdk：**數字大者先跑、外層**；不呼叫 `next()` 即短路整條�
 | priority | 誰 | 行為 |
 |---|---|---|
 | 10 | BCX | 接管資料頁，子頁開啟時不 `next`，底下全跳過 |
-| **7** | **AFC** | 繪製戀人面板與 Profile 模態（面板矩形內遮 hover、吃點擊） |
-| **8（建議）** | overlay 插件（如 FCM） | 繪製在 AFC 之上，並在 AFC 模態之前處理點擊 |
+| **7** | **AFC** | 同步「更多戀人」DOM 按鈕與面板（`#afc-profile-button`／`#afc-profile-panel`）；舊版畫布路徑的 hover 遮罩仍保留 |
+| **8（建議）** | overlay 插件（如 FCM） | DOM 版資訊頁改直接操作 DOM：在 `#afc-profile-panel .afc-lover[data-member-number]` 內加元素 |
 | 5 | 一般繪製 | — |
 
 契約細節與範例見 [Public-API.md](Public-API.md#profile-面板整合)。座標系為 BC 2000×1000 虛擬畫布。

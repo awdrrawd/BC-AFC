@@ -64,7 +64,7 @@ export const MAX_AFC_LOVERS = 20;
 
 // Profile 按鈕（依 profile.txt "More loves" 按鈕座標）
 export const PROFILE_BTN_X = 1020;
-export const PROFILE_BTN_Y = 100;
+export const PROFILE_BTN_Y = 60;
 export const PROFILE_BTN_W = 165;
 export const PROFILE_BTN_H = 50;
 

@@ -31,7 +31,7 @@ const bcGlobals = [
   'CraftingAssets', 'ExtendedItemTypeToRecord', 'ServerPlayerAppearanceSync', 'ServerPlayerIsInChatRoom',
   'InventoryBlockedOrLimited', 'ValidationDeleteLock', 'ValidationSanitizeProperties',
   'ValidationSanitizeLock', 'AudioPlaySoundEffect', 'CharacterGetCurrent',
-  'ElementCreateTextArea', 'ElementPositionFixed', 'DialogMenuMode', 'DialogMenuButton',
+  'ElementCreateTextArea', 'ElementPositionFixed', 'ElementSetFontSize', 'DialogMenuMode', 'DialogMenuButton',
   'DialogFocusSourceItem', 'DrawRect',
 ];
 
