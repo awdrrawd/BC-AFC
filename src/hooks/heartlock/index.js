@@ -1,5 +1,6 @@
 import { installHeartLockRemovalHook, repairHeartLockDuplicates } from './removal.js';
 import { installHeartLockPropertyHooks, restoreHeartLockMarkers } from '../../compat/r132-heartlock.js';
+import { installHeartLockValidateHook } from '../../compat/r134-heartlock.js';
 // ════════════════════════════════════════
 //  HeartLock 的遊戲函式 hooks（由中央 registry 安裝）
 // ════════════════════════════════════════
@@ -37,6 +38,7 @@ export function installHeartLockHooks(registry) {
     });
     installHeartLockRemovalHook(hook);
     installHeartLockPropertyHooks(hook);
+    installHeartLockValidateHook(hook);
 
     // ── 有插件的人都能看到此鎖，但上鎖時才做權限檢查 ──
     hook('DialogInventoryAdd', 10, (args, next) => {

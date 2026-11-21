@@ -1,30 +1,19 @@
 import { HEARTLOCK_NAME, HSLOCK_NAME } from '../features/heartlock/config.js';
-
-// Only AFC's actual HighSecurityPadlock markers cross this compatibility path.
-// Do not relax BC's property filtering for ordinary items or other plugins.
-function markers(property) {
-    if (property?.LockedBy !== HSLOCK_NAME
-        || (property.Name !== HEARTLOCK_NAME && !(typeof property.HeartLockId === 'string' && property.HeartLockId))) return null;
-    const result = { Name: HEARTLOCK_NAME };
-    if (typeof property.HeartLockId === 'string') result.HeartLockId = property.HeartLockId;
-    if (typeof property.LockPickSeed === 'string') result.LockPickSeed = property.LockPickSeed;
-    if (typeof property.ExclusiveUnlock === 'boolean') result.ExclusiveUnlock = property.ExclusiveUnlock;
-    return result;
-}
+import { heartLockMarkers } from './heartlock-markers.js';
 
 export function installHeartLockPropertyHooks(hook) {
     hook('ItemPropertiesCompress', 10, (args, next) => {
         const result = next(args);
         const [item, options] = args;
         if (options?.allowLocks === false || new Set(options?.omit ?? []).has('LockedBy')) return result;
-        const extra = markers(item?.Property);
+        const extra = heartLockMarkers(item?.Property);
         if (!extra || result?.LockedBy !== HSLOCK_NAME) return result;
         for (const key of options?.omit ?? []) delete extra[key];
         return { ...result, ...extra };
     });
     hook('ItemPropertiesDecompress', 10, (args, next) => {
         const result = next(args);
-        const extra = markers(args[1]);
+        const extra = heartLockMarkers(args[1]);
         if (extra && args[0]?.Property?.LockedBy === HSLOCK_NAME) {
             Object.assign(args[0].Property, extra);
         }

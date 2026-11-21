@@ -1,0 +1,55 @@
+// Native BC R134 excerpt for compatibility tests. Do not edit function bodies.
+// Source: Bondage-College-Mirror R134 snapshot (changelog: #6974 / 5169f4a)
+// Test runtime dependencies are supplied by the harness.
+// Scripts/Item.js :: ItemPropertiesValidate SHA256 df4fcd9a942a5a38063c6dfc2e989ab10231f94363413b5afeebf602f8c726cc
+function ItemPropertiesValidate(properties, asset, options=undefined) {
+	options ??= {};
+	const omit = new Set(options.omit ?? []);
+
+	if (!CommonIsObject(properties)) {
+		properties = {};
+	}
+
+	const { extendedOptions } = ItemPropertiesGetBundleProperties(AppearanceItem.fromAsset(asset, { property: properties }));
+	/** @type {ItemProperties} */
+	const defaults = {};
+	for (const option of extendedOptions) {
+		CommonAssign(defaults, option.Property, option.ParentData.baselineProperty);
+	}
+
+	/** @type {Omit<ItemProperty.ValidationMultiOutput, "status"> & { status: 0 | 1 | 2 }} */
+	const ret = {
+		value: {},
+		status: ItemPropertiesValidationStatus.ok,
+		errorDescriptions: {},
+	};
+	for (const [propName, propValue] of CommonEntries(properties)) {
+		/** @type {undefined | PropertyDataEntry<any>} */
+		const entry = PropertyData[propName];
+		if (!entry || omit.has(propName)) {
+			// TODO: Consider bumping this to a (critical) error once `PropertyData` is complete
+			continue;
+		}
+
+		const output = entry.validate(propValue, { asset, C: options.C }, defaults[propName]);
+		switch (output.status) {
+			case "ok":
+				/** @type {Unknown<ItemProperties>} */(ret.value)[propName] = output.value;
+				break;
+			case "error":
+				if (!options.ignoreErrors?.includes(propName)) {
+					ret.status = CommonMax(ret.status, ItemPropertiesValidationStatus[output.status]);
+				}
+				/** @type {Unknown<ItemProperties>} */(ret.value)[propName] = output.value;
+				ret.errorDescriptions[propName] = output.errorDescription;
+				break;
+			case "criticalError":
+				if (!options.ignoreErrors?.includes(propName)) {
+					ret.status = ItemPropertiesValidationStatus.criticalError;
+				}
+				ret.errorDescriptions[propName] = output.errorDescription;
+				break;
+		}
+	}
+	return { ...ret, status: CommonObjectFlip(ItemPropertiesValidationStatus)[ret.status] };
+}

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { extractHookTargets, findMissing } from '../scripts/check-bc-compat.mjs';
+import { extractHookTargets, findMissing, extractPropertyDataKeys, classifyProperties } from '../scripts/check-bc-compat.mjs';
 import { findOrphans } from '../scripts/check-orphans.mjs';
 
 test('hook targets are extracted from literals, quote styles, namespaced names and loop lists', () => {
@@ -65,4 +65,26 @@ test('multi-line, re-export and side-effect imports all count as real imports', 
         'src/a.js': '', 'src/b.js': '', 'src/c.js': '', 'src/d.js': '', 'src/e.js': '',
     };
     assert.deepEqual(findOrphans(files), ['src/e.js']);
+});
+
+test('PropertyData keys are read from the table only, and AFC keys are classified against it', () => {
+    const bc = [
+        'var PropertyData = {',
+        '\tLockedBy: new PropertyDataEntry("LockedBy",',
+        '\t\t{ get valueSet() { return null; } },',
+        '\t),',
+        '\tLockPickSeed: new PropertyDataEntry("LockPickSeed", undefined,',
+        '\t),',
+        '\tLayerScaleX: PropertyDataEntry.copyFrom("LayerRotation", "LayerScaleX",',
+        '\t),',
+        '\tDrawingLeft: undefined, // TODO: Deprecated property; remove at some point',
+        '};',
+        'const Other = {',
+        '\tHeartLockId: new PropertyDataEntry("HeartLockId", undefined),',
+        '};',
+    ].join('\n');
+    const keys = extractPropertyDataKeys(bc);
+    assert.deepEqual([...keys].sort(), ['LayerScaleX', 'LockPickSeed', 'LockedBy']);
+    assert.deepEqual(classifyProperties(['Name', 'LockPickSeed'], keys), { registered: ['LockPickSeed'], unregistered: ['Name'] });
+    assert.equal(extractPropertyDataKeys('function ItemPropertiesCompress() {}'), null);
 });

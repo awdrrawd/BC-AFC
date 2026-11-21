@@ -12,7 +12,7 @@
 | `features/heartlock/` | 鎖、權限、快照、保存、冷卻、計時、震動、防脫逃；`crafting/` 放 Craft 範本 |
 | `net/` | Hidden 訊息、可靠傳輸、AccountBeep、在線狀態、房名、LIKOSHARE 同步 |
 | `ui/` | Profile、設定頁、申請介面；`ui/heartlock/` 放共用面板（`tabs/`）與 Craft 編輯入口 |
-| `compat/` | R132 與 BCX 相容（見 [r132-compatibility.md](r132-compatibility.md)） |
+| `compat/` | R132／R134 與 BCX 相容（見 [r132-compatibility.md](r132-compatibility.md)） |
 | `i18n/` | 共用翻譯引擎、聊天翻譯封裝、離線 fallback |
 | `util/` | 通用工具與提示 |
 

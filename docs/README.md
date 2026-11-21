@@ -13,7 +13,7 @@
 | [Storage.md](Storage.md) | 主資料、公開副本、復原、快照、Craft 範本生命週期 |
 | [Public-API.md](Public-API.md) | `window.Liko.AFC`、Profile 面板整合、心鎖與服裝工具 API |
 | [Localization-Engine.md](Localization-Engine.md) | 共用翻譯引擎、字庫維護、聊天在地化 |
-| [r132-compatibility.md](r132-compatibility.md) | R132／BCX 相容機制、限制、測試依據 |
+| [r132-compatibility.md](r132-compatibility.md) | R132／R134／BCX 相容機制、限制、測試依據 |
 | [verification.md](verification.md) | **待辦**：尚需遊戲內驗收的項目 |
 | [GitHub-Automation.md](GitHub-Automation.md) | CI、Pages、BC 相容檢查、本機檢查指令 |
 | [afc-architecture.html](https://awdrrawd.github.io/BC-AFC/docs/afc-architecture.html) | 互動式功能分支圖（Pages 線上版；功能 → 模組 → 檔案，依前端到後端排列） |

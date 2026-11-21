@@ -23,7 +23,7 @@ function runtime() {
         sendLocalizedAction() {}, log() {}, console, isMemberAllowedByMe: n => n === 2,
         ValidationDeleteLock: p => { delete p.LockedBy; delete p.LockMemberNumber; delete p.MemberNumberListKeys; },
         ValidationSanitizeProperties() {}, ValidationSanitizeLock() {},
-        installHeartLockRemovalHook() {}, installHeartLockPropertyHooks() {}, setupOrgasmHooks() {},
+        installHeartLockRemovalHook() {}, installHeartLockPropertyHooks() {}, installHeartLockValidateHook() {}, setupOrgasmHooks() {},
         setTimeout() {}, HL_PANEL_ID: 'panel',
         InventoryGet: (ch, gn) => ch.Appearance.find(i => i.Asset.Group.Name === gn),
         AssetGet: () => ({}),
