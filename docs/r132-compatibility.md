@@ -1,12 +1,14 @@
-# BC R132 / BCX 相容處理
+# BC R132 / R134 / BCX 相容處理
 
-依 R132Beta3 原始碼調整，分支 `fix/r132`。這份文件描述**目前的相容機制與限制**；各項是否已在實際伺服器通過，見 [verification.md](verification.md)。BC 改版後函式是否仍存在由每週的 `bc-compat` 工作流程檢查（見 [GitHub-Automation.md](GitHub-Automation.md)）。
+依 R132Beta3 原始碼調整，分支 `fix/r132`；R134 的屬性驗證見第 9 節（分支 `fix/r134`，依 R134 鏡像原始碼，changelog 記錄到 #6974 / `5169f4a`）。這份文件描述**目前的相容機制與限制**；各項是否已在實際伺服器通過，見 [verification.md](verification.md)。BC 改版後函式是否仍存在由每週的 `bc-compat` 工作流程檢查（見 [GitHub-Automation.md](GitHub-Automation.md)）。
 
 ## 相容模組
 
 | 檔案 | 目的 | 可否移除 |
 |---|---|---|
 | `compat/r132-heartlock.js` | 心鎖屬性在 R132 壓縮／解壓縮時不遺失 | 僅在 BC 不再壓縮屬性時 |
+| `compat/r134-heartlock.js` | R134 的 `ItemPropertiesValidate` 不刪心鎖標記（第 9 節） | `PropertyData` 登記 `Name`／`HeartLockId`／`ExclusiveUnlock` 後（`npm run check:bc` 會回報） |
+| `compat/heartlock-markers.js` | R132／R134 共用：AFC 標記欄位清單與型別檢查 | 否 |
 | `compat/r132-craft.js` | 補齊舊 Craft 資料的 `Partial` 標記 | 是（函式皆以 `r132` 開頭，集中於此檔） |
 | `compat/bcx-heartlock.js` | 與 BCX 詛咒共存 | 否 |
 | `hooks/heartlock/removal.js` | R132 移除入口的心鎖保護 | 否 |
@@ -56,13 +58,25 @@ R132 將穿戴中的 Craft 改為精簡資料（#6561），#6653 補上 `Invento
 ### 8. BCX 共存
 上鎖或還原後重新蓋章 BCX 的 curse 基準，避免心鎖額外 Property（`Name` / `HeartLockId` / `ExclusiveUnlock`）被 BCX `curseTick` 判為改動而反覆還原洗版。無 BCX 時所有呼叫為 no-op。
 
+### 9. R134 屬性驗證（`ItemPropertiesValidate`）
+R133 的 `ItemPropertiesValidate` 沒有任何呼叫者；R134 把它接進 `ExtendedItemInit`、`ValidationSanitizeProperties`（每次收到外觀資料）與 `ItemPropertiesDecompress` 的 `initExtendedItem:false` 分支，並且**每一處都用回傳值覆寫 `Item.Property`**。驗證只複製 `PropertyData` 有條目的欄位，沒條目的直接略過（原始碼有 `TODO: Consider bumping this to a (critical) error once PropertyData is complete`）。
+
+AFC 寫在 `HighSecurityPadlock` 上的欄位中，`Name`、`HeartLockId`、`ExclusiveUnlock` 沒有條目（`LockPickSeed`、`LockMemberNumber` 等有）。沒有處理時，標記會在開啟物品、穿上、收到外觀時消失，造成：完整性檢查把心鎖判成損壞並（來源為掛鎖者時）刪設定、`restoreLockFromConfig` 剛寫入標記就被緊接的 `ValidationSanitizeProperties` 清掉、`Property.Name` 判斷失效使震動與高潮控制停擺、登入時反覆跳出復原確認。
+
+- `r134-heartlock.js` 掛 `ItemPropertiesValidate`（優先序 5）：驗證完成後，**僅當**結果的 `LockedBy` 是 `HighSecurityPadlock` 且來源帶有型別正確的 AFC 標記時，才補回缺少的欄位；BC 已驗證的欄位（如 `LockPickSeed`）維持 BC 的值，`omit` 選項照常遵守，一般物品與其他插件的欄位仍被過濾。
+- 不改欄位存放位置：標記必須隨外觀同步給對端，且 `restoreHeartLockMarkers`、BCX 基準蓋章（第 8 節）都依賴它。
+- `npm run check:bc <BC 原始碼目錄>` 會列出 AFC 欄位是否已被 `PropertyData` 登記；全部登記後可移除這個 hook。
+
+其餘 R133→R134 項目逐項核對、**AFC 不受影響**：`ItemPropertiesUnion`／`Difference`、`PropertyUnion`／`Difference`、`Property.Type` 遷移（`r132-craft.js` 自己用 `ExtendedItemTypeToRecord`，該函式仍在）、`ModularItem*`、`AssetParseDefaultColor`、`DrawingLeft/Top`、DynamicDraw callback，AFC 皆未使用；所有 hook 目標都存在；`MouseX/MouseY` 全域仍在，`MouseIn` 讀的就是它，`hooks/index.js` 的遮罩手法不受 #6883 影響。`ItemPropertiesCompress` 的 `allowLocks` / `omit` 選項在 R134 同名。
+
 ## 已知限制
 
 - 快照本來就沒有 Craft 時無法復原；已遺失且未保存的歷史欄位無法追溯。
 - 「無心鎖的一般衣物也全部掉 Craft」尚無法歸因，需遊戲內重現並排除其他插件／同步來源。
 - 對端未安裝 AFC 或為舊版時，自訂資料可能再次被丟棄；VM 測試無法取代混合版本驗收。
+- R134 的壓縮格式（逐圖層數值改為字串）與 `ItemPropertiesCompress` 本體在 R134 的行為只靠讀碼與選項名稱核對，尚無像 R132 那樣的原生函式測試。
 - 本文件不代表所有 BC 版本的相容保證。
 
 ## 測試
 
-`test/r132.test.js`、`craft-lock.test.js`、`craft-restore.test.js`、`craft-key-upgrade.test.js`、`r132-craft-data.test.js` 使用 `test/fixtures/` 內的 R132 原生函式摘錄（附來源 SHA256）；物品穿戴與伺服器更新為測試替身。更新 BC 版本時須同步更新摘錄與 SHA256。
+`test/r132.test.js`、`craft-lock.test.js`、`craft-restore.test.js`、`craft-key-upgrade.test.js`、`r132-craft-data.test.js` 使用 `test/fixtures/` 內的 R132 原生函式摘錄（附來源 SHA256）；物品穿戴與伺服器更新為測試替身。更新 BC 版本時須同步更新摘錄與 SHA256。`r134-heartlock.test.js` 直接執行 R134 的 `ItemPropertiesValidate` 原文（`fixtures/r134-validate.txt`，附 SHA256），`PropertyData` 為只含必要條目的替身。
