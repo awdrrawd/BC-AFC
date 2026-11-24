@@ -4,6 +4,9 @@ updates:
     directory: /
     schedule:
       interval: weekly
+      day: saturday
+      time: '08:04'
+      timezone: Asia/Taipei
     open-pull-requests-limit: 3
     groups:
       development:
@@ -12,6 +15,10 @@ updates:
     directory: /
     schedule:
       interval: weekly
+      day: saturday
+      time: '08:04'
+      timezone: Asia/Taipei
     groups:
       actions:
         patterns: ['*']
+        update-types: [minor, patch]
