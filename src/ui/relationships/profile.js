@@ -346,8 +346,11 @@ export function drawProfilePanel() {
 //  列的辨識方式：名稱列內有兩個 .information-sheet-copy（名稱、會員編號）。
 // ════════════════════════════════════════
 
-const RELATION_ROW_SELECTOR = '#information-sheet-screen .information-sheet-relations-slot '
-    + ':is(.information-sheet-owner, .information-sheet-entry-title)';
+// 主人列 .information-sheet-owner、戀人列 .information-sheet-lover（舊版 BC 的戀人列叫 .information-sheet-entry-title）。
+// 不能限定在 .information-sheet-relations-slot 底下：BC 只有查看非本人、非線上角色時才會包這層容器，
+// 自己的資料頁（燈號實際顯示的地方）關係區塊是直接放在欄位裡，限定容器會讓燈號永遠掛不上。
+const RELATION_ROW_SELECTOR = '#information-sheet-screen '
+    + ':is(.information-sheet-owner, .information-sheet-lover, .information-sheet-entry-title)';
 
 function relationMemberNumber(row) {
     const fields = row.querySelectorAll('.information-sheet-copy');
