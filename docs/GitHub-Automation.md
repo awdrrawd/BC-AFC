@@ -4,10 +4,11 @@
 
 | 工作流程 | 觸發 | 內容 |
 |---|---|---|
-| `deploy.yml` Validate and deploy | PR、push main | `npm ci` → lint → test → **check:orphans** → build → check:assets；main 通過後部署 Pages |
+| `deploy.yml` Validate and deploy | PR、push main | `npm ci` → check:i18n（共用 i18n 副本未被手改）→ lint → test → **check:orphans** → build → check:assets；main 通過後部署 Pages |
 | `bc-compat.yml` BC compatibility | 每週一、手動 | 對 BC 原始碼檢查所有被 hook 的函式是否還存在；有缺失時自動開一則 `bc-compat` issue；缺失清單改變時更新並留言，全部恢復後自動關閉（`scripts/bc-compat-issue.mjs`） |
 | `codeql.yml` CodeQL | PR、push main、每週三 | 靜態安全分析（HTML 注入、原型污染等） |
-| Dependabot | 每週 | npm 與 Actions 更新，不自動合併 |
+| `sync-i18n.yml` Manually sync shared i18n | 手動 | 下載最新共用 i18n 引擎，完整檢查後推到新分支並附上建立 PR 的連結（步驟在 Bondage-College-Mirror 的共用 workflow） |
+| Dependabot | 每週六 08:04（台北時間） | npm 與 Actions 更新，不自動合併 |
 
 不需要 PAT 或額外 Secrets，工作流程使用 GitHub 內建 token。未增加自動版本號或自動 Release，避免每次提交就產生發布。
 
@@ -18,8 +19,8 @@
 3. 首次檢查執行後，Settings → Rules → Rulesets 為 main 啟用 *Require a pull request before merging* 與 *Require status checks to pass*，選 **Quality checks**（可再加 **Analyze JavaScript**）。個人維護不必要求其他人審核。
 4. 確認 Actions 允許官方 `actions/*` 與 `github/codeql-action/*`；若 github-pages environment 限制分支，允許 main。
 5. **BC 相容性檢查**：Settings → Secrets and variables → Actions → *Variables* 新增
-   - `BC_REPO_URL`（必填）：Bondage Club 原始碼的 git 網址，需可匿名 clone。
-   - `BC_REF`（選填）：要檢查的分支或標籤，例如 `R134`；留空則用預設分支。
+   - `BC_REPO_URL`（選填）：Bondage Club 原始碼的 git 網址，需可匿名 clone；留空則用[程式碼鏡像](https://github.com/awdrrawd/Bondage-College-Mirror/tree/bondageclub)。
+   - `BC_REF`（選填）：要檢查的分支或標籤，例如 `R134`；留空時，預設鏡像用 `bondageclub` 分支，自訂來源用其預設分支。
    
    設定後到 Actions → BC compatibility → Run workflow 手動跑一次確認。
 6. 程式碼掃描：Settings → Code security → 確認 *Code scanning* 已啟用（公開倉庫免費）。
