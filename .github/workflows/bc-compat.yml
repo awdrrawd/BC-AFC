@@ -1,14 +1,14 @@
 name: BC compatibility
 # 每週檢查 AFC 所 hook 的 Bondage Club 函式，在目前的 BC 原始碼中是否仍然存在。
 # 有缺失時開 issue，缺失清單改變時更新並留言，全部恢復後自動關閉。
-# 需要先設定儲存庫變數 BC_REPO_URL（見 docs/GitHub-Automation.md）。
+# 來源預設為程式碼鏡像 awdrrawd/Bondage-College-Mirror 的 bondageclub 分支；可用儲存庫變數 BC_REPO_URL / BC_REF 覆蓋（見 docs/GitHub-Automation.md）。
 on:
   schedule:
     - cron: '17 3 * * 1'
   workflow_dispatch:
     inputs:
       ref:
-        description: BC 的分支或標籤（留空 = 預設分支或 BC_REF 變數）
+        description: BC 的分支或標籤（留空 = BC_REF 變數，否則用鏡像的 bondageclub 分支）
         required: false
 permissions:
   contents: read
@@ -20,19 +20,18 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24.x
       - name: Fetch Bondage Club sources
         shell: bash
         env:
-          BC_REPO_URL: ${{ vars.BC_REPO_URL }}
-          BC_REF: ${{ inputs.ref || vars.BC_REF }}
+          BC_REPO_URL: ${{ vars.BC_REPO_URL || 'https://github.com/awdrrawd/Bondage-College-Mirror.git' }}
+          # 使用預設鏡像時指定 bondageclub 分支（鏡像的預設分支 main 只有說明文件）；自訂來源則沿用其預設分支。
+          BC_REF: ${{ inputs.ref || vars.BC_REF || (!vars.BC_REPO_URL && 'bondageclub' || '') }}
         run: |
-          if [ -z "$BC_REPO_URL" ]; then
-            echo "::error::請設定儲存庫變數 BC_REPO_URL（Settings → Secrets and variables → Actions → Variables）"
-            exit 1
-          fi
           branch=""
           if [ -n "$BC_REF" ]; then branch="--branch $BC_REF"; fi
           # 優先部分複製（只下載 Scripts/Screens）；上游不支援時退回一般淺層複製
