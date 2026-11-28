@@ -8,7 +8,7 @@
 | `bc-compat.yml` BC compatibility | 每週一、手動 | 對 BC 原始碼檢查所有被 hook 的函式是否還存在；有缺失時自動開一則 `bc-compat` issue；缺失清單改變時更新並留言，全部恢復後自動關閉（`scripts/bc-compat-issue.mjs`） |
 | `codeql.yml` CodeQL | PR、push main、每週三 | 靜態安全分析（HTML 注入、原型污染等） |
 | `sync-i18n.yml` Manually sync shared i18n | 手動 | 下載最新共用 i18n 引擎，完整檢查後推到新分支並附上建立 PR 的連結（步驟在 Bondage-College-Mirror 的共用 workflow） |
-| Dependabot | 每週六 08:04（台北時間） | npm 與 Actions 更新，不自動合併 |
+| Dependabot | 每週六 08:04（台北時間） | npm 與 Actions 更新，不自動合併；新版本發布滿 7 天才提出（安全性更新不受影響） |
 
 不需要 PAT 或額外 Secrets，工作流程使用 GitHub 內建 token。未增加自動版本號或自動 Release，避免每次提交就產生發布。
 
